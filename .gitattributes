@@ -1,0 +1,40 @@
+# Line ending configuration
+# This file ensures consistent line endings across platforms
+
+# Shell scripts - always use LF (Unix line endings)
+*.sh text eol=lf
+
+# R scripts - always use LF (Unix line endings)
+*.R text eol=lf
+*.r text eol=lf
+
+# Other common text files - use LF
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.Rd text eol=lf
+*.xml text eol=lf
+*.cnf text eol=lf
+DESCRIPTION text eol=lf
+NAMESPACE text eol=lf
+LICENSE text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.rda binary
+*.rdb binary
+*.rdx binary
+*.xlsx binary
+*.Rproj binary
+
