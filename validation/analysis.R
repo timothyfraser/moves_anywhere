@@ -9,8 +9,8 @@ library(ggplot2)
 library(ggtext)
 library(viridis)
 
-
-setwd(paste0(rstudioapi::getActiveProject(), "/validation"))
+setwd(here::here("moves_anywhere/validation"))
+# setwd(paste0(rstudioapi::getActiveProject(), "/validation"))
 
 # DATA16 ########################################################
 
@@ -410,9 +410,13 @@ read_rds("data16_compare.rds") %>%
   rename(predicted = paste0("s", yhat), observed = paste0("s", y) ) %>%
   filter(!is.na(observed)) %>%
   group_by(pollutant) %>%
-  summarize(lm(formula = observed ~ predicted ) %>% broom::glance()) %>%
+  summarize(
+    lm(formula = observed ~ predicted ) %>% broom::glance()
+  ) %>%
   # The pollutants we can actually evaluate here are...
   filter(pollutant %in% c(2,3, 31, 33, 98, 100, 110))
+
+
 
   # group_by(pollutant) %>%
   # summarize(
@@ -456,55 +460,78 @@ bind_rows(
   mutate(across(-pollutant, .fns = ~round(.x, digits = 2)*100)) %>%
   write_csv("viz/r2.csv")
 
-read_csv("viz/r2.csv")
+# Mean average error! And root mean square error!
+data %>%
+  group_by(pollutant) %>%
+  summarize(
+    ymax = max(observed),
+    ymin = min(observed),
+    yrange = ymax - ymin,
+    mae = mean(abs(observed - predicted)),
+    mae_pct = mae / yrange,
+    rmse = sqrt(mean((observed - predicted)^2)),
+    rmse_pct = rmse / yrange,
+    r2 = lm(formula = observed ~ predicted ) %>% broom::glance() %>% with(r.squared),
+    sourcetype = 0
+  ) %>%
+  mutate(across(any_of(c(
+    "ymax", "ymin", "yrange",
+    "mae", "mae_pct",
+    "rmse", "rmse_pct",
+    "r2")), .fns = ~round(.x, digits = 3)))  %>%
+    write_csv("viz/mae_rmse.csv")
+
+
+
+
 
 # DATA1-ALL ################################################
 
-data = read_rds("data1_compare.rds") %>%
-  filter(scenario %in% c(y, yhat)) %>%
-  select(year, geoid, pollutant, scenario, emissions, sourcetype, regclass, fueltype, roadtype) %>%
-  distinct() %>%
-  pivot_wider(id_cols = c(year, geoid, pollutant, sourcetype, regclass, fueltype, roadtype),
-              names_from = scenario, values_from = emissions, 
-              names_prefix = "s") %>%
-  rename(predicted = paste0("s",yhat), observed = paste0("s", y)) %>%
-  filter(!is.na(observed), !is.na(predicted)) %>%
-  #mutate(predicted = if_else(is.na(predicted), 0, predicted)) %>%
-  # The pollutants we can actually evaluate here are...
-  filter(pollutant %in% c(2,3, 31, 33, 98, 100, 110))
+# data = read_rds("data1_compare.rds") %>%
+#   filter(scenario %in% c(y, yhat)) %>%
+#   select(year, geoid, pollutant, scenario, emissions, sourcetype, regclass, fueltype, roadtype) %>%
+#   distinct() %>%
+#   pivot_wider(id_cols = c(year, geoid, pollutant, sourcetype, regclass, fueltype, roadtype),
+#               names_from = scenario, values_from = emissions, 
+#               names_prefix = "s") %>%
+#   rename(predicted = paste0("s",yhat), observed = paste0("s", y)) %>%
+#   filter(!is.na(observed), !is.na(predicted)) %>%
+#   #mutate(predicted = if_else(is.na(predicted), 0, predicted)) %>%
+#   # The pollutants we can actually evaluate here are...
+#   filter(pollutant %in% c(2,3, 31, 33, 98, 100, 110))
 
-bind_rows(
-  # Slope, accuracy, and error
-  data %>% 
-    group_by(pollutant) %>%
-    summarize(lm(formula = observed ~ predicted ) %>% broom::glance()) %>%
-    mutate(sourcetype = 0),
-  data %>% 
-    #  filter(pollutant == 98) %>%
-    group_by(sourcetype, pollutant) %>%
-    summarize(lm(formula = observed ~ predicted ) %>% broom::glance())
-) %>%
-  pivot_wider(id_cols = c(pollutant), names_from = sourcetype, values_from = r.squared) %>%
-  mutate(across(-pollutant, .fns = ~round(.x, digits = 2)*100)) %>%
-  write_csv("viz/r2.csv")
+# bind_rows(
+#   # Slope, accuracy, and error
+#   data %>% 
+#     group_by(pollutant) %>%
+#     summarize(lm(formula = observed ~ predicted ) %>% broom::glance()) %>%
+#     mutate(sourcetype = 0),
+#   data %>% 
+#     #  filter(pollutant == 98) %>%
+#     group_by(sourcetype, pollutant) %>%
+#     summarize(lm(formula = observed ~ predicted ) %>% broom::glance())
+# ) %>%
+#   pivot_wider(id_cols = c(pollutant), names_from = sourcetype, values_from = r.squared) %>%
+#   mutate(across(-pollutant, .fns = ~round(.x, digits = 2)*100)) %>%
+#   write_csv("viz/r2.csv")
 
 
-read_csv("viz/r2.csv")
+# read_csv("viz/r2.csv")
 
-data %>% 
-  filter(pollutant == 98) %>%
-  group_by(fueltype, pollutant) %>%
-  summarize(lm(formula = observed ~ predicted ) %>% broom::glance())
+# data %>% 
+#   filter(pollutant == 98) %>%
+#   group_by(fueltype, pollutant) %>%
+#   summarize(lm(formula = observed ~ predicted ) %>% broom::glance())
 
-data %>% 
-  filter(pollutant == 98) %>%
-  group_by(regclass, pollutant) %>%
-  summarize(lm(formula = observed ~ predicted ) %>% broom::glance())
+# data %>% 
+#   filter(pollutant == 98) %>%
+#   group_by(regclass, pollutant) %>%
+#   summarize(lm(formula = observed ~ predicted ) %>% broom::glance())
 
-data %>% 
-  filter(pollutant == 98) %>%
-  group_by(roadtype, pollutant) %>%
-  summarize(lm(formula = observed ~ predicted) %>% broom::glance())
+# data %>% 
+#   filter(pollutant == 98) %>%
+#   group_by(roadtype, pollutant) %>%
+#   summarize(lm(formula = observed ~ predicted) %>% broom::glance())
 
 
 
