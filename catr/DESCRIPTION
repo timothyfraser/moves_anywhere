@@ -10,7 +10,7 @@ Description: A system for executing default or custom runs of the EPA
     MOVES software, from R. You provide any custom input tables, the rest
     get filled in, and it takes care of the rest. Meant to be used with
     our Docker Image `moves_anywhere`
-License: `use_gpl3_license()`
+License: Apache License (>= 2)
 Depends: 
     R (>= 3.5.0)
 Imports: 

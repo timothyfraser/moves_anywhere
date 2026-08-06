@@ -1,0 +1,11 @@
+MOVES Anywhere
+Copyright 2026 Timothy Fraser
+
+This product includes software developed by Timothy Fraser (Cornell University)
+(https://github.com/timothyfraser/moves_anywhere).
+
+This software packages and automates the US Environmental Protection
+Agency's MOTOR VEHICLE EMISSION SIMULATOR (MOVES). EPA MOVES is a work
+of the United States Government and is distributed by EPA under its own
+terms; it is not covered by this License. See
+https://www.epa.gov/moves for EPA's terms and documentation.
