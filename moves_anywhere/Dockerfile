@@ -124,19 +124,17 @@ COPY scripts ./scripts
 # Make scripts executable
 RUN chmod +x /cat/scripts/*.sh
 
-# Install catr
-# The shipped catr_0.2.0 tarball imports gargle, googleAuthR and googleCloudStorageR
-# for its Google Cloud Storage helpers (catr api_functions.R). This image does not
-# ship the Google R stack, so those three imports are stripped from the unpacked
-# source before installing. Nothing in the run path calls them.
-RUN mkdir -p /tmp/catr_src && \
-    tar -xzf /cat/scripts/catr_0.2.0.tar.gz -C /tmp/catr_src && \
-    sed -i '/^importFrom(gargle,/d;/^importFrom(googleAuthR,/d;/^importFrom(googleCloudStorageR,/d' /tmp/catr_src/catr/NAMESPACE && \
-    perl -0pi -e 's/gargle\s*\(>=\s*[0-9.]+\),\s*googleCloudStorageR\s*\(>=\s*[0-9.]+\),\s*googleAuthR\s*\(>=\s*[0-9.]+\),\s*//' /tmp/catr_src/catr/DESCRIPTION && \
-    ! grep -n -i -E "gargle|googleAuthR|googleCloudStorageR" /tmp/catr_src/catr/NAMESPACE /tmp/catr_src/catr/DESCRIPTION && \
-    R CMD INSTALL /tmp/catr_src/catr && \
-    Rscript -e 'cat("catr", as.character(packageVersion("catr")), "\n")' && \
-    rm -rf /tmp/catr_src
+
+# gargle -> fs needs libuv headers (fs 1.6+ no longer bundles libuv); kept out of the big apt layer so the cache holds.
+RUN apt-get update && apt-get install -y --no-install-recommends libuv1-dev && rm -rf /var/lib/apt/lists/*
+# Google R packages: catr 0.2.0 imports them (catr/R/api_functions.R). Kept, pinned to v2 versions,
+# until a catr release drops the imports (backlog; Tim 2026-11-02). They are R-only and small.
+RUN R -e "remotes::install_version('gargle', version = '1.5.2', repos = 'http://cran.us.r-project.org'); library(gargle)"
+RUN R -e "remotes::install_version('googleAuthR', version = '2.0.2', repos = 'http://cran.us.r-project.org'); library(googleAuthR)"
+RUN R -e "remotes::install_version('googleCloudStorageR', version = '0.7.0', repos = 'http://cran.us.r-project.org'); library(googleCloudStorageR)"
+# Fail loudly if the MariaDB client package did not install (the v3 build of 2026-11-02 failed on catr for this reason).
+RUN R -e "library(RMariaDB); library(RMySQL); library(httr)"
+RUN Rscript /cat/scripts/task_install_catr.R && Rscript -e "library(catr); cat('catr', as.character(packageVersion('catr')), '\n')"
 
 # Label the image
 LABEL title="moves-anywhere"
