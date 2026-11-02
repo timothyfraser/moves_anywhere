@@ -2,9 +2,8 @@ FROM ubuntu:20.04
 
 # Build arguments
 # MOVES_COMMIT: the exact USEPA/EPA_MOVES_Model commit baked into the image (the one v2 shipped).
-# KEEP_DEBUG:   set to true to keep MOVES debug data (keepDebugData) in the compiled classes.
+# Debug data (MOVES keepDebugData) is a RUNTIME switch (parameters.json "debug": true); see task_launch_moves.sh.
 ARG MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
-ARG KEEP_DEBUG=false
 
 # Create directory
 RUN mkdir cat
@@ -64,7 +63,8 @@ RUN R -e "remotes::install_version('xml2', version = '1.3.6', repos = 'http://cr
 RUN R -e "remotes::install_version('jsonlite', version = '1.8.9', repos = 'http://cran.us.r-project.org')"
 
 RUN R -e "remotes::install_version('dbplyr', version = '2.3.2', repos = 'http://cran.us.r-project.org')"
-RUN R -e "remotes::install_version('RMariaDB', version = '1.3.1', repos = 'http://cran.us.r-project.org')"
+# plogr (RMariaDB's build dependency) left CRAN; install it from the archive first, then pin RMariaDB to v2's version and fail loudly.
+RUN R -e "remotes::install_version('plogr', version = '0.2.0', repos = 'http://cran.us.r-project.org'); remotes::install_version('RMariaDB', version = '1.3.1', repos = 'http://cran.us.r-project.org'); library(RMariaDB)"
 
 
 # Try again for core ones (RMySQL pinned to the v2 version)
@@ -106,11 +106,11 @@ SHELL ["/bin/bash", "-c"]
 RUN /cat/setupdb.sh
 
 # Compile MOVES (Java and Go) at build time, so no run compiles anything.
-# keepDebugData is only switched on when the image is built with --build-arg KEEP_DEBUG=true.
+# D29: keepDebugData becomes a JVM property, default false, so a RUN can opt in with
+# JAVA_TOOL_OPTIONS=-Dmoves.keepDebugData=true (task_launch_moves.sh sets it when parameters.json has "debug": true).
 RUN cd /cat/EPA_MOVES_Model && \
-    if [ "$KEEP_DEBUG" = "true" ]; then \
-      sed -i 's/keepDebugData = false;/keepDebugData = true;/' gov/epa/otaq/moves/master/framework/OutputProcessor.java; \
-    fi && \
+    sed -i 's/static final boolean keepDebugData = false;/static final boolean keepDebugData = Boolean.getBoolean("moves.keepDebugData");/' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
+    grep -q 'Boolean.getBoolean("moves.keepDebugData")' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     ant compileall && \
     ant go64
 

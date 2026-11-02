@@ -18,6 +18,11 @@ which java
 echo $JAVA_HOME
 
 # Changing to mysql user and running the CUSTOM runspec
+# Debug mode (D29): off by default; a run opts in with "debug": true in parameters.json or MOVES_DEBUG=1.
+if [ "${MOVES_DEBUG:-0}" = "1" ] || grep -Eq '"debug"[[:space:]]*:[[:space:]]*true' /cat/inputs/parameters.json 2>/dev/null; then
+  export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Dmoves.keepDebugData=true"
+  echo "------------debug mode ON (keepDebugData)------------"
+fi
 echo ------------running runspec------------
 sudo -u mysql ant run -Drunspec="/cat/EPA_MOVES_Model/rs_custom.xml"
 
