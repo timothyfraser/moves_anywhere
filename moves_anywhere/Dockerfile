@@ -1,5 +1,11 @@
 FROM ubuntu:20.04
 
+# Build arguments
+# MOVES_COMMIT: the exact USEPA/EPA_MOVES_Model commit baked into the image (the one v2 shipped).
+# KEEP_DEBUG:   set to true to keep MOVES debug data (keepDebugData) in the compiled classes.
+ARG MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
+ARG KEEP_DEBUG=false
+
 # Create directory
 RUN mkdir cat
 
@@ -19,7 +25,10 @@ RUN apt-get update && apt-get install -y \
     unzip \
     sudo \
     libmariadb-dev \
-    libxml2-dev
+    libxml2-dev \
+    rclone \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Upgrade R
 # Install dependencies
@@ -27,25 +36,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     dirmngr \
     gnupg \
-    curl
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add R repository and install the latest R version
 RUN curl -fsSL https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /usr/share/keyrings/cran-archive-keyring.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/cran-archive-keyring.gpg] https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" | tee /etc/apt/sources.list.d/cran.list && \
     apt-get update && \
-    apt-get install -y r-base
-
-# Install next dependencies
-# RUN apt-get update && apt-get install -y \
-#     r-cran-dplyr \
-##    r-cran-readr \
-#    r-cran-jsonlite \
-#    r-cran-dbi \
-#    r-cran-xml2
-
+    apt-get install -y r-base && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install new R dependencies
-RUN R -e "install.packages('remotes', repos = 'http://cran.us.r-project.org')"
+# remotes is pinned to the version v2 shipped (2.5.0): the current CRAN release
+# if it matches, otherwise the CRAN archive.
+RUN R -e "tryCatch(install.packages('remotes', repos = 'http://cran.us.r-project.org'), error = function(e) NULL); if (as.character(packageVersion('remotes')) != '2.5.0') install.packages('https://cran.r-project.org/src/contrib/Archive/remotes/remotes_2.5.0.tar.gz', repos = NULL, type = 'source'); stopifnot(as.character(packageVersion('remotes')) == '2.5.0')"
 
 # Install More R Packages
 RUN R -e "remotes::install_version('dplyr', version = '1.1.0', repos = 'http://cran.us.r-project.org')"
@@ -63,32 +67,24 @@ RUN R -e "remotes::install_version('dbplyr', version = '2.3.2', repos = 'http://
 RUN R -e "remotes::install_version('RMariaDB', version = '1.3.1', repos = 'http://cran.us.r-project.org')"
 
 
-# Try again for core ones
-RUN R -e "install.packages('RMySQL', repos = 'http://cran.us.r-project.org'); packageVersion('RMySQL')"
+# Try again for core ones (RMySQL pinned to the v2 version)
+RUN R -e "remotes::install_version('RMySQL', version = '0.11.1', repos = 'http://cran.us.r-project.org'); packageVersion('RMySQL')"
 
-# Install dependencies for gargle
+# Install dependencies for httr
 RUN apt-get update && apt-get install -y \
-  libssl-dev
-  
-RUN apt-get update && apt-get install -y \
-  libcurl4-openssl-dev \
-  wget
+    libssl-dev \
+    libcurl4-openssl-dev \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# httr is used by catr (pinned to the v2 version)
+RUN R -e "remotes::install_version('httr', version = '1.4.7', repos = 'http://cran.us.r-project.org'); packageVersion('httr');"
 
 
-RUN R -e "install.packages('httr', repos = 'http://cran.us.r-project.org'); packageVersion('httr');"
-RUN R -e "install.packages('gargle', repos = 'http://cran.us.r-project.org'); packageVersion('gargle');"
-RUN R -e "install.packages('googleAuthR', repos = 'http://cran.us.r-project.org'); packageVersion('googleAuthR');"
-RUN R -e "install.packages('googleCloudStorageR', repos = 'http://cran.us.r-project.org'); packageVersion('googleCloudStorageR');"
-
-# RUN R -e "remotes::install_version('RMySQL', version = '0.10.25', repos = 'http://cran.us.r-project.org')"
-# RUN R -e "remotes::install_version('gargle', version = '1.5.2', repos = 'http://cran.us.r-project.org')"
-# RUN R -e "remotes::install_version('googleCloudStorageR', version = '0.7.0', repos = 'http://cran.us.r-project.org')"
-# RUN R -e "remotes::install_version('googleAuthR', version = '2.0.1', repos = 'http://cran.us.r-project.org')"
-# RUN R -e "remotes::install_version('httr', version = '1.4.7', repos = 'http://cran.us.r-project.org')"
-
-
-# Clone the EPA MOVES Model repository
-RUN git clone https://github.com/USEPA/EPA_MOVES_Model.git
+# Clone the EPA MOVES Model repository and pin it to MOVES_COMMIT
+RUN git clone https://github.com/USEPA/EPA_MOVES_Model.git && \
+    git -C EPA_MOVES_Model checkout "$MOVES_COMMIT" && \
+    git -C EPA_MOVES_Model rev-parse HEAD
 
 # Unzip database dumpfile
 RUN unzip EPA_MOVES_Model/database/Setup/movesdb20241112.zip -d EPA_MOVES_Model/database/Setup
@@ -102,49 +98,50 @@ COPY my.cnf /etc/my.cnf
 RUN chown -R mysql:mysql /cat
 RUN chmod -R 6777 /cat
 
-# Setup Databases 
+# Setup Databases
 COPY setupdb.sh /cat/setupdb.sh
 # Make setupdb.sh executable
 RUN chmod +x /cat/setupdb.sh
 SHELL ["/bin/bash", "-c"]
 RUN /cat/setupdb.sh
 
+# Compile MOVES (Java and Go) at build time, so no run compiles anything.
+# keepDebugData is only switched on when the image is built with --build-arg KEEP_DEBUG=true.
+RUN cd /cat/EPA_MOVES_Model && \
+    if [ "$KEEP_DEBUG" = "true" ]; then \
+      sed -i 's/keepDebugData = false;/keepDebugData = true;/' gov/epa/otaq/moves/master/framework/OutputProcessor.java; \
+    fi && \
+    ant compileall && \
+    ant go64
+
 
 # ESTABLISH WORKING DIRECTORY
 WORKDIR /cat
-
-# Install gcloud CLI
-# For information: https://cloud.google.com/sdk/docs/install#deb
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && apt-get update -y && apt-get install google-cloud-cli -y
-
-# Install gcsfuse CLI
-RUN export GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) && \
-    echo "deb https://packages.cloud.google.com/apt $GCSFUSE_REPO main" > /etc/apt/sources.list.d/gcsfuse.list && \
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
-    apt-get update && \
-    apt-get install -y fuse gcsfuse && \
-    gcsfuse -v
 
 # COPY IN MATERIALS
 COPY scripts ./scripts
 
 # Make scripts executable
 RUN chmod +x /cat/scripts/*.sh
-# RUN chmod +x /cat/scripts/launch.sh
-# RUN chmod +x /cat/scripts/launch_runspec.sh
-# RUN chmod +x /cat/scripts/task_fuse.sh
-
-
 
 # Install catr
-RUN Rscript /cat/scripts/task_install_catr.R
-# Run the setup again
-# RUN /cat/setupdb.sh
+# The shipped catr_0.2.0 tarball imports gargle, googleAuthR and googleCloudStorageR
+# for its Google Cloud Storage helpers (catr api_functions.R). This image does not
+# ship the Google R stack, so those three imports are stripped from the unpacked
+# source before installing. Nothing in the run path calls them.
+RUN mkdir -p /tmp/catr_src && \
+    tar -xzf /cat/scripts/catr_0.2.0.tar.gz -C /tmp/catr_src && \
+    sed -i '/^importFrom(gargle,/d;/^importFrom(googleAuthR,/d;/^importFrom(googleCloudStorageR,/d' /tmp/catr_src/catr/NAMESPACE && \
+    perl -0pi -e 's/gargle\s*\(>=\s*[0-9.]+\),\s*googleCloudStorageR\s*\(>=\s*[0-9.]+\),\s*googleAuthR\s*\(>=\s*[0-9.]+\),\s*//' /tmp/catr_src/catr/DESCRIPTION && \
+    ! grep -n -i -E "gargle|googleAuthR|googleCloudStorageR" /tmp/catr_src/catr/NAMESPACE /tmp/catr_src/catr/DESCRIPTION && \
+    R CMD INSTALL /tmp/catr_src/catr && \
+    Rscript -e 'cat("catr", as.character(packageVersion("catr")), "\n")' && \
+    rm -rf /tmp/catr_src
 
 # Label the image
 LABEL title="moves-anywhere"
 LABEL description="standalone docker-moves image for customized MOVES estimation on any OS. Cloud version."
-LABEL version="2.0"
+LABEL version="3.0"
 LABEL maintainer="Tim Fraser"
 LABEL org.opencontainers.image.authors="tmf77@cornell.edu"
 

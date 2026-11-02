@@ -14,7 +14,7 @@ IMAGE_FOLDER="$(pwd)"
 DOCKERHUB_USERNAME="tmf77"
 # Set your Docker image name and tag
 DOCKER_IMAGE_NAME="moves_anywhere"
-DOCKER_IMAGE_TAG="v2"
+DOCKER_IMAGE_TAG="v3"
 
 # Get folder for MOVES Anywhere scripts
 SCRIPTS="$(pwd)/scripts"
