@@ -152,4 +152,5 @@ VOLUME /cat/secret
 ENTRYPOINT ["/bin/bash"]
 
 # Set the default command to be launch.sh
-CMD [ "/bin/bash", "-c", "/cat/scripts/launch.sh" ]
+# ENTRYPOINT is bash, so CMD is the script path only (the old "bash -c" form made bash try to execute bash: exit 126).
+CMD [ "/cat/scripts/launch.sh" ]
