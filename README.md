@@ -7,6 +7,13 @@
 -   Institution: Gao Labs \@ Cornell University
 -   Description: A Docker-based solution to run MOVES anywhere - on Windows, Mac, or Linux
 
+
+> **Image versions (2026-11):** `tmf77/moves-anywhere:v2` is the supported, released image. **`v3` is under
+> active development and is not yet released for public use**: its Dockerfile is on `main` so the work is
+> open, but nothing is published to a registry under the `v3` tag yet and its interfaces (`MOVES_IO`
+> ticket mode, `run_manifest.json`, the replication kit) may still change. Use `v2` until a release note
+> here says otherwise.
+
 ## Welcome!
 
 Welcome to `moves_anywhere`! This software suite includes several tools to help you run the Environmental Protection Agency's [MO]{.underline}tor [V]{.underline}ehicle [E]{.underline}missions [S]{.underline}imulator (MOVES) more easily. Developed by Tim Fraser and colleagues at Gao Labs at Cornell University, `moves_anywhere` aims to solve several common problems for planners, engineers, and researchers who need to know how many tons of emissions are produced from on-road transportation sources in their county or state. These problems include:

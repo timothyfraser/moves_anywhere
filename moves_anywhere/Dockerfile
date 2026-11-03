@@ -139,7 +139,9 @@ RUN Rscript /cat/scripts/task_install_catr.R && Rscript -e "library(catr); cat('
 # Label the image
 LABEL title="moves-anywhere"
 LABEL description="standalone docker-moves image for customized MOVES estimation on any OS. Cloud version."
-LABEL version="3.0"
+LABEL version="3.0-dev"
+LABEL status="development"
+LABEL org.opencontainers.image.description="moves-anywhere v3 is UNDER DEVELOPMENT and not yet released for public use; v2 is the supported image."
 LABEL maintainer="Tim Fraser"
 LABEL org.opencontainers.image.authors="tmf77@cornell.edu"
 
