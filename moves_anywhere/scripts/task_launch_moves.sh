@@ -12,25 +12,17 @@ echo ------------editing MOVESConfiguration.txt------------
 sed -i 's|\\|/|g' MOVESConfiguration.txt
 
 
-# Ensure debugdata is kept
-sed -i 's/keepDebugData = false;/keepDebugData = true;/' gov/epa/otaq/moves/master/framework/OutputProcessor.java
-
 # Ensure that the output of these two match: 
 #   which java should have the same path as $JAVA_HOME, but with /bin/java at the end
 which java
 echo $JAVA_HOME
 
-
-
-# Compiling Java and Go files in MOVES
-echo ------------compiling Java------------
-ant clean
-ant compileall
-echo ------------compiling Go------------
-ant go64
-
-
 # Changing to mysql user and running the CUSTOM runspec
+# Debug mode (D29): off by default; a run opts in with "debug": true in parameters.json or MOVES_DEBUG=1.
+if [ "${MOVES_DEBUG:-0}" = "1" ] || grep -Eq '"debug"[[:space:]]*:[[:space:]]*true' /cat/inputs/parameters.json 2>/dev/null; then
+  export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Dmoves.keepDebugData=true"
+  echo "------------debug mode ON (keepDebugData)------------"
+fi
 echo ------------running runspec------------
 sudo -u mysql ant run -Drunspec="/cat/EPA_MOVES_Model/rs_custom.xml"
 

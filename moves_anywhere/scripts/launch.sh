@@ -44,9 +44,6 @@ fi
 
 
 # Check if all R packages are installed.
-Rscript "scripts/task_install_catr.R"
-
-# Check if all R packages are installed.
 Rscript "scripts/task_check_packages.R"
 
 # Start up mysql
