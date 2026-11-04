@@ -72,7 +72,7 @@ check "ok: run_manifest.json was the LAST PUT" '[ "$(tail -n1 "$WORK/ok/puts.log
 check "ok: manifest status is ok" 'grep -q "\"status\": \"ok\"" "$OUT/run_manifest.json"'
 want=$(wc -l < "$FIXTURE/data.csv"); got=$(gzip -dc "$OUT/data.csv.gz" | wc -l)
 check "ok: data.csv.gz has $want lines (got $got)" '[ "$want" = "$got" ]'
-check "ok: replication.tar.xz is a valid xz tar" 'tar -tJf "$OUT/replication.tar.xz" >/dev/null'
+check "ok: replication.tar.xz is a valid xz tar" 'tar --force-local -tJf "$OUT/replication.tar.xz" >/dev/null'
 mf() { python3 -I "$TESTS_DIR/manifest_get.py" "$OUT/run_manifest.json" "$1" 2>/dev/null; }
 want_sha=$(sha256sum "$OUT/data.csv.gz" | cut -d' ' -f1)
 check "ok: manifest moves.commit is set (got $(mf moves.commit))" '[ -n "$(mf moves.commit)" ] && [ "$(mf moves.commit)" != None ]'
