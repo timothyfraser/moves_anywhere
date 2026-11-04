@@ -33,3 +33,4 @@ dev/.env
 dev/oauth2.json
 dev/app.R
 runapikey.json
+moves_anywhere/tests/.work/

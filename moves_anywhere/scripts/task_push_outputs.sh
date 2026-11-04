@@ -23,7 +23,9 @@ mkdir -p "$RUNDIR"
 
 clean() { echo "${1%%\?*}"; }
 
-# Write the manifest (merges into the one task_pack.sh wrote, if any).
+# The manifest. A successful run keeps the one task_pack.sh wrote, byte for byte, unless the
+# required data.csv.gz was not stored (inventory mode), which turns it failed. A failed run (or a
+# run with no pack manifest) gets the minimal record below, merged over any pack fields.
 write_manifest() {
   STATUS="$STATUS" REASON="$REASON" STARTED_AT="${STARTED_AT:-}" python3 -I -c '
 import json, os, hashlib, datetime, sys
@@ -32,6 +34,14 @@ now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"
 p = os.path.join(inp, "run_manifest.json")
 try: m = json.load(open(p))
 except Exception: m = {}
+names = sorted(l.strip() for l in open(stored) if l.strip())
+status = os.environ["STATUS"]
+if status == "ok" and m.get("manifest_version") and m.get("status") in ("ok", "failed"):
+    # the pack manifest: push it unchanged, unless a required output never made it
+    if m["status"] == "ok" and m.get("mode", "inv") == "inv" and "data.csv.gz" not in names:
+        m["status"] = "failed"; m["stop_reason"] = "required output missing: data.csv.gz"
+        json.dump(m, open(p, "w"), indent=2, sort_keys=True)
+    sys.exit(0)
 try: tk = json.load(open(ticket))
 except Exception: tk = {}
 def info(n):
@@ -39,7 +49,6 @@ def info(n):
     with open(os.path.join(inp, n), "rb") as f:
         for c in iter(lambda: f.read(1 << 20), b""): h.update(c); b += len(c)
     return {"name": n, "bytes": b, "sha256": h.hexdigest()}
-names = sorted(l.strip() for l in open(stored) if l.strip())
 m.update({"manifest_version": 1, "status": os.environ["STATUS"],
           "stop_reason": os.environ["REASON"].encode("ascii", "replace").decode()[:110],
           "run_id": tk.get("run_id") or os.environ.get("RUN_ID") or m.get("run_id"),
@@ -53,6 +62,9 @@ for k, v in (("mode", "inv"), ("image", {"name": os.environ.get("MOVES_IMAGE"), 
 json.dump(m, open(p, "w"), indent=2, sort_keys=True)
 ' "$IN" "$STORED" "$T"
 }
+
+# The manifest decides the final status (pack may have written failed; a missing required output flips it).
+sync_status() { STATUS=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$IN/run_manifest.json" 2>/dev/null || echo "$STATUS"); }
 
 # PUT one file with the ticket's headers; echoes the HTTP status.
 put_file() {  # put_file <file> <put_url> <content_type> <headers.txt>
@@ -75,7 +87,7 @@ if [ "$MOVES_IO" = "sync" ]; then
   [ -n "$MOVES_SYNC_REMOTE" ] || { echo "---MOVES_SYNC_REMOTE is not set"; exit 5; }
   : > "$STORED"
   for n in data.csv.gz moveslog.txt.gz replication.tar.xz; do [ -f "$IN/$n" ] && echo "$n" >> "$STORED"; done
-  write_manifest
+  write_manifest; sync_status
   rclone --config /dev/null copy "$IN" "$MOVES_SYNC_REMOTE/out" --exclude run_manifest.json \
     --include 'data.csv.gz' --include 'moveslog.txt.gz' --include 'replication.tar.xz' || exit 4
   rclone --config /dev/null copyto "$IN/run_manifest.json" "$MOVES_SYNC_REMOTE/out/run_manifest.json" || exit 4
@@ -132,7 +144,7 @@ if [ -n "$FAILED_REASON" ] && [ "$STATUS" = ok ]; then STATUS=failed; REASON="$F
 rm -f "$RUNDIR/h.txt"
 
 # 3. The manifest, PUT last and once.
-write_manifest
+write_manifest; sync_status
 read -r murl mctype < <(list_outputs | awk -F'\t' '$1=="run_manifest.json" {print $2, $3}')
 if [ -z "$murl" ]; then echo "---ticket lists no run_manifest.json"; exit 4; fi
 headers_for run_manifest.json > "$RUNDIR/h.txt"

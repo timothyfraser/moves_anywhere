@@ -20,6 +20,7 @@ TESTS="$(pwd -W 2>/dev/null || pwd)/moves_anywhere/tests"
 FIXTURE=${1:-${FIXTURE:-C:/Users/tmf77/cloud_moves/moves_anywhere/moves_anywhere/inputs_ny}}
 WORK="$REPO/moves_anywhere/tests/.work"
 FAILS=0
+TESTS_DIR="$REPO/moves_anywhere/tests"
 check() { if eval "$2"; then echo "PASS  $1"; else echo "FAIL  $1"; FAILS=$((FAILS + 1)); fi; }
 
 for f in "$REPO"/moves_anywhere/scripts/*.sh; do sed -i 's/\r$//' "$f"; done
@@ -41,8 +42,8 @@ run_case() {  # run_case <name> [stub args...]; sets RC
     --mount "type=bind,src=$w,target=/w" --entrypoint python3 "$IMAGE" -I /t/ticket_stub_server.py \
     --in /w/in --out /w/out --log /w/puts.log --port 8765 "$@" >/dev/null
   sleep 2
-  docker run --rm --network "container:ma_stub_$n" \
-    -e MOVES_IO=ticket -e RUN_ID=d36109-u1-o1 -e MOVES_RETRY_SCALE=0 \
+  docker run --rm --cpus 2 --network "container:ma_stub_$n" \
+    -e MOVES_IO=ticket -e "MOVES_IMAGE=$IMAGE" -e RUN_ID=d36109-u1-o1 -e MOVES_RETRY_SCALE=0 \
     -e "TICKET_URL=http://127.0.0.1:8765/ticket?t=SECRETTOKEN" \
     --mount "type=bind,src=$SCRIPTS,target=/cat/scripts" \
     --entrypoint bash "$IMAGE" -c "./scripts/launch.sh" > "$WORK/$n/container.log" 2>&1
@@ -72,6 +73,12 @@ check "ok: manifest status is ok" 'grep -q "\"status\": \"ok\"" "$OUT/run_manife
 want=$(wc -l < "$FIXTURE/data.csv"); got=$(gzip -dc "$OUT/data.csv.gz" | wc -l)
 check "ok: data.csv.gz has $want lines (got $got)" '[ "$want" = "$got" ]'
 check "ok: replication.tar.xz is a valid xz tar" 'tar -tJf "$OUT/replication.tar.xz" >/dev/null'
+mf() { python3 -I "$TESTS_DIR/manifest_get.py" "$OUT/run_manifest.json" "$1" 2>/dev/null; }
+want_sha=$(sha256sum "$OUT/data.csv.gz" | cut -d' ' -f1)
+check "ok: manifest moves.commit is set (got $(mf moves.commit))" '[ -n "$(mf moves.commit)" ] && [ "$(mf moves.commit)" != None ]'
+check "ok: manifest has image.name" '[ -n "$(mf image.name)" ]'
+check "ok: manifest sha256 of data.csv.gz matches the pushed file" '[ "$(mf output:data.csv.gz)" = "$want_sha" ]'
+check "ok: manifest lists replication.tar.xz (pack wrote it)" '[ -n "$(mf output:replication.tar.xz)" ]'
 check "ok: no query string or token in container stdout" '! grep -qE "SECRETTOKEN|sig=stub|\?t=" "$WORK/ok/container.log"'
 
 echo

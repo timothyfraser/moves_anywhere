@@ -81,29 +81,19 @@ RUN apt-get update && apt-get install -y \
 RUN R -e "remotes::install_version('httr', version = '1.4.7', repos = 'http://cran.us.r-project.org'); packageVersion('httr');"
 
 
-# Clone the EPA MOVES Model repository and pin it to MOVES_COMMIT
-RUN git clone https://github.com/USEPA/EPA_MOVES_Model.git && \
-    git -C EPA_MOVES_Model checkout "$MOVES_COMMIT" && \
-    git -C EPA_MOVES_Model rev-parse HEAD
-
-# Unzip database dumpfile
-RUN unzip EPA_MOVES_Model/database/Setup/movesdb20241112.zip -d EPA_MOVES_Model/database/Setup
-
-# Copy your files to the container
-COPY setenv.sh /cat/EPA_MOVES_Model
+# Staged copies, used by the single big RUN below (setenv.sh goes into the MOVES tree after checkout).
+COPY setenv.sh /cat/stage/setenv.sh
 # Setting mysql/mariadb configurations based on MOVES repository README
 COPY my.cnf /etc/my.cnf
-
-# Giving group permissions recursively to /cat and giving mysql ownership recursively
-RUN chown -R mysql:mysql /cat
-RUN chmod -R 6777 /cat
-
-# Setup Databases
 COPY setupdb.sh /cat/setupdb.sh
-# Make setupdb.sh executable
-RUN chmod +x /cat/setupdb.sh
+
+# ONE layer for the MOVES tree (about 1 GB): fetch ONLY MOVES_COMMIT (no history, no .git kept),
+# unzip the default-database dump, give mysql ownership and group permissions on /cat, load the
+# databases with setupdb.sh, then delete the dump (.sql and .zip) in the same RUN so no layer keeps it.
+# MOVES_COMMIT is also an ENV so the run manifest can report it without .git (task_pack.sh).
+ENV MOVES_COMMIT=$MOVES_COMMIT
 SHELL ["/bin/bash", "-c"]
-RUN /cat/setupdb.sh
+RUN set -e &&     mkdir -p EPA_MOVES_Model && cd EPA_MOVES_Model &&     git init -q &&     git remote add origin https://github.com/USEPA/EPA_MOVES_Model.git &&     git fetch -q --depth 1 origin "$MOVES_COMMIT" &&     git checkout -q FETCH_HEAD &&     test "$(git rev-parse HEAD)" = "$MOVES_COMMIT" &&     rm -rf .git && cd /cat &&     mv -f /cat/stage/setenv.sh /cat/EPA_MOVES_Model/setenv.sh && rmdir /cat/stage &&     unzip -q EPA_MOVES_Model/database/Setup/movesdb20241112.zip -d EPA_MOVES_Model/database/Setup &&     chown -R mysql:mysql /cat &&     chmod -R 6777 /cat &&     chmod +x /cat/setupdb.sh &&     /cat/setupdb.sh &&     rm -f EPA_MOVES_Model/database/Setup/movesdb20241112.sql EPA_MOVES_Model/database/Setup/movesdb20241112.zip
 
 # Compile MOVES (Java and Go) at build time, so no run compiles anything.
 # D29: keepDebugData becomes a JVM property, default false, so a RUN can opt in with
