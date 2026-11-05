@@ -136,6 +136,15 @@ EOF
   if [ "$rc" -ne 0 ] && [ "$status" = "ok" ]; then
     status=failed; reason="replication kit could not be built"
   fi
+  # MOVES can stop on a bad runspec and the pipeline still reach here. No results means a failed
+  # run, whatever exit codes came before: ok must never describe a run with nothing in it.
+  if [ "$status" = "ok" ]; then
+    need=data.csv
+    grep -qi 'modelscale value="Rates"' rs_custom.xml 2>/dev/null && need=rateperdistance.csv
+    if [ ! -s "$need" ] && [ ! -s "$need.gz" ]; then
+      status=failed; reason="MOVES produced no results: see moveslog"
+    fi
+  fi
 
   python3 -I "$_tp_here/manifest_fields.py" \
     --out run_manifest.json \

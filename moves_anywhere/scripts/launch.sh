@@ -100,4 +100,8 @@ if [ "$MOVES_IO" != mounted ]; then
 fi
 
 # Finishup
+if [ "$MOVES_IO" = mounted ] && [ "${MOVES_PACK:-1}" != 0 ] && [ -f inputs/run_manifest.json ] &&    python3 -I -c 'import json,sys; sys.exit(json.load(open("inputs/run_manifest.json"))["status"] != "failed")'; then
+  echo "---run failed: see inputs/run_manifest.json and inputs/moveslog.txt"
+  exit 1
+fi
 exit 0 # Exit without error

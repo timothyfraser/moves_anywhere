@@ -159,5 +159,19 @@ check "kit files are byte-identical to the originals" \
 check "failed-run manifest: RUN_STATUS=failed is carried" \
   "( export RUN_STATUS=failed RUN_STOP_REASON='MOVES exited 1: see moveslog.txt.gz'; . '$pack' ) && grep -q '\"status\": \"failed\"' '$D/run_manifest.json' && grep -q 'MOVES exited 1' '$D/run_manifest.json'"
 
+# A run with no results is failed, even when every step before it said ok.
+status_of() { python3 -I "$here/manifest_get.py" "$1/run_manifest.json" status | tr -d '\r'; }
+E="$tmp/nores"; mkdir -p "$E" && cp "$D"/* "$E"/ && rm -f "$E/data.csv" "$E/data.csv.gz" "$E/run_manifest.json"
+( export RUN_STATUS=ok RUN_STOP_REASON='MOVES finished' INPUTS_DIR="$E"; . "$pack" ) >/dev/null 2>&1
+if [ "$(status_of "$E")" = failed ]; then ok "no data.csv in inventory mode: manifest says failed"; else bad "no data.csv in inventory mode: manifest says failed"; fi
+check "no data.csv: the reason names the missing results" "grep -q 'produced no results' '$E/run_manifest.json'"
+R="$tmp/rate"; mkdir -p "$R" && cp "$E"/* "$R"/ && rm -f "$R/run_manifest.json"
+sed -i 's/modelscale value="[A-Za-z]*"/modelscale value="Rates"/' "$R/rs_custom.xml"
+( export RUN_STATUS=ok RUN_STOP_REASON='MOVES finished' INPUTS_DIR="$R"; . "$pack" ) >/dev/null 2>&1
+if [ "$(status_of "$R")" = failed ]; then ok "no rate tables in rate mode: manifest says failed"; else bad "no rate tables in rate mode: manifest says failed"; fi
+printf 'a,b\n1,2\n' > "$R/rateperdistance.csv"; rm -f "$R/run_manifest.json"
+( export RUN_STATUS=ok RUN_STOP_REASON='MOVES finished' INPUTS_DIR="$R"; . "$pack" ) >/dev/null 2>&1
+if [ "$(status_of "$R")" = ok ]; then ok "rate tables present, no data.csv: manifest says ok"; else bad "rate tables present, no data.csv: manifest says ok"; fi
+
 echo "----"; echo "passed: $pass  failed: $fail"
 [ $fail -eq 0 ]
