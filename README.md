@@ -36,6 +36,18 @@ Welcome to `moves_anywhere`! This software suite includes several tools to help 
 
 ![](docs/img/moves-anywhere-cheatsheet.png)
 
+## Run MOVES on a folder of inputs
+
+With Docker running, point the script at a folder holding `rs_custom.xml` and any custom input tables. Results land in the same folder, and the exit status is 0 only when the run produced results.
+
+```bash
+bash moves_anywhere/run.sh path/to/inputs
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File moves_anywhereun.ps1 path	o\inputs
+```
+
 ## Download the `catr` package using
 
 Data processing in **MOVES Anywhere** is supported by our `catr` package in `R`. 
