@@ -45,7 +45,7 @@ bash moves_anywhere/run.sh path/to/inputs
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File moves_anywhereun.ps1 path	o\inputs
+powershell -ExecutionPolicy Bypass -File moves_anywhere\run.ps1 path\to\inputs
 ```
 
 ## Download the `catr` package using
