@@ -1,8 +1,8 @@
 <head><link rel="shortcut icon" type="image/png" href="docs/img/movesanywhere_hexagon.png"></head>
 
-# `moves_anywhere` <a href="https://github.com/gao-labs/movesanywhere"><img src="docs/img/movesanywhere_hexagon.png" align="right" height="200"/></a>
+# `moves_anywhere` <a href="https://github.com/timothyfraser/moves_anywhere"><img src="docs/img/movesanywhere_hexagon.png" align="right" height="200"/></a>
 
--   Lead Developer: [Tim Fraser, PhD](github.com/timothyfraser) `<tmf77@cornell.edu>`
+-   Lead Developer: [Tim Fraser, PhD](https://github.com/timothyfraser) `<tmf77@cornell.edu>`
 -   Contributors: Erin Murphy, Junna Chen, Mahak Bindal, Shungo Najima, Carl Closs
 -   Institution: Gao Labs \@ Cornell University
 -   Description: A Docker-based solution to run MOVES anywhere - on Windows, Mac, or Linux
@@ -32,7 +32,7 @@ Welcome to `moves_anywhere`! This software suite includes several tools to help 
 
 ## Using this Repository
 
-📂 To get started, check out [our cheatsheet](https://github.com/gao-labs/movesanywhere/tree/main/docs/img/moves-anywhere-cheatsheet.png):
+📂 To get started, check out [our cheatsheet](docs/img/moves-anywhere-cheatsheet.png):
 
 ![](docs/img/moves-anywhere-cheatsheet.png)
 
@@ -56,13 +56,13 @@ Need to install `catr`?
 ✅ To install the latest from source:, use the \`remotes package.
 
 ``` r
-remotes::install_github("Gao-Labs/moves_anywhere", subdir = "catr")
+remotes::install_github("timothyfraser/moves_anywhere", subdir = "catr")
 ```
 
 ✅ To install a specific version (e.g., 0.2.0):
 
 ```         
-remotes::install_url("https://github.com/Gao-Labs/moves_anywhere/raw/main/catr/catr_0.2.0.tar.gz")
+remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/catr/catr_0.2.0.tar.gz")
 ```
 
 ## Stay Tuned!
