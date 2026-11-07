@@ -1,8 +1,17 @@
 #!/bin/bash
-# tests/test_pack.sh: proves scripts/task_pack.sh on a finished run folder, without running MOVES.
+# test_pack.sh ################################################################
+#
+# What:      tests/test_pack.sh: proves scripts/task_pack.sh on a finished run folder, without running MOVES.
+# Does:      Copies the fixture to a temporary folder, sources task_pack.sh as the launcher does,
+#            and checks the manifest and replication.tar.xz (same sha256 across two runs, statuses).
+# Called by: Developer tool: test of the pack step of launch.sh. Not run by launch.sh.
+# Reads:     FIXTURE_DIR, scripts/task_pack.sh, tests/manifest_get.py
+# Writes:    a temporary folder, removed on exit
+# Exits:     2 if the fixture folder is not found; 0 if every check passes, 1 otherwise
 # Usage: bash moves_anywhere/tests/test_pack.sh [FIXTURE_DIR]
 # FIXTURE_DIR defaults to $PACK_FIXTURE, else moves_anywhere/inputs_ny (a finished run, 47
 # files, in this repository). The fixture is copied; it is never modified.
+###############################################################################
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pack="$here/../scripts/task_pack.sh"

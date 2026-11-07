@@ -1,4 +1,14 @@
 #!/bin/sh
+# setenv.sh ###################################################################
+#
+# What:      Java and Ant environment for MOVES.
+# Does:      Exports PATH (jre/bin, ant/bin), JAVA_TOOL_OPTIONS, ANT_OPTS, JAVA_HOME and JRE_HOME.
+# Called by: setupdb.sh at image build (the Dockerfile copies it to EPA_MOVES_Model/setenv.sh).
+#            Not run by launch.sh.
+# Reads:     nothing
+# Writes:    environment variables of the shell that sources it
+# Exits:     none (sourced)
+###############################################################################
 
 export PATH=jre/bin:ant/bin:$PATH
 export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8

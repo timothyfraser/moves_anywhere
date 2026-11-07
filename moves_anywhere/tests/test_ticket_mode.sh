@@ -1,15 +1,18 @@
 #!/bin/bash
-
-# test_ticket_mode.sh
-
-# Proves MOVES_IO=ticket end to end against a local stub ticket server.
-# The stub runs in a container too; the MOVES container joins its network namespace,
-# so TICKET_URL is a loopback http URL (the only http the dispatcher accepts) and
-# Docker Desktop needs no host networking. No inputs folder is mounted: everything
-# arrives through the ticket.
+# test_ticket_mode.sh #########################################################
 #
+# What:      Proves MOVES_IO=ticket end to end against a local stub ticket server.
+# Does:      The stub runs in a container too; the MOVES container joins its network namespace,
+#            so TICKET_URL is a loopback http URL (the only http the dispatcher accepts) and
+#            Docker Desktop needs no host networking. No inputs folder is mounted: everything
+#            arrives through the ticket.
+# Called by: Developer tool: test of ticket mode (MOVES_IO=ticket in launch.sh). Not run by launch.sh.
+# Reads:     fixture_dir (or FIXTURE), tests/ticket_stub_server.py, tests/manifest_get.py
+# Writes:    moves_anywhere/tests/.work/; strips CR from scripts/*.sh in place
+# Exits:     1 if not in a git repository; otherwise the number of failed assertions
 # Usage: bash moves_anywhere/tests/test_ticket_mode.sh [fixture_dir]
 # Needs Docker and the image (IMAGE, default tmf77/moves-anywhere:v3).
+###############################################################################
 
 export MSYS_NO_PATHCONV=1
 REPO=$(git rev-parse --show-toplevel) || exit 1

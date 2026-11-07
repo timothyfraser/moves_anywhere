@@ -1,8 +1,14 @@
-#/bin/bash
-
-# dev.sh
-
-# Development Workspace for pulling docker_moves:v2
+#!/bin/bash
+# testme.sh ###################################################################
+#
+# What:      Development Workspace for pulling docker_moves:v2
+# Does:      Ad hoc sections, run by hand: start tmf77/moves-anywhere:v2 or moves_anywhere:v2 with
+#            scripts/ and an inputs folder bind-mounted, run launch.sh or test runspecs interactively.
+# Called by: Developer tool: ad hoc testing of the v2 image. Not used by v3.
+# Reads:     moves_anywhere/scripts/, an inputs folder (inputs3 and others named below)
+# Writes:    unknown (whatever a run writes into the mounted inputs folder)
+# Exits:     no explicit exit; the status of the last command
+###############################################################################
 
 REPO=$(git rev-parse --show-toplevel) && \
   cd "$REPO" && \

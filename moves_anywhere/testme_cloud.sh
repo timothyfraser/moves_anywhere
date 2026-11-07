@@ -1,8 +1,14 @@
-#/bin/bash
-
-# testme_cloud.sh
-
-# Script to test MOVES Anywhere for cloud deployment
+#!/bin/bash
+# testme_cloud.sh #############################################################
+#
+# What:      Script to test MOVES Anywhere for cloud deployment
+# Does:      Runs dos2unix on scripts/*.sh, then opens an interactive bash shell in
+#            moves_anywhere:v2 with inputs2/ and scripts/ bind-mounted.
+# Called by: Not used by v3. Legacy v2 cloud-deployment test.
+# Reads:     inputs2/, scripts/
+# Writes:    scripts/*.sh line endings, in place
+# Exits:     no explicit exit; the status of the last command
+###############################################################################
 
 #/bin/bash
 # REPO="/c/Users/tmf77/OneDrive - Cornell University/Documents/rstudio/moves_anywhere/moves_anywhere"
