@@ -1,3 +1,14 @@
+# task_get_data.R ##############################################################
+#
+# What:      Helper functions process_by2() and get_data()
+# Does:      Process emissions and activity data from movesoutput.csv and movesactivityoutput.csv
+#            for each '.by' group in parameters.json, and write data.csv.
+# Called by: task_postprocess.R (sourced), step 11 of launch.sh
+# Reads:     inputs/movesoutput.csv, inputs/movesactivityoutput.csv, inputs/parameters.json
+# Writes:    data.rds, inputs/data.csv
+# Needs:     process_emissions(), process_activity() (catr); dplyr, readr, tidyr, stringr, purrr, jsonlite, catr
+###############################################################################
+
 #' @name process_by2
 #' @title `process_by2()`
 #' @description

@@ -1,6 +1,14 @@
-# task_postprocess.R
-
-# Task to postprocess MOVES data
+# task_postprocess.R ###########################################################
+#
+# What:      Task to postprocess MOVES data
+# Does:      Inventory runs: write movesoutput and movesactivityoutput as .csvs, then
+#            inputs/data.csv unless it is a randomized training run. Rate runs: write the rate tables.
+# Called by: launch.sh, step 11 of launch.sh
+# Reads:     inputs/rs_custom.xml, inputs/parameters.json, MOVES output database (moves)
+# Writes:    inputs/movesoutput.csv, inputs/movesactivityoutput.csv, data.rds, inputs/data.csv;
+#            rates: inputs/rateper*.csv, inputs/startspervehicle.csv, inputs/movesrun.csv
+# Needs:     scripts/task_get_data.R; dplyr, readr, DBI, dbplyr, RMariaDB, catr, purrr, tidyr, stringr, jsonlite, RMySQL
+###############################################################################
 
 # Reset working directory
 setwd("/cat")

@@ -1,9 +1,14 @@
 #!/bin/bash
-
-# task_copy_logs.sh
-
-# Script to copy logs from MOVES to the inputs/ folder,
-# so that the logs persist in mounted volume after job ends.
+# task_copy_logs.sh ############################################################
+#
+# What:      Script to copy logs from MOVES to the inputs/ folder,
+#            so that the logs persist in mounted volume after job ends.
+# Does:      Copies EPA_MOVES_Model/moveslog.txt to inputs/moveslog.txt.
+# Called by: launch.sh, step 12 of launch.sh (sourced)
+# Reads:     /cat/EPA_MOVES_Model/moveslog.txt
+# Writes:    /cat/inputs/moveslog.txt
+# Exits:     1 if it cannot change directory, no logs exist, or folder 'inputs/' does not exist
+###############################################################################
 
 # Log results
 echo ------------logging moveslog.txt------------

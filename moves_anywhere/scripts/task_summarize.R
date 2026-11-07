@@ -1,4 +1,13 @@
-# task_summarize.R
+# task_summarize.R #############################################################
+#
+# What:      Summarize results quickly for diagnostics
+# Does:      Inventory runs: write CO2e Emissions (98) and Vehicle Population to
+#            inputs/diagnostics.txt, or remove it if either output .csv is missing.
+# Called by: launch.sh, step 13 of launch.sh
+# Reads:     inputs/rs_custom.xml, inputs/movesoutput.csv, inputs/movesactivityoutput.csv
+# Writes:    inputs/diagnostics.txt
+# Needs:     dplyr, readr, catr
+###############################################################################
 
 # Set working directory
 setwd("/cat")
