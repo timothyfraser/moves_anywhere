@@ -1,6 +1,13 @@
-# task_local_test.R
-
-# Script for accessing a local MariaDB MOVES output database
+# task_local_test.R ###########################################################
+#
+# What:      Script for accessing a local MariaDB MOVES output database
+# Does:      Reads a runspec with catr, sets database environment variables, connects to MariaDB,
+#            and sums emissions (pollutant 98) and activity (activity type 6) from the output tables.
+# Called by: Developer tool: query a local MariaDB output database by hand in RStudio, not part of a run.
+# Reads:     moves_anywhere/rs_template_M5mar18.xml; tables moves.movesoutput, moves.movesactivityoutput
+# Writes:    nothing on disk (prints results; sets environment variables in the R session)
+# Needs:     dplyr, dbplyr, readr, catr, DBI, RMariaDB, rstudioapi
+###############################################################################
 library(dplyr)
 library(dbplyr)
 library(readr)

@@ -1,9 +1,17 @@
-#/bin/bash
-
-# task_fuse.sh
-
-# Script for mounting bucket with GCSFUSE
-# Only applicable when run on Google Cloud
+#!/bin/bash
+# task_fuse.sh ################################################################
+#
+# What:      Script for mounting bucket with GCSFUSE
+# Does:      Only applicable when run on Google Cloud.
+#            Logs in to gcloud with a service-account key, mounts the bucket $BUCKET at /cat/inputs,
+#            sets owner and permissions on /cat and /cat/inputs, and lists the mount to verify it.
+# Called by: Not used by v3. Legacy (v2, Google Cloud): first step of launch_fuse.sh (sourced).
+# Reads:     the service-account key file in /cat/secret/; environment variable BUCKET
+# Writes:    mount point /cat/inputs; owner and mode of /cat and /cat/inputs; gcloud config (project)
+# Exits:     1 if the key file is not found
+#            1 if the BUCKET environment variable is not set
+#            1 if /cat/inputs cannot be accessed after mounting
+###############################################################################
 
 # Status update
 echo '-------------MOUNTING BUCKET--------------'
