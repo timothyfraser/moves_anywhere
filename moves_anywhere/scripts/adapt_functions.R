@@ -1,3 +1,16 @@
+# adapt_functions.R ###########################################################
+#
+# What:      Helper functions for the adapt_*.R scripts.
+# Does:      get_changes lists the custom input CSVs, get_is_custom and get_data load one,
+#            import_table saves an adapted table, get_table and counter are small helpers.
+# Called by: task_adapt.R, step 6 of launch.sh (sourced before the adapt_*.R scripts);
+#            also sourced by test.sh
+# Reads:     inputs/*.csv (custom input tables)
+#            EPA_MOVES_Model/rs_custom.xml (the runspec) and the default input database
+#            (get_table only)
+# Writes:    <volume>/_<tablename>.csv (import_table, when save = TRUE)
+# Needs:     dplyr, stringr, readr, DBI, catr
+###############################################################################
 
 # Function to get vector of custom input table names
 get_changes = function(BUCKET = "inputs"){

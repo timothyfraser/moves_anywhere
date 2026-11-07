@@ -1,6 +1,16 @@
-#' adapt_from_nei.R
-
-# A series of functions for adapting inputs from the National Emissions Inventory
+# adapt_from_nei.R ############################################################
+#
+# What:      A series of functions for adapting inputs from the National Emissions Inventory
+# Does:      Helper functions (approxit, get_vmt*, get_vehicles*) and adapt_vmt_from_nei,
+#            adapt_vehicles_from_nei, which return VMT and vehicle tables for a county-year.
+# Called by: task_adapt.R, step 6 of launch.sh (sourced; used by adapt_sourcetypeyear2.R
+#            and adapt_vmt2.R); also sourced by validate_adapt_from_nei.R
+# Reads:     scripts/reference/hpmsvtypeyear.csv, scripts/reference/sourcetypeyear.csv,
+#            scripts/reference/nei_sourcetypeyearvmt.rds, scripts/reference/nei_sourcetypeyear.rds,
+#            scripts/projections.rds
+# Writes:    nothing (functions return data frames)
+# Needs:     readr, dplyr, stringr
+###############################################################################
 
 # testing values
 # setwd(paste0(rstudioapi::getActiveProject(), "/moves_anywhere"))

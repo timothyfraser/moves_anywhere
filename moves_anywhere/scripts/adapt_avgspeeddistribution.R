@@ -1,3 +1,19 @@
+# adapt_avgspeeddistribution.R ################################################
+#
+# What:      Adapts the avgspeeddistribution input table for the run.
+# Does:      Uses inputs/avgspeeddistribution.csv if provided; otherwise takes the default
+#            table, filtered to the runspec's hour-days.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (the runspec)
+#            inputs/avgspeeddistribution.csv (optional)
+#            table avgspeeddistribution in the default input database
+# Writes:    inputs/_avgspeeddistribution.csv
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table)
+#            catr, dplyr, tidyr, stringr, DBI, RMariaDB
+###############################################################################
+
+#' Adapt the avgspeeddistribution table
+#' @param .runspec path to the run's runspec (XML)
 adapt_avgspeeddistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "avgspeeddistribution"

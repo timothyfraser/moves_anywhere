@@ -1,3 +1,23 @@
+# adapt_fuel.R ################################################################
+#
+# What:      Adapts the fuel input tables for the run.
+# Does:      adapt_fuelsupply, adapt_fuelformulation, adapt_fuelusagefraction and adapt_avft.
+#            Provided inputs CSVs are used; otherwise NY metro defaults or the default table.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (the runspec)
+#            inputs/fuelsupply.csv, inputs/fuelformulation.csv, inputs/fuelusagefraction.csv,
+#            inputs/avft.csv (each optional)
+#            scripts/fuelsupply.csv, scripts/fuelformulation.csv (NY metro defaults)
+#            tables regioncounty, fuelusagefraction, samplevehiclepopulation in the
+#            default input database
+# Writes:    inputs/_fuelsupply.csv, inputs/_fuelformulation.csv, inputs/_fuelusagefraction.csv,
+#            inputs/_avft.csv
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table)
+#            catr, dplyr, tidyr, stringr, readr, DBI, RMariaDB
+###############################################################################
+
+#' Adapt the fuelsupply table
+#' @param .runspec path to the run's runspec (XML)
 adapt_fuelsupply = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "fuelsupply"
@@ -153,6 +173,8 @@ adapt_fuelsupply = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
 }
 
+#' Adapt the fuelformulation table
+#' @param .runspec path to the run's runspec (XML)
 adapt_fuelformulation = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
 
   table = "fuelformulation"
@@ -281,6 +303,8 @@ adapt_fuelformulation = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
 
 
 
+#' Adapt the fuelusagefraction table
+#' @param .runspec path to the run's runspec (XML)
 adapt_fuelusagefraction = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "fuelusagefraction"
@@ -348,6 +372,8 @@ adapt_fuelusagefraction = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   }  
   
 }
+#' Adapt the avft table
+#' @param .runspec path to the run's runspec (XML)
 adapt_avft = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "avft"
