@@ -35,7 +35,7 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 
 ## What v3 removes
 
-`google-cloud-cli`, `gcsfuse` and `fuse`, and the R packages `gargle`, `googleAuthR`, `googleCloudStorageR`. The `catr` 0.2.0 tarball imports those three packages, so the Dockerfile strips those imports from the unpacked source before installing it; see the comment in the Dockerfile.
+`google-cloud-cli`, `gcsfuse` and `fuse` (the Google command-line tools). The three Google R packages `gargle`, `googleAuthR` and `googleCloudStorageR` are not removed: the Dockerfile still installs them, pinned to the v2 versions below, because `catr` 0.2.0 imports them.
 
 ## R packages in v2 (`installed.packages()`)
 
