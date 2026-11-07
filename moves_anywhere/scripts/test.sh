@@ -1,3 +1,16 @@
+# test.sh #####################################################################
+#
+# What:      Ad hoc R test
+# Does:      R code to paste into an R session (the first line, R, starts one): checks the fuel
+#            formulation, fuel supply and fuel/engine fraction tables of a run's custom database.
+# Called by: Developer tool: ad hoc testing of adapt functions. Not part of a run; launch.sh does not run it.
+# Reads:     EPA_MOVES_Model/rs_custom.xml, scripts/defaults/fuelsupply.csv,
+#            scripts/defaults/fuelformulation.csv, scripts/helper_fuelformulation.csv, inputs/avft.csv;
+#            MariaDB databases movesdb20241112 and the run's custom database
+# Writes:    nothing
+# Exits:     no exit codes set (R code kept in a .sh file)
+###############################################################################
+
 R
 library(dplyr)
 library(DBI)

@@ -1,8 +1,14 @@
-#/bin/bash
-
-# buildme_cloud.sh
-
-# Script to build the cloud version of moves_anywhere
+#!/bin/bash
+# buildme_cloud.sh ############################################################
+#
+# What:      Script to build the cloud version of moves_anywhere
+# Does:      Runs dos2unix on scripts/*.sh, builds moves_anywhere:v3 with docker buildx
+#            (builder cloud-catcornell-timbuild), then removes dangling images.
+# Called by: Developer tool: builds the image. Not run by launch.sh.
+# Reads:     Dockerfile and this folder (the build context), scripts/*.sh
+# Writes:    local image moves_anywhere:v3; scripts/*.sh line endings, in place
+# Exits:     no explicit exit; the status of the last command
+###############################################################################
 
 
 # STARTUP ################################################################

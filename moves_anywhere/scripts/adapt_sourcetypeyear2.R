@@ -1,7 +1,19 @@
-# adapt_sourcetypeyear2.R
+# adapt_sourcetypeyear2.R #####################################################
+#
+# What:      Script to adapt sourcetypeyear table, by adapting NEI MOVES inputs
+# Does:      Uses a custom inputs/sourcetypeyear.csv if provided; otherwise builds sourcetypeyear
+#            from NEI inputs with adapt_vehicles_from_nei().
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/sourcetypeyear.csv if provided;
+#            otherwise scripts/reference/sourcetypeyear.csv, scripts/reference/nei_sourcetypeyear.rds,
+#            scripts/projections.rds
+# Writes:    inputs/_sourcetypeyear.csv
+# Needs:     adapt_functions.R (get_changes, get_data, import_table); adapt_from_nei.R
+#            (adapt_vehicles_from_nei); catr, dplyr, readr, stringr
+###############################################################################
 
-# Script to adapt sourcetypeyear table, by adapting NEI MOVES inputs
-
+#' Adapt the sourcetypeyear table from NEI inputs
+#' @param .runspec path to the run's runspec (XML)
 adapt_sourcetypeyear2 = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   library(dplyr, warn.conflicts = FALSE, quietly = TRUE)

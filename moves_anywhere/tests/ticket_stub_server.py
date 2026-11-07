@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ticket_stub_server.py #######################################################
+#
+# What:      Stub ticket server for docs/RUN_TICKET.md (standard library only).
+# Does:      Serves GET /ticket, GET /in/<name> and PUT /out/<name> until stopped (see the docstring).
+# Called by: tests/test_ticket_mode.sh, in a container. Not run by launch.sh.
+# Reads:     the files in --in
+# Writes:    files PUT to --out; the PUT order to --log (default puts.log beside --out)
+# Exits:     2 on bad arguments (argparse); otherwise runs until killed
+###############################################################################
 """Stub ticket server for docs/RUN_TICKET.md (standard library only).
 
 GET /ticket      -> ticket JSON listing every file in --in as an input (/in/<name>)

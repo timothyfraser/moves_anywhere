@@ -1,11 +1,19 @@
 #!/bin/bash
-
-# task_push_outputs.sh
-
-# Ticket/sync mode: store the outputs, then run_manifest.json LAST (docs/RUN_TICKET.md section 4).
-# Env in: PUSH_STATUS (ok|failed, default ok), PUSH_STOP_REASON (optional), STARTED_AT.
-# Exit 4 = push failed. Exit 0 = everything stored and status ok.
-# Never prints a URL's query string.
+# task_push_outputs.sh ########################################################
+#
+# What:      Ticket/sync mode: store the outputs, then run_manifest.json LAST (docs/RUN_TICKET.md section 4).
+# Does:      Never prints a URL's query string.
+# Called by: launch.sh, step 16 of launch.sh (ticket/sync mode only), and by launch.sh's
+#            exit trap with PUSH_STATUS=failed when a ticket/sync run ends non-zero.
+# Reads:     Env in: PUSH_STATUS (ok|failed, default ok), PUSH_STOP_REASON (optional), STARTED_AT.
+#            Also MOVES_IO, TICKET_URL, MOVES_SYNC_REMOTE, MOVES_RETRY_SCALE, /cat/run/ticket.json,
+#            /cat/run/stop_reason, and the outputs in /cat/inputs.
+# Writes:    the outputs and run_manifest.json to the ticket URLs (ticket) or MOVES_SYNC_REMOTE/out
+#            (sync); /cat/run/stored.txt; may rewrite /cat/inputs/run_manifest.json.
+# Exits:     Exit 4 = push failed. Exit 0 = everything stored and status ok.
+#            5 if MOVES_SYNC_REMOTE is not set (sync); 1 if a required output is missing or the
+#            status is not ok.
+###############################################################################
 
 echo ------------pushing outputs------------
 

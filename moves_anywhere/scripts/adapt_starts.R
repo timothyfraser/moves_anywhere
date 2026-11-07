@@ -1,3 +1,17 @@
+# adapt_starts.R ##############################################################
+#
+# What:      adapt starts table
+# Does:      Four adapters: starts, startshourfraction, startsperday, startsperdaypervehicle. Each uses
+#            a custom inputs/<table>.csv if provided; otherwise takes the default table for the runspec.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/<table>.csv if provided, otherwise
+#            the <table> table in the runspec's default database (MariaDB)
+# Writes:    inputs/_<table>.csv for default tables only (custom tables are imported with save = FALSE)
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); catr, DBI, RMariaDB, dplyr, stringr, tidyr
+###############################################################################
+
+#' Adapt the starts table
+#' @param .runspec path to the run's runspec (XML)
 adapt_starts = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "starts"
@@ -70,6 +84,8 @@ adapt_starts = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
 
 
 
+#' Adapt the startshourfraction table
+#' @param .runspec path to the run's runspec (XML)
 adapt_startshourfraction = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "startshourfraction"
@@ -134,6 +150,8 @@ adapt_startshourfraction = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
 }
 
 
+#' Adapt the startsperday table
+#' @param .runspec path to the run's runspec (XML)
 adapt_startsperday = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "startsperday"
@@ -198,6 +216,8 @@ adapt_startsperday = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
 
 
 
+#' Adapt the startsperdaypervehicle table
+#' @param .runspec path to the run's runspec (XML)
 adapt_startsperdaypervehicle = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "startsperdaypervehicle"

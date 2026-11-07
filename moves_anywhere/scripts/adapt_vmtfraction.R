@@ -1,3 +1,20 @@
+# adapt_vmtfraction.R #########################################################
+#
+# What:      Adapters for the dayvmtfraction, hourvmtfraction and monthvmtfraction input tables.
+# Does:      Three functions, one per table: each imports the user's CSV if supplied, otherwise
+#            filters the default table to the runspec's months, days (and hours) and imports that.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     the runspec; the dayvmtfraction, hourvmtfraction and monthvmtfraction CSVs in
+#            inputs/, if supplied; otherwise the same tables in the custom input database
+# Writes:    inputs/_dayvmtfraction.csv, inputs/_hourvmtfraction.csv,
+#            inputs/_monthvmtfraction.csv (via import_table)
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table),
+#            sourced by task_adapt.R; catr (translate_rs); dplyr, stringr, tidyr, DBI;
+#            catr (connect)
+###############################################################################
+
+#' Adapt the dayvmtfraction table
+#' @param .runspec path to the run's runspec (XML)
 adapt_dayvmtfraction = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
     table = "dayvmtfraction"

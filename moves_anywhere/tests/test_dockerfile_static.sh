@@ -1,9 +1,15 @@
 #!/bin/bash
-
-# test_dockerfile_static.sh
-# Static checks on moves_anywhere/Dockerfile (no docker needed): the ~1 GB MOVES tree is
-# written in ONE layer and the database dump never survives in an image layer.
+# test_dockerfile_static.sh ###################################################
+#
+# What:      Static checks on moves_anywhere/Dockerfile (no docker needed): the ~1 GB MOVES tree is
+#            written in ONE layer and the database dump never survives in an image layer.
+# Does:      Joins backslash continuations, greps the instructions, prints PASS or FAIL per assertion.
+# Called by: Developer tool: test of the Dockerfile. Not run by launch.sh.
+# Reads:     moves_anywhere/Dockerfile
+# Writes:    nothing (stdout only)
+# Exits:     0 if every assertion passes; otherwise the number of failed assertions
 # Usage: bash moves_anywhere/tests/test_dockerfile_static.sh
+###############################################################################
 
 D="$(cd "$(dirname "$0")/.." && pwd)/Dockerfile"
 FAILS=0

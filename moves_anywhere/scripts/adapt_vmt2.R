@@ -1,12 +1,26 @@
-# adapt_vmt2.R
+# adapt_vmt2.R ################################################################
+#
+# What:      VMT adapter: builds the VMT tables from NEI inputs.
+# Does:      This script's function picks from any of these 4 tables and selects the most appropriate, if multiple are provided.
+#            Only 1 of these 4 next tables can be uploaded at one time.
+#            - sourcetypedayvmt
+#            - hpmsvtypeday 
+#            - sourcetypeyearvmt 
+#            - hpmsvtypeyear 
+#            With none supplied, builds sourcetypeyearvmt from NEI inputs (adapt_vmt_from_nei).
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     the runspec; one of the 4 tables above as a CSV in inputs/, if supplied; otherwise
+#            scripts/reference/hpmsvtypeyear.csv, scripts/reference/nei_sourcetypeyearvmt.rds,
+#            scripts/projections.rds
+# Writes:    inputs/_<table>.csv for the table kept (via import_table); truncates the other
+#            3 tables in the custom input database
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table),
+#            sourced by task_adapt.R; catr (translate_rs); dplyr, stringr, tidyr, DBI;
+#            adapt_from_nei.R (adapt_vmt_from_nei), sourced by task_adapt.R; catr (connect)
+###############################################################################
 
-# This script's function picks from any of these 4 tables and selects the most appropriate, if multiple are provided.
-# Only 1 of these 4 next tables can be uploaded at one time.
-# - sourcetypedayvmt
-# - hpmsvtypeday 
-# - sourcetypeyearvmt 
-# - hpmsvtypeyear 
-
+#' Adapt the VMT table from NEI inputs
+#' @param .runspec path to the run's runspec (XML)
 adapt_vmt2 = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   BUCKET = "inputs"

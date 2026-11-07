@@ -1,8 +1,14 @@
 #!/bin/bash
-
-# task_launch_moves.sh
-
-# Script to launch MOVES
+# task_launch_moves.sh #########################################################
+#
+# What:      Script to launch MOVES
+# Does:      Runs the CUSTOM runspec (rs_custom.xml) with MOVES as the mysql user;
+#            debug mode (keepDebugData) only when the run opts in.
+# Called by: launch.sh, step 10 of launch.sh (sourced)
+# Reads:     /cat/EPA_MOVES_Model/rs_custom.xml, MOVESConfiguration.txt, /cat/inputs/parameters.json ("debug")
+# Writes:    MOVES output database; EPA_MOVES_Model/moveslog.txt; MOVESConfiguration.txt (edited in place)
+# Exits:     1 if it cannot change directory
+###############################################################################
 
 # 3. MOVES Setup ###################################
 cd "/cat/EPA_MOVES_Model" || { echo "Failed to change directory"; exit 1; }

@@ -1,3 +1,14 @@
+# setenv.r ####################################################################
+#
+# What:      Environment settings for the MOVES databases, in R.
+# Does:      Sys.setenv() for OUTPUTDBNAME, INPUTDBNAME, the MDB_* connection settings, MOVES_FOLDER
+#            and TEMP_FOLDER. Same content as scripts/setenv.R; names movesdb20240104.
+# Called by: Not used by v3. Legacy environment settings; no script sources this file.
+# Reads:     nothing
+# Writes:    environment variables of the R session
+# Needs:     base R
+###############################################################################
+
 # .env
 Sys.setenv("OUTPUTDBNAME"="moves")
 Sys.setenv("INPUTDBNAME"="movesdb20240104")

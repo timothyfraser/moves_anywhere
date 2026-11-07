@@ -1,3 +1,17 @@
+# adapt_imcoverage.R ##########################################################
+#
+# What:      adapt I/M coverage table
+# Does:      Uses a custom inputs/imcoverage.csv if provided; otherwise takes the default
+#            imcoverage rows for the runspec's county and year.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/imcoverage.csv if provided,
+#            otherwise the imcoverage table in the runspec's default database (MariaDB)
+# Writes:    inputs/_imcoverage.csv
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); catr, DBI, RMariaDB, dplyr, stringr
+###############################################################################
+
+#' Adapt the imcoverage table
+#' @param .runspec path to the run's runspec (XML)
 adapt_imcoverage = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   ### imcoverage #################################

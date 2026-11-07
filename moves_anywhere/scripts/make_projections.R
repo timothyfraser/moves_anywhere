@@ -1,6 +1,13 @@
-# make_projections.rds
-
-# Script to summarize how projections.rds gets made
+# make_projections.R ##########################################################
+#
+# What:      Script to summarize how projections.rds gets made
+# Does:      Joins catr::projections to 2022 county land area and computes each county's
+#            population density and its share of all counties' density by year.
+# Called by: Developer tool: shows how projections.rds was made. Not part of a run; launch.sh does not run it.
+# Reads:     catr::projections; county boundaries from tigris (2022)
+# Writes:    scripts/projections.rds
+# Needs:     dplyr, readr, tigris, sf, catr
+###############################################################################
 
 library(dplyr)
 library(readr)

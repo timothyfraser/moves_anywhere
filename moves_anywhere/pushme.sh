@@ -1,9 +1,15 @@
-#/bin/bash
-
-# pushme.sh
-
-# Script to push the MOVES Anywhere image to the cloud.
-# For internal developer use only.
+#!/bin/bash
+# pushme.sh ###################################################################
+#
+# What:      Script to push the MOVES Anywhere image to the cloud.
+# Does:      Tags moves_anywhere:v2 and pushes it to Docker Hub (tmf77/moves-anywhere:v2) and to
+#            Google Cloud Artifact Registry, then prunes dangling images.
+# Called by: Not used by v3. Legacy v2 image push (Docker Hub, Google Cloud).
+#            For internal developer use only.
+# Reads:     secret/.env (LOCATION, PROJECT_NAME, REPOSITORY), secret/key.json
+# Writes:    the image in Docker Hub and in Artifact Registry
+# Exits:     no explicit exit; the status of the last command
+###############################################################################
 
 # Set working directory
 REPO="$(git rev-parse --show-toplevel)/moves_anywhere" && cd "$REPO"

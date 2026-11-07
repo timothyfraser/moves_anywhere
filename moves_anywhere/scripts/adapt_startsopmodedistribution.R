@@ -1,3 +1,17 @@
+# adapt_startsopmodedistribution.R ############################################
+#
+# What:      Adapter for the startsopmodedistribution input table.
+# Does:      If the user supplied a startsopmodedistribution CSV, selects its columns, marks it
+#            isUserInput = "Y" and imports it; if not, skips it and MOVES uses the defaults.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     the runspec; the startsopmodedistribution CSV in inputs/, if supplied
+# Writes:    inputs/_startsopmodedistribution.csv (via import_table), only when supplied
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table),
+#            sourced by task_adapt.R; catr (translate_rs); dplyr, stringr
+###############################################################################
+
+#' Adapt the startsopmodedistribution table
+#' @param .runspec path to the run's runspec (XML)
 adapt_startsopmodedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   ### startsopmodedistribution #################################  
