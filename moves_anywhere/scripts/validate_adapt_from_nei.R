@@ -1,6 +1,13 @@
-# validate_adapt_from_nei.R
-
-# Script to run validation analysis on adapt_from_nei.R script functions.
+# validate_adapt_from_nei.R ###################################################
+#
+# What:      Script to run validation analysis on adapt_from_nei.R script functions.
+# Does:      Runs the get_vmt and get_vehicles functions for one random county per state and
+#            checks that their outputs are not crazy.
+# Called by: Developer tool: validate adapt_from_nei functions. Not part of a run; launch.sh does not run it.
+# Reads:     scripts/projections.rds
+# Writes:    nothing
+# Needs:     scripts/adapt_from_nei.R (sourced)
+###############################################################################
 
 source("scripts/adapt_from_nei.R")
 

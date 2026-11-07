@@ -1,6 +1,12 @@
-# task_runspec.R
-
-# Task script to create a runspec .xml file
+# task_runspec.R ##############################################################
+#
+# What:      Task script to create a runspec .xml file
+# Does:      Makes a county-level, annual runspec for GEOID and YEAR with catr::custom_rs().
+# Called by: Developer tool: make a runspec at launch. Run by launch_runspec.sh; launch.sh does not run it.
+# Reads:     environment variables GEOID and YEAR (both required)
+# Writes:    inputs/rs_custom.xml
+# Needs:     catr; working directory /cat
+###############################################################################
 
 # Loda packages
 setwd("/cat")

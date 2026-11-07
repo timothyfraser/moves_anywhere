@@ -1,4 +1,13 @@
-# task_test_db.R
+# task_test_db.sh #############################################################
+#
+# What:      R code to test database contents
+# Does:      Connects to movesdb20241112 and disconnects, then counts the distinct sourceTypeID
+#            values in hourvmtfraction in the custom database.
+# Called by: Developer tool: test database contents. Not part of a run; launch.sh does not run it.
+# Reads:     MariaDB databases movesdb20241112 and custom (table hourvmtfraction)
+# Writes:    nothing
+# Exits:     no exit codes set (R code kept in a .sh file; run it in an R session)
+###############################################################################
 
 library(dplyr)
 library(dbplyr)
