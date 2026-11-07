@@ -1,4 +1,13 @@
-# task_create_db.R
+# task_db_create.R ############################################################
+#
+# What:      Creates the custom input database.
+# Does:      Connects to MariaDB and runs CREATE DATABASE IF NOT EXISTS custom.
+#            The output database and table schema steps below are commented out.
+# Called by: launch.sh, step 7 of launch.sh
+# Reads:     nothing (connects to the local MariaDB server)
+# Writes:    MariaDB database custom
+# Needs:     packages catr, DBI, RMariaDB, dplyr, dbplyr
+###############################################################################
 
 # R # start R, if needed
 

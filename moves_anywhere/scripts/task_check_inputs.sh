@@ -1,10 +1,14 @@
 #!/bin/bash
-
-# task_check_inputs.sh
-
-# Script to quality check the inputs/ folder before proceeding with MOVES.
-
-# Only start MOVES if required files are in place.
+# task_check_inputs.sh ########################################################
+#
+# What:      Script to quality check the inputs/ folder before proceeding with MOVES.
+# Does:      Only start MOVES if required files are in place.
+#            Checks that /cat/inputs exists and holds rs_custom.xml.
+# Called by: launch.sh, step 2 of launch.sh (sourced, so an exit here ends launch.sh)
+# Reads:     /cat/inputs/, /cat/inputs/rs_custom.xml
+# Writes:    nothing (prints to the log)
+# Exits:     1 if /cat cannot be entered, the inputs folder is missing, or rs_custom.xml is missing
+###############################################################################
 
 echo -----------checking MOVES inputs files----------------
 
