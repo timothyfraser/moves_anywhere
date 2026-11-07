@@ -1,3 +1,17 @@
+# adapt_sourcetypeagedistribution.R ###########################################
+#
+# What:      adapt source type age distribution
+# Does:      Uses a custom inputs/sourcetypeagedistribution.csv if provided, filling missing ages
+#            with national defaults and renormalizing; otherwise takes the default rows for the year.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/sourcetypeagedistribution.csv if provided,
+#            otherwise the sourcetypeagedistribution table in the runspec's default database (MariaDB)
+# Writes:    inputs/_sourcetypeagedistribution.csv
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); catr, DBI, RMariaDB, dplyr, stringr
+###############################################################################
+
+#' Adapt the sourcetypeagedistribution table
+#' @param .runspec path to the run's runspec (XML)
 adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "sourcetypeagedistribution"

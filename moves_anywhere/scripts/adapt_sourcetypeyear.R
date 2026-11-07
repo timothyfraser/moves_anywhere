@@ -1,7 +1,19 @@
-# adapt_sourcetypeyear.R
+# adapt_sourcetypeyear.R ######################################################
+#
+# What:      Script to adapt sourcetypeyear table
+# Does:      Uses a custom inputs/sourcetypeyear.csv if provided; otherwise scales the default
+#            sourceTypePopulation by the county's catr::projections fraction.
+# Called by: Not used by v3. Legacy sourcetypeyear adapter, superseded by adapt_sourcetypeyear2.R
+#            (its source line is commented out in task_adapt.R)
+# Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/sourcetypeyear.csv if provided,
+#            otherwise the sourcetypeyear table in the runspec's default database (MariaDB)
+#            and catr::projections
+# Writes:    inputs/_sourcetypeyear.csv
+# Needs:     adapt_functions.R (get_changes, get_data, import_table); catr, DBI, RMariaDB, dplyr, stringr
+###############################################################################
 
-# Script to adapt sourcetypeyear table
-
+#' Adapt the sourcetypeyear table
+#' @param .runspec path to the run's runspec (XML)
 adapt_sourcetypeyear = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "sourcetypeyear"

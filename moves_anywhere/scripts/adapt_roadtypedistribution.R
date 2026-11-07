@@ -1,3 +1,17 @@
+# adapt_roadtypedistribution.R ################################################
+#
+# What:      adapt road type distribution
+# Does:      Uses a custom inputs/roadtypedistribution.csv if provided; otherwise takes the
+#            default roadtypedistribution table, unfiltered.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/roadtypedistribution.csv if provided,
+#            otherwise the roadtypedistribution table in the runspec's default database (MariaDB)
+# Writes:    inputs/_roadtypedistribution.csv
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); catr, DBI, RMariaDB, dplyr, stringr, tidyr
+###############################################################################
+
+#' Adapt the roadtypedistribution table
+#' @param .runspec path to the run's runspec (XML)
 adapt_roadtypedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "roadtypedistribution"
