@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+# compare_outputs.py ##########################################################
+#
+# What:      Compare two MOVES output folders and print PASS/FAIL per file.
+# Does:      Exact comparison: per-key sums of the metric columns must be bit-identical
+#            (details and keys in the docstring below).
+# Called by: Developer tool: exactness gate between two output folders
+#            (docs/REPLICATION_KIT.md; tested by test_compare_outputs.py).
+# Reads:     <dirA>/ and <dirB>/: movesoutput.csv, movesactivityoutput.csv, data.csv
+# Writes:    stdout only (one line per file, or one JSON object with --json)
+# Exits:     0 if no file FAILs; 1 if any file FAILs; 2 on a usage error (argparse)
+###############################################################################
 """Compare two MOVES output folders and print PASS/FAIL per file.
 
 Usage:
