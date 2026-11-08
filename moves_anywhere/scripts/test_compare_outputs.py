@@ -1,3 +1,16 @@
+#!/usr/bin/env python3
+# test_compare_outputs.py #####################################################
+#
+# What:      Unit tests for compare_outputs.py
+# Does:      Builds small output folders in a temporary directory and checks that the exactness
+#            gate passes, fails and reports as expected.
+# Called by: Developer tool: repo test of the exactness gate. Not part of a run.
+#            Run: python -I moves_anywhere/scripts/test_compare_outputs.py
+# Reads:     compare_outputs.py (imported from the same folder)
+# Writes:    temporary folders only, removed after each test
+# Exits:     0 if every test passes
+#            1 if any test fails (unittest.main)
+###############################################################################
 import contextlib
 import io
 import json

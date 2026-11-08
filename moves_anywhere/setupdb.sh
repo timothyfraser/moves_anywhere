@@ -1,4 +1,16 @@
 #!/bin/bash
+# setupdb.sh ##################################################################
+#
+# What:      Loads the MOVES default database at image build.
+# Does:      Starts MySQL, creates the 'moves' database if missing, runs SetupDatabase.bat, creates
+#            the output tables (CreateOutput.sql for movesdb20241112, CreateOutputRates.sql), sources
+#            setenv.sh, then stops MySQL.
+# Called by: Dockerfile, the combined RUN at image build. Not run by launch.sh.
+# Reads:     EPA_MOVES_Model/database/Setup/, database/CreateOutput.sql, database/CreateOutputRates.sql,
+#            setenv.sh
+# Writes:    MySQL databases; database/NewCreateOutput.sql
+# Exits:     no explicit exit; the status of the last command
+###############################################################################
 
 
 # 1. Pre-MOVES #######################################################

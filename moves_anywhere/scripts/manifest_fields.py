@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# manifest_fields.py ##########################################################
+#
+# What:      Assemble run_manifest.json (docs/RUN_MANIFEST.md) from arguments and small files.
+# Does:      Builds the manifest so that bash never builds JSON by hand, writes it, then
+#            validates it. Standard library only.
+# Called by: task_pack.sh, step 15 of launch.sh
+# Reads:     --inputs-tsv, --outputs-tsv, --timings, --parameters, --runspec, --schema-from
+#            (each only if given); /sys/fs/cgroup/memory.max or /proc/meminfo for host info
+# Writes:    --out (run_manifest.json, via <out>.part); problems to stderr
+# Exits:     0 if the manifest is valid; 1 if validation fails (the manifest is still written);
+#            2 on a usage error (argparse)
+###############################################################################
 """Assemble run_manifest.json (docs/RUN_MANIFEST.md) from arguments and small files.
 
 Used by scripts/task_pack.sh so that bash never builds JSON by hand. Standard library only.

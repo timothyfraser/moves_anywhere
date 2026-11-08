@@ -1,3 +1,21 @@
+# adapt_ids.R #################################################################
+#
+# What:      Adapts the identifier tables for the run.
+# Does:      This function will adapt all of the identifier tables needed for your run.
+#            Tables: year, county, state, idleregion, zone, zoneroadtype, regioncounty,
+#            pollutantprocessassoc, opmodepolprocassoc. A provided inputs/<table>.csv is
+#            used; otherwise the default table is filtered to the runspec.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (the runspec)
+#            inputs/<table>.csv (optional, per table)
+#            the same tables in the default input database
+# Writes:    inputs/_<table>.csv for each table above
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table)
+#            catr, dplyr, tidyr, stringr, DBI, RMariaDB
+###############################################################################
+
+#' Adapt the identifier tables
+#' @param .runspec path to the run's runspec (XML)
 adapt_ids = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   # setwd("/cat")
   # .runspec = "EPA_MOVES_Model/rs_custom.xml"

@@ -1,3 +1,19 @@
+# adapt_zonemonthhour.R #######################################################
+#
+# What:      Adapter for the zonemonthhour input table (temperature and relative humidity).
+# Does:      Imports the user's zonemonthhour CSV if supplied; otherwise filters the default
+#            zonemonthhour table to the county's zones and the runspec's months and hours.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     the runspec; the zonemonthhour CSV in inputs/, if supplied; otherwise tables
+#            zone and zonemonthhour in the custom input database
+# Writes:    inputs/_zonemonthhour.csv (via import_table)
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table),
+#            sourced by task_adapt.R; catr (translate_rs); dplyr, stringr, tidyr, DBI;
+#            catr (connect)
+###############################################################################
+
+#' Adapt the zonemonthhour table
+#' @param .runspec path to the run's runspec (XML)
 adapt_zonemonthhour = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   ### zonemonthhour ################################

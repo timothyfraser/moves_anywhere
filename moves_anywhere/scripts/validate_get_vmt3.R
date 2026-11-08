@@ -1,8 +1,16 @@
-# validate_get_vmt3.R
-
-# Validation procedure for our last-ditch-attempt model,
-# where if we dont have any prior vmt/vehicle data on that geoid,
-# we use a population and area based projection 
+# validate_get_vmt3.R #########################################################
+#
+# What:      Validation procedure for our last-ditch-attempt model,
+#            where if we dont have any prior vmt/vehicle data on that geoid,
+#            we use a population and area based projection 
+# Does:      Fits and checks the VMT and vehicle projection models (VIF, R-squared).
+# Called by: Developer tool: validate the VMT model. Not part of a run; launch.sh does not run it.
+# Reads:     scripts/reference/nei_sourcetypeyearvmt.rds, scripts/projections.rds,
+#            scripts/reference/urban.rds, scripts/reference/urban_areas.rds, scripts/geoids.rds,
+#            scripts/reference/hpmsvtypeyear.csv, scripts/reference/sourcetypeyear.csv
+# Writes:    scripts/reference/urban_areas.rds
+# Needs:     dplyr, readr, ggplot2, car, broom, sf; run from the RStudio project (rstudioapi)
+###############################################################################
 
 library(dplyr)
 library(readr)

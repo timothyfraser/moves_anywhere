@@ -1,4 +1,14 @@
-# task_adapt.R
+# task_adapt.R ################################################################
+#
+# What:      Runs the adapt protocol: adapts the MOVES input tables for this run.
+# Does:      Sources adapt_functions.R and each adapt_*.R script, then runs their adapt_*()
+#            functions in order on the runspec, from identifiers to climate.
+# Called by: launch.sh, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml; inputs/; the MOVES default database named in the runspec
+# Writes:    adapted tables as files in inputs/ (through the adapt_* scripts)
+# Needs:     scripts/adapt_functions.R, scripts/adapt_*.R;
+#            packages catr, DBI, RMariaDB, dplyr, readr
+###############################################################################
 
 # Script to get a vector of csvs
 

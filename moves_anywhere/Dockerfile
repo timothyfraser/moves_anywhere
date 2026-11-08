@@ -1,3 +1,15 @@
+# Dockerfile ##################################################################
+#
+# What:      The moves-anywhere v3 image (in development; v2 is the released image).
+# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Go and R with pinned packages; fetches
+#            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
+#            compiles MOVES; copies in scripts/ and installs catr.
+# Called by: buildme_cloud.sh (docker buildx build). Checked by tests/test_dockerfile_static.sh.
+# Reads:     setenv.sh, my.cnf, setupdb.sh, scripts/ (the build context)
+# Writes:    the image
+# Exits:     n/a (a failed RUN stops the build)
+###############################################################################
+
 FROM ubuntu:20.04
 
 # Build arguments

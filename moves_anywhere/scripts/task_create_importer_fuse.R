@@ -1,6 +1,13 @@
-# task_create_importer_fuse.R
-
-# Script to create an importer.xml file
+# task_create_importer_fuse.R #################################################
+#
+# What:      Script to create an importer.xml file
+# Does:      Builds importer.xml with create_importer() from importer.R, with BUCKET = "inputs",
+#            for the gcsfuse mount made by task_fuse.sh.
+# Called by: Not used by v3. Legacy (v2, Google Cloud): launch_fuse.sh, after task_copy_inputs.sh.
+# Reads:     /cat/inputs/rs_custom.xml; /cat/scripts/importer_template.xml
+# Writes:    /cat/inputs/importer.xml
+# Needs:     scripts/importer.R; catr, DBI, RMariaDB, dplyr, dbplyr
+###############################################################################
 
 # R # start R, if needed
 # Load packages

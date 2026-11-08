@@ -1,3 +1,19 @@
+# adapt_hotellingactivitydistribution.R #######################################
+#
+# What:      Adapts the hotellingactivitydistribution input table for the run.
+# Does:      Uses inputs/hotellingactivitydistribution.csv if provided; otherwise copies the
+#            default distribution (fake zoneID 990000) to each zone in the county.
+# Called by: task_adapt.R, step 6 of launch.sh
+# Reads:     EPA_MOVES_Model/rs_custom.xml (the runspec)
+#            inputs/hotellingactivitydistribution.csv (optional)
+#            tables zone, hotellingactivitydistribution in the default input database
+# Writes:    inputs/_hotellingactivitydistribution.csv
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table)
+#            catr, dplyr, stringr, DBI, RMariaDB
+###############################################################################
+
+#' Adapt the hotellingactivitydistribution table
+#' @param .runspec path to the run's runspec (XML)
 adapt_hotellingactivitydistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   table = "hotellingactivitydistribution"

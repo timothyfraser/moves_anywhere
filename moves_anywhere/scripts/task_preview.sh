@@ -1,6 +1,14 @@
-# task_preview.R
-
-# Preview results using R
+# task_preview.sh #############################################################
+#
+# What:      Preview results using R
+# Does:      R code to paste into an R session (the first line, R, starts one): sums emissions
+#            (pollutant 98) and activity (type 6) in inputs_ny, and checks Tompkins County vehicles.
+# Called by: Developer tool: preview a run's results in R. Not part of a run; launch.sh does not run it.
+# Reads:     inputs_ny/movesoutput.csv, movesactivityoutput.csv, sourcetypeyear.csv,
+#            _startsperdaypervehicle.csv, hourvmtfraction.csv
+# Writes:    nothing
+# Exits:     no exit codes set (R code kept in a .sh file)
+###############################################################################
 
 R
 # setwd("moves_anywhere")

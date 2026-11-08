@@ -1,11 +1,17 @@
 #!/bin/bash
-
-# task_compress_outputs.sh
-
-# Compress the run's outputs (data.csv.gz, moveslog.txt.gz, and the rate tables in rate mode).
-# Keeps every original file. Safe to run twice (it overwrites).
-# replication.tar.xz and run_manifest.json belong to task_pack.sh, not here.
-# launch.sh runs this as a child process (never sourced), so it may exit normally.
+# task_compress_outputs.sh ####################################################
+#
+# What:      Compress the run's outputs (data.csv.gz, moveslog.txt.gz, and the rate tables in rate mode).
+# Does:      Keeps every original file. Safe to run twice (it overwrites).
+#            replication.tar.xz and run_manifest.json belong to task_pack.sh, not here.
+# Called by: launch.sh, step 14 of launch.sh.
+#            launch.sh runs this as a child process (never sourced), so it may exit normally.
+# Reads:     /cat/inputs: data.csv, moveslog.txt, rateperhour.csv, ratepervehicle.csv,
+#            rateperdistance.csv, rateperstart.csv, startspervehicle.csv, rateperprofile.csv,
+#            movesrun.csv (each only if present)
+# Writes:    /cat/inputs/<file>.gz for each file read (via <file>.gz.part)
+# Exits:     0 if every file present was compressed; 1 if /cat cannot be entered or a gzip failed
+###############################################################################
 
 echo ------------compressing outputs------------
 

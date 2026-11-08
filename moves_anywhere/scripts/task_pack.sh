@@ -1,19 +1,22 @@
 #!/bin/bash
-# task_pack.sh
+# task_pack.sh ################################################################
 #
-# Pack step: after the outputs are compressed, write
-#   replication.tar.xz  a kit that reproduces the run on a stock MOVES install
-#   run_manifest.json   the run's final record (docs/RUN_MANIFEST.md)
-# into $INPUTS_DIR. Source it (". scripts/task_pack.sh") or run it; it is idempotent:
-# a second run on the same folder produces a byte-identical replication.tar.xz.
-#
-# Environment (all optional): INPUTS_DIR (/cat/inputs), RUN_ID, MOVES_IMAGE,
-# MOVES_IMAGE_DIGEST, MOVES_COMMIT, MOVES_DIR (/cat/EPA_MOVES_Model), MOVES_DEFAULT_DB
-# (movesdb20241112), MOVES_DEBUG, RUN_STATUS (ok|failed), RUN_STOP_REASON, RUN_STARTED_AT,
-# RUN_FINISHED_AT. Stage timings are read from $INPUTS_DIR/.timings ("stage seconds").
-#
-# Exit status: 0 = kit and valid manifest written; 1 = something was written but a check
-# failed (the manifest is still written, so the run still ends with a manifest).
+# What:      Pack step: after the outputs are compressed, write
+#              replication.tar.xz  a kit that reproduces the run on a stock MOVES install
+#              run_manifest.json   the run's final record (docs/RUN_MANIFEST.md)
+#            into $INPUTS_DIR.
+# Does:      Source it (". scripts/task_pack.sh") or run it; it is idempotent:
+#            a second run on the same folder produces a byte-identical replication.tar.xz.
+# Called by: launch.sh, step 15 of launch.sh (skipped when MOVES_PACK=0).
+# Reads:     Environment (all optional): INPUTS_DIR (/cat/inputs), RUN_ID, MOVES_IMAGE,
+#            MOVES_IMAGE_DIGEST, MOVES_COMMIT, MOVES_DIR (/cat/EPA_MOVES_Model), MOVES_DEFAULT_DB
+#            (movesdb20241112), MOVES_DEBUG, RUN_STATUS (ok|failed), RUN_STOP_REASON, RUN_STARTED_AT,
+#            RUN_FINISHED_AT. Stage timings are read from $INPUTS_DIR/.timings ("stage seconds").
+# Writes:    $INPUTS_DIR/replication.tar.xz and $INPUTS_DIR/run_manifest.json
+#            (the manifest through scripts/manifest_fields.py)
+# Exits:     Exit status: 0 = kit and valid manifest written; 1 = something was written but a check
+#            failed (the manifest is still written, so the run still ends with a manifest).
+###############################################################################
 
 _tp_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

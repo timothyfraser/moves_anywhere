@@ -1,12 +1,27 @@
-# adapt_vmt.R
+# adapt_vmt.R #################################################################
+#
+# What:      Old VMT adapter, superseded by adapt_vmt2.R.
+# Does:      This script's function picks from any of these 4 tables and selects the most appropriate, if multiple are provided.
+#            Only 1 of these 4 next tables can be uploaded at one time.
+#            - sourcetypedayvmt
+#            - hpmsvtypeday 
+#            - sourcetypeyearvmt 
+#            - hpmsvtypeyear 
+#            With none supplied, builds hpmsvtypeyear from the default table, interpolated to the
+#            run year and weighted by the county's share of population (catr::projections).
+# Called by: Not used by v3. Legacy VMT adapter; its call in task_adapt.R is commented out
+#            (task_adapt.R uses adapt_vmt2.R instead).
+# Reads:     the runspec; one of the 4 tables above as a CSV in inputs/, if supplied; otherwise
+#            hpmsvtypeyear in the custom input database; catr::projections
+# Writes:    inputs/_<table>.csv for the table kept (via import_table); truncates the other
+#            3 tables in the custom input database
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table),
+#            sourced by task_adapt.R; catr (translate_rs); dplyr, stringr, tidyr, DBI;
+#            catr (connect, projections)
+###############################################################################
 
-# This script's function picks from any of these 4 tables and selects the most appropriate, if multiple are provided.
-# Only 1 of these 4 next tables can be uploaded at one time.
-# - sourcetypedayvmt
-# - hpmsvtypeday 
-# - sourcetypeyearvmt 
-# - hpmsvtypeyear 
-
+#' Adapt the VMT table (legacy)
+#' @param .runspec path to the run's runspec (XML)
 adapt_vmt = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
   
   BUCKET = "inputs"

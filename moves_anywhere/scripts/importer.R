@@ -1,7 +1,21 @@
-# importer.R
-# Function for creating an importer .xml script to make a custom input database.
+# importer.R ##################################################################
+#
+# What:      Function for creating an importer .xml script to make a custom input database.
+# Does:      Fills the importer template with the runspec's selections and the paths of the
+#            custom input tables (_<table>.csv) present in the inputs folder.
+# Called by: task_create_importer.R, step 8 of launch.sh (sourced; defines create_importer())
+# Reads:     <BUCKET>/rs_custom.xml, <SOURCE>/importer_template.xml, <BUCKET>/_<table>.csv (if present)
+# Writes:    <BUCKET>/importer.xml
+# Needs:     dplyr, readr, xml2
+###############################################################################
 
-# Debugging 
+#' Create the importer .xml for a custom input database
+#' @param BUCKET inputs folder holding rs_custom.xml and the _<table>.csv files
+#' @param SOURCE folder holding importer_template.xml
+#' @param dir folder prefixed to each input file path in the importer
+#' @return path of the importer.xml written
+
+# Debugging
 # setwd(paste0(rstudioapi::getActiveProject(), "/moves_anywhere"))
 
 create_importer = function(BUCKET = "/cat/inputs", SOURCE= "scripts", dir = "/cat"){

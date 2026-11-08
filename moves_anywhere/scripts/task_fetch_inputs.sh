@@ -1,10 +1,16 @@
 #!/bin/bash
-
-# task_fetch_inputs.sh
-
-# Ticket mode: download this run's inputs into /cat/inputs (docs/RUN_TICKET.md section 3).
-# Exit 2 = input fetch failed, 3 = ticket unusable, 5 = configuration error.
-# Never prints a URL's query string.
+# task_fetch_inputs.sh ########################################################
+#
+# What:      Ticket mode: download this run's inputs into /cat/inputs (docs/RUN_TICKET.md section 3).
+# Does:      Gets the run ticket from $TICKET_URL, checks it, then downloads each input it lists,
+#            checking size and sha256. In sync mode, copies $MOVES_SYNC_REMOTE/in with rclone.
+#            Never prints a URL's query string.
+# Called by: launch.sh, step 1 of launch.sh (only when MOVES_IO is not "mounted")
+# Reads:     $TICKET_URL (the run ticket) and each input URL in it; $MOVES_SYNC_REMOTE/in in sync mode
+# Writes:    /cat/run/ticket.json, /cat/inputs/<name>; /cat/run/stop_reason and ticket.err on failure
+# Exits:     0 if every input is fetched.
+#            Exit 2 = input fetch failed, 3 = ticket unusable, 5 = configuration error.
+###############################################################################
 
 echo ------------fetching inputs------------
 

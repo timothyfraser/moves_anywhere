@@ -1,8 +1,13 @@
 #!/bin/bash
-
-# task_copy_runspec.sh
-
-# Script to copy runspec from /inputs/ into EPA_MOVES_Model folder.
+# task_copy_runspec.sh ########################################################
+#
+# What:      Script to copy runspec from /inputs/ into EPA_MOVES_Model folder.
+# Does:      Copies /cat/inputs/rs_custom.xml to /cat/EPA_MOVES_Model/rs_custom.xml; stops if it is missing.
+# Called by: launch.sh, step 3 of launch.sh (sourced, so an exit here ends launch.sh)
+# Reads:     /cat/inputs/rs_custom.xml
+# Writes:    /cat/EPA_MOVES_Model/rs_custom.xml
+# Exits:     1 if /cat cannot be entered or rs_custom.xml is not in inputs/
+###############################################################################
 
 
 # Message

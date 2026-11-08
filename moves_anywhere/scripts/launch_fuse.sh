@@ -1,9 +1,16 @@
 #!/bin/bash
-
-# launch_fuse.sh
-
-# A script to run MOVES ANYWHERE in the cloud at launch, 
-# initiating Google Cloud Storage FUSE.
+# launch_fuse.sh ##############################################################
+#
+# What:      A script to run MOVES ANYWHERE in the cloud at launch,
+#            initiating Google Cloud Storage FUSE.
+# Does:      Mounts the inputs bucket with gcsfuse (task_fuse.sh), then runs the v2 steps in order:
+#            setenv, packages, mysql, adapt, database, inputs, importer, MOVES, postprocess, logs, summary.
+# Called by: Not used by v3. Legacy (v2, Google Cloud): launch script for a cloud run with gcsfuse.
+#            v3 runs launch.sh instead.
+# Reads:     the bucket named in $BUCKET, mounted at /cat/inputs
+# Writes:    whatever the task scripts it runs write (database, outputs, logs)
+# Exits:     0 at the end; 1 earlier if a sourced task script exits 1 (for example task_fuse.sh)
+###############################################################################
 
 # Mount inputs folder from bucket with GCSFUSE
 . "scripts/task_fuse.sh"

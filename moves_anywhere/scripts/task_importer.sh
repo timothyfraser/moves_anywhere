@@ -1,7 +1,14 @@
-#/bin/bash
-# task_importer.sh
-
-# Script to import a set of files using an importer.xml
+#!/bin/bash
+# task_importer.sh #############################################################
+#
+# What:      Script to import a set of files using an importer.xml
+# Does:      Copies inputs/importer.xml into EPA_MOVES_Model/, then runs the MOVES
+#            custom database importer as the mysql user.
+# Called by: launch.sh, step 9 of launch.sh (sourced)
+# Reads:     /cat/inputs/importer.xml, /cat/EPA_MOVES_Model/MOVESConfiguration.txt
+# Writes:    /cat/EPA_MOVES_Model/importer.xml, MOVESConfiguration.txt (edited in place), custom input database
+# Exits:     1 if it cannot change directory, cannot copy importer.xml, or mysql cannot read it
+###############################################################################
 
 # MOVES Setup ###################################
 cd "/cat/EPA_MOVES_Model" || { echo "Failed to change directory"; exit 1; }

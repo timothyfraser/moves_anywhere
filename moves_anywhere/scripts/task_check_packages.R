@@ -1,6 +1,14 @@
-# status_check.R
-
-# Script to check if all necessary packages are installed.
+# task_check_packages.R #######################################################
+#
+# What:      Script to check if all necessary packages are installed.
+# Does:      Compares a list of needed packages with installed.packages() and prints how many
+#            are missing, or "R packages ready." It does not stop the run. The list still
+#            includes three Google packages: googleCloudStorageR, googleAuthR, gargle.
+# Called by: launch.sh, step 4 of launch.sh
+# Reads:     the installed R packages
+# Writes:    nothing (prints to the log)
+# Needs:     base R only
+###############################################################################
 
 # Get installed packages
 p = as.data.frame(installed.packages())
