@@ -22,7 +22,7 @@ This base image contains:
 
 Unlike the `moves_anywhere` cloud image, this base image does **not** include:
 - Custom scripts (these are mounted at runtime)
-- Google Cloud SDK and gcsfuse
+- Google Cloud SDK and gcsfuse (the `v2` cloud image had them; `v3` does not)
 - Pre-installed `catr` package
 
 ## Directory Structure
@@ -210,8 +210,9 @@ The image uses these environment variables (set via `setenv.sh`):
 | Feature | docker_moves (base) | moves_anywhere (cloud) |
 |---------|---------------------|------------------------|
 | Scripts | Not included | Included in image |
-| Google Cloud SDK | Not included | Included |
-| gcsfuse | Not included | Included |
+| Google Cloud SDK | Not included | `v2` only; not in `v3` |
+| gcsfuse | Not included | `v2` only; not in `v3` |
+| File transfer | Mounted folders | `v3`: `MOVES_IO` = `mounted`, `ticket` (HTTPS) or `sync` (`rclone`); see [Run tickets](RUN_TICKET.md) |
 | catr package | Not pre-installed | Pre-installed |
 | Use Case | Base for custom builds | Cloud execution |
 
@@ -285,5 +286,5 @@ To update R packages:
 
 For issues or questions:
 - **Maintainer**: Tim Fraser <tmf77@cornell.edu>
-- **Repository**: [moves_anywhere](https://github.com/gao-labs/movesanywhere)
+- **Repository**: [moves_anywhere](https://github.com/timothyfraser/moves_anywhere)
 

@@ -8,7 +8,7 @@ The `catr` package is an R package designed to facilitate execution of default o
 
 **Package Version**: 0.2.0  
 **Maintainer**: Timothy Fraser <tmf77@cornell.edu>  
-**License**: GPL-3
+**License**: Apache License (>= 2), see [LICENSE](../LICENSE)
 
 For installation instructions, see the [main README](../README.md#download-the-catr-package-using).
 
@@ -55,6 +55,8 @@ The package contains 19 R source files organized by functionality:
   - `bucket_upload()`, `bucket_upload_bulk()` - Upload operations
   - `object_list()`, `object_delete()`, `object_delete_bulk()` - Object management
   - `workflow_execute()` - Execute cloud workflows
+
+> The `v3` image does not call these functions: it moves files with `MOVES_IO` (`mounted`, `ticket` or `sync`), see [Run tickets](RUN_TICKET.md). They stay in `catr` 0.2.0, which still imports the Google packages listed under Dependencies.
 
 #### MOVES Data Processing
 - **[process_emissions.R](../catr/R/process_emissions.R)** - Processes emissions data for specific geoids and pollutants

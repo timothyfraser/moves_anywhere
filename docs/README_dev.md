@@ -154,7 +154,7 @@ The directory contains raw NEI data files downloaded from the EPA FTP server:
 - **[VPOP_2020NEI.csv](../moves_anywhere/dev/VPOP_2020NEI.csv)** (13.5 MB) - Vehicle population data from 2020 NEI
 
 **Other NEI Data Files:**
-- **[HOTELING_2014NEI.csv](../moves_anywhere/dev/HOTELING_2014NEI.csv)** (1.0 MB) - Hotelling (idling) activity data from 2014 NEI
+- **[HOTELLING_2014NEI.csv](../moves_anywhere/dev/HOTELLING_2014NEI.csv)** (1.0 MB) - Hotelling (idling) activity data from 2014 NEI
 - **[HOTELING_2017NEI.csv](../moves_anywhere/dev/HOTELING_2017NEI.csv)** (391 KB) - Hotelling (idling) activity data from 2017 NEI
 - **[HOTELING_2020NEI.csv](../moves_anywhere/dev/HOTELING_2020NEI.csv)** (910 KB) - Hotelling (idling) activity data from 2020 NEI
 - **[SPEED_2014NEI.csv](../moves_anywhere/dev/SPEED_2014NEI.csv)** (90.4 MB) - Speed distribution data from 2014 NEI

@@ -21,7 +21,7 @@ dev/
 ├── VPOP_2014NEI.csv                       # NEI vehicle population data for 2014
 ├── VPOP_2017NEI.csv                       # NEI vehicle population data for 2017
 ├── VPOP_2020NEI.csv                       # NEI vehicle population data for 2020
-├── HOTELING_2014NEI.csv                   # NEI hotelling (idling) data for 2014
+├── HOTELLING_2014NEI.csv                  # NEI hotelling (idling) data for 2014
 ├── HOTELING_2017NEI.csv                   # NEI hotelling (idling) data for 2017
 ├── HOTELING_2020NEI.csv                   # NEI hotelling (idling) data for 2020
 ├── SPEED_2014NEI.csv                      # NEI speed distribution data for 2014
