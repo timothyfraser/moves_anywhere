@@ -15,7 +15,7 @@ flowchart LR
  subgraph subGraph0["Container Functions"]
         f1(["Containerized<br>Software<br>as Image"])
         f2(["Run Container<br>as Job<br>from Image"])
-        f3(["Mount Bucket<br>to Container"])
+        f3(["Fetch Inputs by<br>Ticket or from<br>Mounted Folder"])
   end
  subgraph subGraph2["Cloud Job Functions"]
         f7(["Trigger Job"])
@@ -24,7 +24,7 @@ flowchart LR
         subGraph0
         subGraph2
   end
- subgraph subGraph1["Cloud Bucket Functions"]
+ subgraph subGraph1["Input and Output Storage Functions"]
         f4(["Add Inputs<br>to Bucket"])
         f5(["Extract Outputs<br>from Bucket"])
         f6(["Create<br>Bucket"])
