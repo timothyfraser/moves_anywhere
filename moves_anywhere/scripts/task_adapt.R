@@ -41,11 +41,32 @@ library(readr, warn.conflicts = FALSE, quietly = TRUE)
 # Load functions
 source("scripts/adapt_functions.R")
 
+# First useful line of an error message: no cli bullets, ANSI colour codes or backticks; "" if none
+adapt_first_line = function(msg){
+  lines = strsplit(msg, "\n")[[1]]
+  lines = gsub("\033[[][0-9;]*m", "", lines)
+  lines = gsub("`", "", lines)
+  lines = sub("^[[:space:]]*([ix!*v]|\u2139|\u2716|\u2714|\u2022)[[:space:]]+", "", lines)
+  lines = trimws(gsub("[[:space:]]+", " ", lines))
+  lines = lines[nzchar(lines)]
+  if(length(lines) == 0) "" else lines[1]
+}
+
+# Short reason for a failed adapter: the innermost cause of the error, else the outer message
+adapt_reason = function(e){
+  inner = e
+  while(!is.null(inner$parent) && inherits(inner$parent, "condition")){ inner = inner$parent }
+  out = adapt_first_line(conditionMessage(inner))
+  if(!nzchar(out)){ out = adapt_first_line(conditionMessage(e)) }
+  if(!nzchar(out)){ out = "see moveslog.txt.gz" }
+  out
+}
+
 # Run one adapter group; on error, record why and stop the run with status 1 (read by launch.sh)
 run_adapter = function(name, expr){
   tryCatch(force(expr), error = function(e){
     full = conditionMessage(e)
-    msg = paste0("adapt failed on ", name, ": ", strsplit(full, "\n")[[1]][1])
+    msg = paste0("adapt failed on ", name, ": ", adapt_reason(e))
     msg = substr(msg, 1, 110)
     if(dir.exists("/cat/run")){ writeLines(msg, "/cat/run/stop_reason", sep = "") }
     message(paste0("ERROR: adapt failed on ", name, ": ", gsub("[[:space:]]*\n[[:space:]]*", " | ", full)))
