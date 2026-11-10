@@ -49,12 +49,15 @@ if [ ! -d moves_anywhere/tests ] || [ -n "$(git rev-parse --show-prefix)" ]; the
 fi
 SHORT=$(git rev-parse --short HEAD)
 [ -n "$IMAGE" ] || IMAGE="moves-anywhere:gate-$SHORT"
-export MSYS_NO_PATHCONV=1   # as run.sh does: Git Bash must not rewrite container paths
+# MSYS_NO_PATHCONV is NOT exported here: run.sh and the tests set it themselves where docker needs it, and
+# exporting it would stop Git Bash converting /tmp/... and /c/... paths for the native python calls below.
 export IMAGE
 
 GATE_WORK="$TOP/moves_anywhere/tests/.work/gate"
 rm -rf "$GATE_WORK"; mkdir -p "$GATE_WORK"
 TMP=$(mktemp -d)
+# Native Windows programs (python, docker) need C:/... rather than /tmp/...
+command -v cygpath >/dev/null 2>&1 && TMP=$(cygpath -m "$TMP")
 RUN_DIR="$TMP/run"        # the copy of the inputs that run.sh runs in
 EXPORT_DIR="$TMP/export"  # the git archive export the image is built from
 GOLD="$TOP/moves_anywhere/inputs_ny"
