@@ -1,4 +1,12 @@
 # make_nei.R
+#
+# What:      Developer script that builds NEI-based starting tables for sourcetypeyear and sourcetypeyearvmt.
+# Does:      Reads the NEI on-road VMT and VPOP files (download steps are commented out), recodes SCC codes to MOVES source types and road types, and saves the results as .rds files.
+# Called by: Developer tool: run by hand from an RStudio project (it calls rstudioapi::getActiveProject). Not used by v3 or launch.sh.
+# Reads:     dev/SCC.xlsx; dev/VMT_<year>NEI.csv and dev/VPOP_<year>NEI.csv for the NEI years it handles
+# Writes:    dev/SCC.csv, dev/VMT.rds, dev/VPOP.rds, dev/nei_sourcetypeyearvmt.rds, dev/nei_vmt_by_sourcetype_roadtype.rds, dev/nei_sourcetypeyear.rds
+# Needs:     rstudioapi, readxl, dplyr, readr, tidyr, stringr, purrr
+#
 
 # Download the NEI MOVES inputs, to use as starting resources for:
 # - sourcetypeyear

@@ -2,6 +2,13 @@
 # tests/test_comments_only_selftest.sh: proves tests/test_comments_only.sh passes comment-only
 # changes and fails code changes, in a throwaway git repository.
 # Usage: bash moves_anywhere/tests/test_comments_only_selftest.sh
+#
+# What:      Developer test: self-test of test_comments_only.sh.
+# Does:      Builds a throwaway git repository, makes comment-only and code changes, and checks the checker passes and fails as it should.
+# Called by: A person, after editing test_comments_only.sh. Not run by launch.sh.
+# Reads:     tests/test_comments_only.sh
+# Writes:    A temporary folder, removed on exit
+# Exits:     0 if every case behaves as expected; 1 if any case fails
 # Needs: git, diff, sed. Touches nothing outside its own temporary folder, which it removes.
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
