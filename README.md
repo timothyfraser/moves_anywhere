@@ -71,7 +71,7 @@ Results land in the same folder as your inputs. The run manifest and replication
 | `movesoutput.csv`, `movesactivityoutput.csv` | The raw MOVES output tables |
 | `moveslog.txt` | The full MOVES log |
 | `run_manifest.json` | A record of the run: status, file hashes, MOVES version, timings. See [the run manifest](docs/RUN_MANIFEST.md) |
-| `replication.tar.xz` | Everything needed to rerun this result on a stock MOVES install. See [the replication kit](moves_anywhere/docs/REPLICATION_KIT.md) |
+| `replication.tar.xz` | Everything needed to rerun this result on a stock MOVES install. See [the replication kit](docs/REPLICATION_KIT.md) |
 
 ## Cheatsheet
 
@@ -97,10 +97,11 @@ Results land in the same folder as your inputs. The run manifest and replication
 | [The pipeline scripts](docs/README_scripts.md) | see what happens inside the container, step by step |
 | [The `catr` package](docs/README_catr.md) | write runspecs and work with results in R |
 | [The run manifest](docs/RUN_MANIFEST.md) | read or check `run_manifest.json` |
-| [The replication kit](moves_anywhere/docs/REPLICATION_KIT.md) | rerun a result on a stock MOVES install |
+| [The replication kit](docs/REPLICATION_KIT.md) | rerun a result on a stock MOVES install |
 | [Run tickets](docs/RUN_TICKET.md) | run `moves_anywhere` from your own cloud service |
 | [Version pins](docs/PINS_v3.md) | see exactly which MOVES, R and package versions are inside |
 | [Developer tools](docs/README_dev.md) | build and test the image yourself |
+| [All guides](docs/README.md) | see the index of every guide |
 
 ## The `catr` package
 

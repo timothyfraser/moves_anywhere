@@ -1,5 +1,7 @@
 # Run tickets: how a MOVES run gets its inputs and returns its outputs
 
+Part of the MOVES Anywhere guides: see the [index](README.md).
+
 A MOVES ANYWHERE container needs two things from the outside world: the files that describe
 the run (the runspec `rs_custom.xml`, `parameters.json`, and up to about 16 user CSV tables),
 and somewhere to put the results. Today the container finds both in a mounted folder,
@@ -317,3 +319,7 @@ passes when:
 Failure cases to script: a `404` on one input (exit 2, `failed` manifest naming the file); a
 stub that returns `403` on the first PUT and `200` after a ticket re-fetch (exit 0); a ticket
 with `"ticket_version": 2` (exit 3).
+
+---
+
+Back to the [index](README.md). Next: [The replication kit](REPLICATION_KIT.md).

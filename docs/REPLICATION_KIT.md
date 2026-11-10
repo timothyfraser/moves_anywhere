@@ -1,5 +1,7 @@
 # The replication kit: rerun any MOVES ANYWHERE result on a stock MOVES install
 
+Part of the MOVES Anywhere guides: see the [index](README.md).
+
 Every finished run ends with a file called `replication.tar.xz`. It holds everything needed
 to get the same numbers out of EPA's own MOVES, with none of this project's software: the
 runspec, the tables MOVES actually read, and the results we got. If you do not trust the
@@ -131,3 +133,7 @@ manifest's `moves` block before debugging anything else.
   from an arbitrary folder.
 - The kit holds one run. Rate-mode runs include whichever of `movesoutput.csv` and
   `movesactivityoutput.csv` exist; the rate result objects stay outside the kit.
+
+---
+
+Back to the [index](README.md). Next: [The `catr` package](README_catr.md).

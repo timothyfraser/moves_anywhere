@@ -1,5 +1,7 @@
 # moves-anywhere v3 pins
 
+Part of the MOVES Anywhere guides: see the [index](README.md).
+
 These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starting `sha256:51ccd84e`) ships, recorded so v3 rebuilds the same MOVES and the same R stack. v3 changes how the image is built (MOVES pinned and compiled at build time, no Google tooling); it does not change which MOVES it runs.
 
 ## MOVES
@@ -142,3 +144,7 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 - Compile happens once, in the build, after `setupdb.sh`. `scripts/task_importer.sh` and `scripts/task_launch_moves.sh` no longer run `ant clean`, `ant compileall`, `ant go64`, or the `keepDebugData` edit. `scripts/launch.sh` no longer runs `task_install_catr.R`. `scripts/launch_fuse.sh` is unchanged and is not supported by v3 (no gcsfuse).
 - `scripts/task_check_packages.R` still lists `googleCloudStorageR`, `googleAuthR` and `gargle` as needed, so it prints a "packages need installed" line on v3. It is a diagnostic only; it does not stop the run.
 - Package versions are those of the image at the time of the v2 build (2025). Versions pinned by `install_version` in the Dockerfile can be upgraded by later installs, so the list above, not the Dockerfile lines, is the record of what v2 actually contained.
+
+---
+
+Back to the [index](README.md). Next: [Developer tools](README_dev.md).
