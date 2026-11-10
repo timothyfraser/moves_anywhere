@@ -39,7 +39,9 @@ fi
 
 # 1. Where we are ####
 TOP=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "run_gate.sh: not in a git repository" >&2; exit 2; }
-if [ ! -d moves_anywhere/tests ] || [ "$(pwd -P)" != "$(cd "$TOP" && pwd -P)" ]; then
+# An empty --show-prefix means the current folder is the top of the work tree. (Comparing two pwd strings
+# fails on Git Bash, where the same folder can be spelled /c/..., C:/... or /tmp/....)
+if [ ! -d moves_anywhere/tests ] || [ -n "$(git rev-parse --show-prefix)" ]; then
   echo "run_gate.sh: run it from the repository root ($TOP)" >&2; exit 2
 fi
 SHORT=$(git rev-parse --short HEAD)
