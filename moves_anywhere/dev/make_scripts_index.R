@@ -78,13 +78,14 @@ for(l in ls){
 
 # 4. Classify: every file exactly once ####################################
 # Run: named in launch.sh after a step banner. Adapters: adapt_*. Tests and tools: test_*, validate_*,
-# or Called by starts "Developer tool" / "Not used by v3". Helpers and libraries: everything else.
+# or Called by starts "Developer tool". Legacy: Called by starts "Not used by v3". Helpers and libraries: everything else.
 class_of = function(f){
   cb = hdr[[f]][["Called by"]]
   if(is.null(cb)){ cb = "" }
   if(f %in% steps$script || f == "launch.sh"){ return("run") }
   if(grepl("^adapt_", f)){ return("adapt") }
-  if(grepl("^(test_|validate_)", f) || grepl("^(Developer tool|Not used by v3)", cb)){ return("tools") }
+  if(grepl("^Not used by v3", cb)){ return("legacy") }
+  if(grepl("^(test_|validate_)", f) || grepl("^Developer tool", cb)){ return("tools") }
   "helper"
 }
 cls = vapply(files, class_of, character(1))
@@ -132,14 +133,15 @@ sec = function(title, key, intro){
 doc = c(doc,
   sec("Adapters", "adapt", "Scripts named `adapt_*`: each adapts one group of MOVES input tables. `task_adapt.R` runs them in step 6."),
   sec("Helpers and libraries", "helper", "Scripts and files that other scripts call or source."),
-  sec("Tests and tools", "tools", "Test scripts, validation scripts, developer tools and legacy (v2) scripts that a run does not use."))
+  sec("Tests and tools", "tools", "Test scripts, validation scripts and developer tools. A run does not use them."),
+  sec("Legacy (v2, not used by v3)", "legacy", "Kept for reference. The v3 run does not call these."))
 ex = hdr[["launch.sh"]][["Exits"]]
 if(is.null(ex)){ stop("launch.sh header has no Exits field") }
 doc = c(doc, "", "## Failure behaviour", "", cell(ex), "")
 
 # 7. Count check ####################################
 n_run = sum(cls == "run"); n_other = sum(cls != "run")
-counted = n_run + sum(cls == "adapt") + sum(cls == "helper") + sum(cls == "tools")
+counted = n_run + sum(cls == "adapt") + sum(cls == "helper") + sum(cls == "tools") + sum(cls == "legacy") + sum(cls == "legacy")
 if(counted != length(files) || any(is.na(cls))){
   stop("Count check failed: ", counted, " classified of ", length(files), " files")
 }
@@ -147,4 +149,4 @@ con = file(out, "wb")
 writeBin(charToRaw(paste0(paste(doc, collapse = "\n"), "\n")), con)
 close(con)
 cat(sprintf("Wrote %s: %d scripts = %d run + %d adapters + %d helpers + %d tests and tools\n",
-            out, length(files), n_run, sum(cls == "adapt"), sum(cls == "helper"), sum(cls == "tools")))
+            out, length(files), n_run, sum(cls == "adapt"), sum(cls == "helper"), sum(cls == "tools"), sum(cls == "legacy")))
