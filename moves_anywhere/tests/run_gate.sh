@@ -16,6 +16,8 @@
 ###############################################################################
 
 set -uo pipefail
+# The gate builds from a clean commit, so its own Python steps must not leave __pycache__ behind.
+export PYTHONDONTWRITEBYTECODE=1
 
 MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
 STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha"
@@ -59,7 +61,7 @@ cleanup() { [ "$KEEP" = 1 ] && echo "kept: $TMP and $GATE_WORK" || rm -rf "$TMP"
 trap cleanup EXIT
 
 # 2. Step bookkeeping ####
-RESULTS=(); FAILED=0
+RESULTS=(); FAILED=0; BUILD_OK=0; FIXTURE_OK=0
 # record <status> <name> <seconds>
 record() { RESULTS+=("$(printf '%-5s %-13s %ss' "$1" "$2" "$3")"); [ "$1" = FAIL ] && FAILED=$((FAILED + 1)); return 0; }
 # run_step <n> <name> <function>: runs the function with its output in the step log and on screen
@@ -67,12 +69,22 @@ run_step() {
   local n=$1 name=$2 fn=$3 t0 rc
   echo "=== $n. $name"
   if [ -n "$ONLY" ] && [ "$ONLY" != "$name" ]; then record SKIP "$name" 0; echo "(skipped)"; return; fi
+  # A step that needs the image, or the finished fixture run, is skipped when that earlier step did not pass
+  # (the earlier FAIL already fails the gate; running on would only bury the real cause).
+  case "$name" in
+    fixture|ticket|bad-table)
+      if [ -z "$ONLY" ] && [ "$BUILD_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: no image, see step build)"; return; fi ;;
+    compare|manifest|pack|sha)
+      if [ -z "$ONLY" ] && [ "$FIXTURE_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: the fixture run did not finish)"; return; fi ;;
+  esac
   t0=$SECONDS
   "$fn" 2>&1 | tee "$GATE_WORK/$n-$name.log"
   rc=${PIPESTATUS[0]}
   if [ "$rc" = 99 ]; then record SKIP "$name" $((SECONDS - t0))
   elif [ "$rc" = 0 ]; then record PASS "$name" $((SECONDS - t0))
   else record FAIL "$name" $((SECONDS - t0)); fi
+  if [ "$name" = build ] && [ "$rc" = 0 -o "$rc" = 99 ]; then BUILD_OK=1; fi
+  if [ "$name" = fixture ] && [ "$rc" = 0 ]; then FIXTURE_OK=1; fi
 }
 
 # 3. The steps ####
