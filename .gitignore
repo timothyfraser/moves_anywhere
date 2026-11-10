@@ -34,3 +34,5 @@ dev/oauth2.json
 dev/app.R
 runapikey.json
 moves_anywhere/tests/.work/
+# Python bytecode caches
+__pycache__/
