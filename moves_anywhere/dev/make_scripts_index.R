@@ -141,7 +141,7 @@ doc = c(doc, "", "## Failure behaviour", "", cell(ex), "")
 
 # 7. Count check ####################################
 n_run = sum(cls == "run"); n_other = sum(cls != "run")
-counted = n_run + sum(cls == "adapt") + sum(cls == "helper") + sum(cls == "tools") + sum(cls == "legacy") + sum(cls == "legacy")
+counted = n_run + sum(cls == "adapt") + sum(cls == "helper") + sum(cls == "tools") + sum(cls == "legacy")
 if(counted != length(files) || any(is.na(cls))){
   stop("Count check failed: ", counted, " classified of ", length(files), " files")
 }
