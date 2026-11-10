@@ -1,5 +1,7 @@
 # Run manifest: the one file that means "this run finished"
 
+Part of the MOVES Anywhere guides: see the [index](README.md).
+
 Every MOVES ANYWHERE run ends by writing `run_manifest.json`, a small JSON file (about 5 KB)
 that says whether the run succeeded, why it stopped if it did not, and exactly what went in
 and came out: the image and MOVES version, the runspec settings, a SHA-256 checksum and size
@@ -225,3 +227,7 @@ A failed run differs in `status: "failed"`, a `stop_reason` such as
 `"MOVES exited 1: see moveslog.txt.gz"`, an `outputs` list holding only what was stored
 (typically `moveslog.txt.gz` and `replication.tar.xz`), and `timings` without the stages that
 never ran.
+
+---
+
+Back to the [index](README.md). Next: [Run tickets](RUN_TICKET.md).

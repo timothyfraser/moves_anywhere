@@ -1,0 +1,28 @@
+# CITATION.cff for MOVES Anywhere (CFF 1.2.0).
+# The v3 line is unreleased, so `version` and `date-released` are left out.
+# They are filled in at release.
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "MOVES Anywhere"
+authors:
+  - family-names: Fraser
+    given-names: Timothy
+    affiliation: "Gao Labs @ Cornell University"
+  - family-names: Gao
+    given-names: H. Oliver
+    affiliation: "Gao Labs @ Cornell University"
+repository-code: "https://github.com/timothyfraser/moves_anywhere"
+license: Apache-2.0
+preferred-citation:
+  type: report
+  title: "Distributed Cloud Computing for Clean Transportation, Community Health, & Climate Action Anywhere"
+  authors:
+    - family-names: Fraser
+      given-names: Timothy
+    - family-names: Gao
+      given-names: H. Oliver
+  year: 2025
+  institution:
+    name: "Cornell University Systems Studio"
+  notes: "Working paper. Cited tentatively."

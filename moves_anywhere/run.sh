@@ -6,6 +6,14 @@
 # The folder needs rs_custom.xml, plus any custom input tables as <table>.csv. Results land in the same
 # folder: data.csv, moveslog.txt, run_manifest.json. The exit status is 0 only when the run produced
 # results. Defaults: 2 CPUs, 6 GB, the released image. MOVES uses about one core at a time.
+#
+# What:      Command-line wrapper that runs one MOVES run in the Docker image.
+# Does:      Checks the inputs folder and Docker, then runs `docker run --rm` with the folder mounted at /cat/inputs.
+# Called by: A person at a terminal. run.ps1 is the PowerShell equivalent.
+# Reads:     <inputs-folder>/rs_custom.xml and any custom tables; environment: MOVES_IMAGE
+# Writes:    Nothing itself. The container writes data.csv, moveslog.txt and run_manifest.json into <inputs-folder>.
+# Needs:     bash, Docker (running); cygpath when present (Git Bash on Windows)
+# Exits:     0 if the run produced results; 2 on a usage error or missing inputs; 3 if Docker is missing or not running; otherwise the container's exit status
 set -u
 
 IMAGE="${MOVES_IMAGE:-tmf77/moves-anywhere:v2}"

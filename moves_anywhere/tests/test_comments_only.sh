@@ -16,6 +16,13 @@
 # Other changed files are listed as `OTHER <file>` and are not checked.
 # COMMENTS_ONLY_SKIP: space-separated paths to leave out, each printed as `SKIP <file>`.
 # Exits: 0 when every checked file passes (`PASS n files`); 1 on any failure; 2 on a usage error.
+#
+# What:      Developer test: checks that a change to scripts touched only comments and blank lines.
+# Does:      Compares each changed .R, .r, .sh, .py file and Dockerfile between the merge base and HEAD after dropping comment and blank lines.
+# Called by: A person or a CI job, before merging a documentation-only change. Not run by launch.sh.
+# Reads:     git history (git diff, git show); environment: COMMENTS_ONLY_SKIP
+# Writes:    A temporary file, removed on exit; prints ok, FAIL, SKIP and OTHER lines to stdout
+# Needs:     bash, git, diff, sed
 
 base="${1:-origin/main}"
 git rev-parse --verify --quiet "$base^{commit}" > /dev/null || { echo "unknown BASE_REF: $base" >&2; exit 2; }
