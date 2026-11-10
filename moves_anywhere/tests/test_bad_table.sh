@@ -1,53 +1,65 @@
 #!/bin/bash
 # test_bad_table.sh ###########################################################
 #
-# What:      tests/test_bad_table.sh <image>: proves a bad input table stops the run at the adapt step.
-# Does:      Copies moves_anywhere/inputs_ny to a temporary folder, replaces sourcetypeyear.csv there with
-#            a table whose columns are wrong, runs the image in mounted mode through run.sh, and checks
-#            the exit status, the failed manifest, and a stop_reason that starts "adapt failed on sourcetypeyear".
-# Called by: Developer tool: test of the exit-status handling of launch.sh (CM-8.18). Not run by launch.sh.
-# Reads:     moves_anywhere/inputs_ny, moves_anywhere/run.sh, tests/manifest_get.py; needs Docker and the image
-# Writes:    a temporary folder, removed on exit
-# Exits:     2 if the image argument is missing; 0 if every check passes, 1 otherwise
+# What:      Proves a bad input table stops a ticket-mode run at the adapt step and is reported (CM-8.18).
+# Does:      Like test_ticket_mode.sh: the stub ticket server runs in a container and the MOVES container
+#            joins its network. The stub serves the normal inputs_ny inputs, except sourcetypeyear.csv,
+#            which has the wrong columns. Checks the exit status and the failed manifest the run pushes.
+# Called by: Developer tool: test of the exit-status handling of launch.sh. Not run by launch.sh.
+# Reads:     fixture_dir (or FIXTURE, default moves_anywhere/inputs_ny), tests/ticket_stub_server.py,
+#            tests/manifest_get.py
+# Writes:    moves_anywhere/tests/.work/bad_table/; strips CR from scripts/*.sh in place
+# Exits:     1 if not in a git repository; otherwise the number of failed assertions
+# Usage: bash moves_anywhere/tests/test_bad_table.sh [fixture_dir]
+# Needs Docker and the image (IMAGE, default tmf77/moves-anywhere:v3).
 ###############################################################################
 
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo="$(cd "$here/../.." && pwd)"
-image="${1:-}"
-[ -n "$image" ] || { echo "usage: test_bad_table.sh <image>" >&2; exit 2; }
+export MSYS_NO_PATHCONV=1
+REPO=$(git rev-parse --show-toplevel) || exit 1
+cd "$REPO" || exit 1
+IMAGE=${IMAGE:-tmf77/moves-anywhere:v3}
+SCRIPTS="$(pwd -W 2>/dev/null || pwd)/moves_anywhere/scripts"
+TESTS="$(pwd -W 2>/dev/null || pwd)/moves_anywhere/tests"
+FIXTURE=${1:-${FIXTURE:-$REPO/moves_anywhere/inputs_ny}}
+WORK="$REPO/moves_anywhere/tests/.work/bad_table"
+FAILS=0
+check() { if eval "$2"; then echo "PASS  $1"; else echo "FAIL  $1"; FAILS=$((FAILS + 1)); fi; }
 
-pass=0; fail=0
-ok()  { pass=$((pass+1)); echo "PASS  $1"; }
-bad() { fail=$((fail+1)); echo "FAIL  $1"; }
-check() { if eval "$2"; then ok "$1"; else bad "$1"; fi; }
+for f in "$REPO"/moves_anywhere/scripts/*.sh; do sed -i 's/\r$//' "$f"; done
 
-# 1. Make a copy of the inputs with one bad table ####
-tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-D="$tmp/inputs"
-mkdir -p "$D" && cp "$repo/moves_anywhere/inputs_ny"/* "$D"/
-# Remove the finished-run outputs so nothing from the fixture can stand in for a new result.
-rm -f "$D"/data.csv "$D"/movesoutput.csv "$D"/movesactivityoutput.csv "$D"/moveslog.txt "$D"/diagnostics.txt \
-      "$D"/run_manifest.json "$D"/data.csv.gz "$D"/moveslog.txt.gz
-printf 'not_a_column,another_bad_one\n1,2\n' > "$D/sourcetypeyear.csv"
+# 1. Inputs: the 14 user tables + runspec + parameters, with one bad table ####
+rm -rf "$WORK"; mkdir -p "$WORK/in" "$WORK/out"
+for f in avft avgspeeddistribution dayvmtfraction fuelformulation fuelsupply fuelusagefraction \
+         hourvmtfraction imcoverage monthvmtfraction roadtypedistribution sourcetypeagedistribution \
+         sourcetypeyear sourcetypeyearvmt zonemonthhour; do cp "$FIXTURE/$f.csv" "$WORK/in/"; done
+cp "$FIXTURE/rs_custom.xml" "$FIXTURE/parameters.json" "$WORK/in/"
+printf 'not_a_column,another_bad_one\n1,2\n' > "$WORK/in/sourcetypeyear.csv"
 
-# 2. Run the image the way a user does ####
-bash "$repo/moves_anywhere/run.sh" "$D" --image "$image" > "$tmp/run.log" 2>&1
-rc=$?
-tail -n 5 "$tmp/run.log" | sed 's/^/      /'
+# 2. Run the stub and the MOVES container, as test_ticket_mode.sh does ####
+W="$(cd "$WORK" && pwd -W 2>/dev/null || pwd)"
+docker rm -f ma_stub_bad_table >/dev/null 2>&1
+docker run -d --rm --name ma_stub_bad_table --mount "type=bind,src=$TESTS,target=/t,readonly" \
+  --mount "type=bind,src=$W,target=/w" --entrypoint python3 "$IMAGE" -I /t/ticket_stub_server.py \
+  --in /w/in --out /w/out --log /w/puts.log --port 8765 >/dev/null
+sleep 2
+docker run --rm --name ma_run_bad_table --cpus 2 --network "container:ma_stub_bad_table" \
+  -e MOVES_IO=ticket -e "MOVES_IMAGE=$IMAGE" -e RUN_ID=d36109-u1-o1 -e MOVES_RETRY_SCALE=0 \
+  -e "TICKET_URL=http://127.0.0.1:8765/ticket?t=SECRETTOKEN" \
+  --mount "type=bind,src=$SCRIPTS,target=/cat/scripts" \
+  --entrypoint bash "$IMAGE" -c "./scripts/launch.sh" > "$WORK/container.log" 2>&1
+RC=$?
+docker rm -f ma_stub_bad_table >/dev/null 2>&1
 
-# 3. Check the result ####
-check "run exits non-zero (got $rc)" "[ $rc -ne 0 ]"
-man="$D/run_manifest.json"
-status=""; reason=""
-if [ -f "$man" ]; then
-  status="$(python3 -I "$here/manifest_get.py" "$man" status)"
-  reason="$(python3 -I "$here/manifest_get.py" "$man" stop_reason)"
-fi
-check "run_manifest.json exists and status is failed (got '$status')" "[ '$status' = failed ]"
-case "$reason" in
-  "adapt failed on sourcetypeyear"*) check "stop_reason starts 'adapt failed on sourcetypeyear'" "true" ;;
-  *) check "stop_reason starts 'adapt failed on sourcetypeyear' (got '$reason')" "false" ;;
-esac
+# 3. Assertions ####
+OUT="$WORK/out"
+mf() { python3 -I "$REPO/moves_anywhere/tests/manifest_get.py" "$OUT/run_manifest.json" "$1" 2>/dev/null; }
+REASON="$(mf stop_reason)"
+check "container exit status is non-zero (got $RC)" '[ "$RC" -ne 0 ]'
+check "run_manifest.json pushed with status failed (got '$(mf status)')" '[ -s "$OUT/run_manifest.json" ] && [ "$(mf status)" = failed ]'
+check "stop_reason starts 'adapt failed on sourcetypeyear' (got '$REASON')" 'case "$REASON" in "adapt failed on sourcetypeyear"*) true ;; *) false ;; esac'
+check "stop_reason is at most 110 characters (got ${#REASON})" '[ "${#REASON}" -ge 1 ] && [ "${#REASON}" -le 110 ]'
+check "no data.csv.gz pushed" '[ ! -e "$OUT/data.csv.gz" ]'
 
-echo "$pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+echo
+if [ "$FAILS" = 0 ]; then echo "PASS: all assertions"; else echo "FAIL: $FAILS assertion(s)"; fi
+exit "$FAILS"

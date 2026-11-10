@@ -13,6 +13,8 @@
 #            the exit status of an R step (4, 6, 7, 8, 11, 13) that fails: the run stops there and
 #            writes stop_reason "<step> failed (exit N)" unless the step already wrote one;
 #            otherwise the exit code of task_fetch_inputs.sh or task_push_outputs.sh
+#            In mounted mode a failed step exits non-zero and prints the reason to the log, and no manifest
+#            is written; in ticket/sync mode the pushed failed manifest carries the reason.
 ###############################################################################
 
 # I/O mode dispatcher (docs/RUN_TICKET.md): mounted (default) | ticket | sync

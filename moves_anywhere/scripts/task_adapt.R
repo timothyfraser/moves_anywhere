@@ -45,11 +45,10 @@ source("scripts/adapt_functions.R")
 run_adapter = function(name, expr){
   tryCatch(force(expr), error = function(e){
     full = conditionMessage(e)
-    msg = paste0("adapt failed on ", name, ": ", strsplit(full, "
-")[[1]][1])
+    msg = paste0("adapt failed on ", name, ": ", strsplit(full, "\n")[[1]][1])
     msg = substr(msg, 1, 110)
     if(dir.exists("/cat/run")){ writeLines(msg, "/cat/run/stop_reason", sep = "") }
-    message(paste0("adapt failed on ", name, ": ", full))
+    message(paste0("ERROR: adapt failed on ", name, ": ", gsub("[[:space:]]*\n[[:space:]]*", " | ", full)))
     quit(save = "no", status = 1)
   })
 }
