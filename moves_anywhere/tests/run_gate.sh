@@ -17,6 +17,7 @@
 
 set -uo pipefail
 # The gate builds from a clean commit, so its own Python steps must not leave __pycache__ behind.
+# (-I makes Python ignore PYTHON* variables, so each call below also passes -B.)
 export PYTHONDONTWRITEBYTECODE=1
 
 MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
@@ -90,7 +91,7 @@ run_step() {
 # 3. The steps ####
 step_static() { bash moves_anywhere/tests/test_dockerfile_static.sh; }
 
-step_compare_unit() { python -I moves_anywhere/scripts/test_compare_outputs.py; }
+step_compare_unit() { python -I -B moves_anywhere/scripts/test_compare_outputs.py; }
 
 step_build() {
   if [ "$SKIP_BUILD" = 1 ]; then
@@ -140,7 +141,7 @@ step_compare() {
       gzip -dc "$RUN_DIR/$f.gz" > "$cmp/$f"
     fi
   done
-  out=$(python -I moves_anywhere/scripts/compare_outputs.py "$GOLD" "$cmp"); rc=$?
+  out=$(python -I -B moves_anywhere/scripts/compare_outputs.py "$GOLD" "$cmp"); rc=$?
   printf '%s\n' "$out"
   [ "$rc" = 0 ] || { echo "compare_outputs.py exited $rc"; return 1; }
   printf '%s\n' "$out" | grep -q 'OVERALL: PASS' || { echo "no OVERALL: PASS in the output"; return 1; }
@@ -155,7 +156,7 @@ step_compare() {
 
 step_manifest() {
   local s
-  s=$(python3 -I moves_anywhere/tests/manifest_get.py "$RUN_DIR/run_manifest.json" status | tr -d '\r') || return 1
+  s=$(python3 -I -B moves_anywhere/tests/manifest_get.py "$RUN_DIR/run_manifest.json" status | tr -d '\r') || return 1
   echo "run_manifest.json status: $s"
   [ "$s" = ok ]
 }
