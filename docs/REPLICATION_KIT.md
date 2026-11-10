@@ -60,7 +60,7 @@ If you only want to inspect, skip steps 2 to 6: the `_*.csv` tables are plain CS
 Not in the kit: `data.csv.gz` (the post-processed result, delivered next to the kit),
 `moveslog.txt.gz`, and `run_manifest.json`. The manifest records the checksum of the kit and
 of every input and output, so you can check that the kit you hold is the one the run produced
-([`RUN_MANIFEST.md`](../../docs/RUN_MANIFEST.md)).
+([`RUN_MANIFEST.md`](RUN_MANIFEST.md)).
 
 ---
 
@@ -69,7 +69,7 @@ of every input and output, so you can check that the kit you hold is the one the
 Implementation: `moves_anywhere/scripts/task_pack.sh` (sourced by the launcher after the
 outputs are compressed), `moves_anywhere/scripts/manifest_fields.py` (stdlib helper that
 assembles the manifest), proven by `moves_anywhere/tests/test_pack.sh`. Output contract:
-[`RUN_TICKET.md`](../../docs/RUN_TICKET.md) §2 (the object set) and [`RUN_MANIFEST.md`](../../docs/RUN_MANIFEST.md).
+[`RUN_TICKET.md`](RUN_TICKET.md) §2 (the object set) and [`RUN_MANIFEST.md`](RUN_MANIFEST.md).
 
 ### Kit contents (normative)
 
