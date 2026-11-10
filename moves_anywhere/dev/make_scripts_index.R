@@ -148,5 +148,5 @@ if(counted != length(files) || any(is.na(cls))){
 con = file(out, "wb")
 writeBin(charToRaw(paste0(paste(doc, collapse = "\n"), "\n")), con)
 close(con)
-cat(sprintf("Wrote %s: %d scripts = %d run + %d adapters + %d helpers + %d tests and tools\n",
+cat(sprintf("Wrote %s: %d scripts = %d run + %d adapters + %d helpers + %d tests and tools + %d legacy\n",
             out, length(files), n_run, sum(cls == "adapt"), sum(cls == "helper"), sum(cls == "tools"), sum(cls == "legacy")))
