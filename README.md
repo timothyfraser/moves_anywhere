@@ -44,6 +44,7 @@ You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [
 
 ``` r
 library(catr)
+dir.create("inputs", showWarnings = FALSE)
 custom_rs(.geoid = "36109", .year = 2025, .path = "inputs/rs_custom.xml")
 ```
 
