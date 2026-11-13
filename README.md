@@ -2,6 +2,8 @@
 
 **Run EPA MOVES anywhere: on Windows, Mac, or Linux, in one Docker container.**
 
+The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Windows; Apple-silicon Macs are untested.
+
 ![Docker image](https://img.shields.io/badge/docker-tmf77%2Fmoves--anywhere%3Av3-2496ED?logo=docker&logoColor=white) ![R package](https://img.shields.io/badge/R-catr%200.2.0-276DC3?logo=r&logoColor=white) ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
 -   Lead Developer: [Tim Fraser, PhD](https://github.com/timothyfraser) `<tmf77@cornell.edu>`

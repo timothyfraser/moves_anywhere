@@ -1,0 +1,79 @@
+name: Fixture run (build, run, compare exact)
+
+# Proves the image built from this commit reproduces the gold MOVES run on a plain Linux runner, outside AWS
+# (checklist item 10, plan P1 / contract CM-6.15). It builds the image, runs the Tompkins County, NY fixture
+# (moves_anywhere/inputs_ny, user inputs only) through run.sh, and compares the three output files with the
+# gold outputs kept in the same folder. Any difference fails. Nothing is pushed anywhere.
+
+on:
+  pull_request:
+    paths:
+      - "moves_anywhere/**"
+      - ".github/workflows/fixture.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fixture-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      MOVES_COMMIT: 2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
+      IMAGE: moves-anywhere:fixture
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space (the image is about 4 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Build the image from this commit
+        working-directory: moves_anywhere
+        run: docker build --build-arg MOVES_COMMIT="$MOVES_COMMIT" --build-arg GIT_REVISION="${{ github.sha }}" -t "$IMAGE" .
+
+      - name: Record the image
+        run: |
+          docker image inspect "$IMAGE" --format 'id {{.Id}} size {{.Size}}'
+          docker inspect "$IMAGE" --format '{{json .Config.Labels}}'
+
+      - name: Stage the fixture inputs (user inputs only, no outputs)
+        run: |
+          F=moves_anywhere/inputs_ny
+          R="$RUNNER_TEMP/run"
+          mkdir -p "$R"
+          for f in avft avgspeeddistribution dayvmtfraction fuelformulation fuelsupply fuelusagefraction \
+                   hourvmtfraction imcoverage monthvmtfraction roadtypedistribution sourcetypeagedistribution \
+                   sourcetypeyear sourcetypeyearvmt zonemonthhour; do cp "$F/$f.csv" "$R/"; done
+          cp "$F/rs_custom.xml" "$F/parameters.json" "$R/"
+          ls "$R"
+
+      - name: Run MOVES with run.sh
+        run: bash moves_anywhere/run.sh "$RUNNER_TEMP/run" --image "$IMAGE" --cpus 2 --memory 6g
+
+      - name: Compare with the gold run (exact)
+        run: |
+          ls -la "$RUNNER_TEMP/run"
+          python3 -I moves_anywhere/scripts/compare_outputs.py moves_anywhere/inputs_ny "$RUNNER_TEMP/run"
+
+      - name: Output hashes
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/run" && sha256sum data.csv movesoutput.csv movesactivityoutput.csv run_manifest.json 2>/dev/null || true
+
+      - name: Keep the run record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixture-run
+          path: |
+            ${{ runner.temp }}/run/run_manifest.json
+            ${{ runner.temp }}/run/moveslog.txt
+          retention-days: 30
+          if-no-files-found: ignore
