@@ -2,17 +2,15 @@
 
 **Run EPA MOVES anywhere: on Windows, Mac, or Linux, in one Docker container.**
 
-![Docker image](https://img.shields.io/badge/docker-tmf77%2Fmoves--anywhere%3Av2-2496ED?logo=docker&logoColor=white) ![R package](https://img.shields.io/badge/R-catr%200.2.0-276DC3?logo=r&logoColor=white) ![License](https://img.shields.io/badge/license-Apache%202.0-green)
+![Docker image](https://img.shields.io/badge/docker-tmf77%2Fmoves--anywhere%3Av3-2496ED?logo=docker&logoColor=white) ![R package](https://img.shields.io/badge/R-catr%200.2.0-276DC3?logo=r&logoColor=white) ![License](https://img.shields.io/badge/license-Apache%202.0-green)
 
 -   Lead Developer: [Tim Fraser, PhD](https://github.com/timothyfraser) `<tmf77@cornell.edu>`
 -   Contributors: Erin Murphy, Junna Chen, Mahak Bindal, Shungo Najima, Carl Closs
 -   Institution: Gao Labs @ Cornell University
 
-> **Image versions (2026-11):** `tmf77/moves-anywhere:v2` is the supported, released image. **`v3` is under
-> active development and is not yet released for public use**: its Dockerfile is on `main` so the work is
-> open, but nothing is published to a registry under the `v3` tag yet and its interfaces (`MOVES_IO`
-> ticket mode, `run_manifest.json`, the replication kit) may still change. Use `v2` until a release note
-> here says otherwise.
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.0.0`) is the current release, and `run.sh` and
+> `run.ps1` use it by default. `tmf77/moves-anywhere:v2` is the previous image and is unchanged. See the
+> [changelog](CHANGELOG.md) for what changed.
 
 ## Contents
 
@@ -64,7 +62,7 @@ powershell -ExecutionPolicy Bypass -File moves_anywhere\run.ps1 inputs
 
 ## What you get back
 
-Results land in the same folder as your inputs. The run manifest and replication kit are part of `v3`, which is not released yet.
+Results land in the same folder as your inputs. The run manifest and replication kit are part of `v3`.
 
 | File | What it is |
 |----|----|
@@ -124,8 +122,8 @@ remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/c
 
 | Image | Status | Notes |
 |----|----|----|
-| `tmf77/moves-anywhere:v2` | Released | The supported image; `run.sh` and `run.ps1` use it by default. |
-| `tmf77/moves-anywhere:v3` | In development | Not released for public use. Its Dockerfile is on `main`; see [version pins](docs/PINS_v3.md). |
+| `tmf77/moves-anywhere:v3` (`v3.0.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
+| `tmf77/moves-anywhere:v2` | Previous release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
 
 ## Citation
 

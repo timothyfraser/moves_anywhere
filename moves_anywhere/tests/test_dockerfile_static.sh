@@ -37,7 +37,8 @@ check "no gcsfuse" '! grep -qi "gcsfuse" "$D"'
 check "no google-cloud-cli" '! grep -qi "google-cloud-cli" "$D"'
 check "compile RUN kept" 'printf "%s\n" "$INS" | grep -q "ant compileall"'
 check "debug property kept" 'grep -q "moves.keepDebugData" "$D"'
-check "v3 development labels kept" 'grep -q "status=\"development\"" "$D" && grep -q "UNDER DEVELOPMENT" "$D"'
+check "release labels present" 'grep -q "^LABEL version=\"3\.0\.0\"" "$D" && grep -q "org.opencontainers.image.source=\"https://github.com/timothyfraser/moves_anywhere\"" "$D" && grep -q "org.opencontainers.image.revision=" "$D" && grep -q "org.opencontainers.image.licenses=\"Apache-2.0\"" "$D"'
+check "no development labels" '! grep -qiE "status=\"development\"|UNDER DEVELOPMENT|3\.0-dev" "$D"'
 
 echo
 if [ "$FAILS" = 0 ]; then echo "PASS: all assertions"; else echo "FAIL: $FAILS assertion(s)"; fi

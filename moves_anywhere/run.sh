@@ -16,7 +16,7 @@
 # Exits:     0 if the run produced results; 2 on a usage error or missing inputs; 3 if Docker is missing or not running; otherwise the container's exit status
 set -u
 
-IMAGE="${MOVES_IMAGE:-tmf77/moves-anywhere:v2}"
+IMAGE="${MOVES_IMAGE:-tmf77/moves-anywhere:v3}"
 CPUS=2
 MEMORY=6g
 INPUTS=""

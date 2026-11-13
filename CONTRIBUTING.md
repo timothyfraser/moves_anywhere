@@ -2,8 +2,8 @@
 
 How to propose a change, and the header every script in `moves_anywhere/scripts/` carries.
 
-> **Image versions:** `tmf77/moves-anywhere:v2` is the released image. `v3` is in development and is not
-> yet published to a registry. A change to the scripts goes into `v3`; `v2` does not change.
+> **Image versions:** `tmf77/moves-anywhere:v3` is the current release (3.0.0). `v2` is the previous image and does not change.
+> A change to the scripts goes into `v3`.
 
 ## Proposing a change
 

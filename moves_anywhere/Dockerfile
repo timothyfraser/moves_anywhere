@@ -1,6 +1,6 @@
 # Dockerfile ##################################################################
 #
-# What:      The moves-anywhere v3 image (in development; v2 is the released image).
+# What:      The moves-anywhere v3 image (release 3.0.0; v2 is the previous image).
 # Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Go and R with pinned packages; fetches
 #            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
 #            compiles MOVES; copies in scripts/ and installs catr.
@@ -16,6 +16,8 @@ FROM ubuntu:20.04
 # MOVES_COMMIT: the exact USEPA/EPA_MOVES_Model commit baked into the image (the one v2 shipped).
 # Debug data (MOVES keepDebugData) is a RUNTIME switch (parameters.json "debug": true); see task_launch_moves.sh.
 ARG MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
+# GIT_REVISION: the moves_anywhere commit the image is built from (--build-arg GIT_REVISION=<sha>).
+ARG GIT_REVISION=unknown
 
 # Create directory
 RUN mkdir cat
@@ -141,9 +143,12 @@ RUN Rscript /cat/scripts/task_install_catr.R && Rscript -e "library(catr); cat('
 # Label the image
 LABEL title="moves-anywhere"
 LABEL description="standalone docker-moves image for customized MOVES estimation on any OS. Cloud version."
-LABEL version="3.0-dev"
-LABEL status="development"
-LABEL org.opencontainers.image.description="moves-anywhere v3 is UNDER DEVELOPMENT and not yet released for public use; v2 is the supported image."
+LABEL version="3.0.0"
+LABEL org.opencontainers.image.version="3.0.0"
+LABEL org.opencontainers.image.description="moves-anywhere v3.0.0: EPA MOVES on any OS in one Docker container (ticket mode, run manifest, replication kit)."
+LABEL org.opencontainers.image.source="https://github.com/timothyfraser/moves_anywhere"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.revision="${GIT_REVISION}"
 LABEL maintainer="Tim Fraser"
 LABEL org.opencontainers.image.authors="tmf77@cornell.edu"
 
