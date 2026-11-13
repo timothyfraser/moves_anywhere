@@ -17,6 +17,11 @@ Image `tmf77/moves-anywhere:v3` (also `v3.0.0`). `v2` is unchanged and stays ava
 - **Apache License 2.0.** The repository was relicensed from GPL-3.0. (#1)
 - **Documentation.** The README has the new look and the published citation, and its repository links and `catr` install commands are fixed (#8, #9). Every script carries one standard header, and `CONTRIBUTING.md` describes it (#10). The guides were corrected (#11), the scripts guide is generated from the headers (#13), and the guides have an index, top and tail links and a `CITATION.cff` (#14). A test runs every command in the README (#15).
 
+### Frozen interfaces
+
+- The run manifest (`manifest_version: 1`) and the run ticket are both frozen at v3.0.0: fields are not removed or renamed within v3. See [`docs/RUN_MANIFEST.md`](docs/RUN_MANIFEST.md) and [`docs/RUN_TICKET.md`](docs/RUN_TICKET.md).
+- R packages are the current CRAN versions at build time, listed in [`docs/PINS_v3.md`](docs/PINS_v3.md).
+
 ### Known limits
 
 - The image is built for `linux/amd64` (Intel/AMD). It has not been tested on Apple-silicon Macs.
