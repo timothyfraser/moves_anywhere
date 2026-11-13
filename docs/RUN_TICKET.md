@@ -2,6 +2,8 @@
 
 Part of the MOVES Anywhere guides: see the [index](README.md).
 
+**Frozen at v3.0.0:** the ticket fields and the order of fetch, run, push and manifest described here do not change within v3. A breaking change needs a new major release.
+
 A MOVES ANYWHERE container needs two things from the outside world: the files that describe
 the run (the runspec `rs_custom.xml`, `parameters.json`, and up to about 16 user CSV tables),
 and somewhere to put the results. Today the container finds both in a mounted folder,

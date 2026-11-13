@@ -7,7 +7,7 @@
 # results. Defaults: 2 CPUs, 6 GB, the released image. MOVES uses about one core at a time.
 param(
   [Parameter(Mandatory = $true, Position = 0)][string]$Inputs,
-  [string]$Image = $(if ($env:MOVES_IMAGE) { $env:MOVES_IMAGE } else { "tmf77/moves-anywhere:v2" }),
+  [string]$Image = $(if ($env:MOVES_IMAGE) { $env:MOVES_IMAGE } else { "tmf77/moves-anywhere:v3" }),
   [string]$Cpus = "2",
   [string]$Memory = "6g"
 )

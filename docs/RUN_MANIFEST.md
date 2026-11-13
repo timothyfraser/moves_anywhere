@@ -2,6 +2,8 @@
 
 Part of the MOVES Anywhere guides: see the [index](README.md).
 
+**Frozen at v3.0.0** (`manifest_version: 1`): fields are not removed or renamed within v3. A change that would break a reader gets a new `manifest_version` and a new major release.
+
 Every MOVES ANYWHERE run ends by writing `run_manifest.json`, a small JSON file (about 5 KB)
 that says whether the run succeeded, why it stopped if it did not, and exactly what went in
 and came out: the image and MOVES version, the runspec settings, a SHA-256 checksum and size
