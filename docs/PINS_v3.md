@@ -33,11 +33,11 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 
 ## What v3 pins that v2 left floating
 
-`remotes` 2.5.0, `RMySQL` 0.11.1 and `httr` 1.4.7 now install at the version v2 had. Packages that v2 installed with a version (for example `dplyr` 1.1.0) are unchanged in the Dockerfile; v2 ended up with newer versions of several of them because later installs upgraded them (see the list below). The apt packages and the R binary itself are not version-pinned.
+The Dockerfile asks for `remotes` 2.5.0, `RMySQL` 0.11.1 and `httr` 1.4.7, the versions v2 had. In the v3.0.0 build a later install upgraded `httr` to 1.4.9 (see the v3.0.0 table below); `remotes` and `RMySQL` stayed as asked. Packages that v2 installed with a version (for example `dplyr` 1.1.0) are unchanged in the Dockerfile; v2 ended up with newer versions of several of them because later installs upgraded them (see the list below). The apt packages and the R binary itself are not version-pinned.
 
 ## What v3 removes
 
-`google-cloud-cli`, `gcsfuse` and `fuse` (the Google command-line tools). The three Google R packages `gargle`, `googleAuthR` and `googleCloudStorageR` are not removed: the Dockerfile still installs them, pinned to the v2 versions below, because `catr` 0.2.0 imports them.
+`google-cloud-cli`, `gcsfuse` and `fuse` (the Google command-line tools). The three Google R packages `gargle`, `googleAuthR` and `googleCloudStorageR` are not removed: the Dockerfile still installs them, pinned to the v2 versions below, because `catr` 0.2.0 imports them. They are asked for at the v2 versions, but later installs upgrade `gargle` and `googleAuthR` (v3.0.0 has `gargle` 1.7.0 and `googleAuthR` 2.0.2.1).
 
 ## R packages in v2 (`installed.packages()`)
 
@@ -135,6 +135,69 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 | utils | 4.5.0 |
 
 ---
+
+## R packages in v3.0.0 as built (2026-11-13)
+
+The v3.0.0 image installs R packages from CRAN at build time; they are not pinned to the v2 versions above. Built 2026-11-13 from the release commit, it holds R 4.5.2 and the versions below wherever they differ from v2 (55 packages differ; `fansi` is no longer installed). The fixture run on this image matched the v2-era gold result exactly on all three output files, so these differences do not change results. The published image is fixed by its digest; a later rebuild may pick up newer CRAN versions.
+
+| Package | v2 | v3.0.0 |
+|---|---|---|
+| DBI | 1.2.3 | 1.3.0 |
+| bit64 | 4.6.0-1 | 4.8.6 |
+| blob | 1.2.4 | 1.3.0 |
+| cli | 3.6.4 | 3.6.6 |
+| clipr | 0.8.0 | 0.8.1 |
+| cpp11 | 0.5.2 | 0.5.5 |
+| curl | 6.2.2 | 8.1.0 |
+| digest | 0.6.37 | 0.6.39 |
+| dplyr | 1.1.4 | 1.2.1 |
+| fansi | 1.0.6 | (not installed) |
+| fs | 1.6.6 | 2.1.0 |
+| gargle | 1.5.2 | 1.7.0 |
+| generics | 0.1.3 | 0.1.4 |
+| glue | 1.8.0 | 1.8.1 |
+| googleAuthR | 2.0.2 | 2.0.2.1 |
+| hms | 1.1.3 | 1.1.4 |
+| httr | 1.4.7 | 1.4.9 |
+| jsonlite | 1.8.9 | 2.0.0 |
+| lifecycle | 1.0.4 | 1.0.5 |
+| lubridate | 1.9.4 | 1.9.5 |
+| magrittr | 2.0.3 | 2.0.5 |
+| openssl | 2.3.2 | 2.5.0 |
+| pillar | 1.10.2 | 1.11.1 |
+| purrr | 1.0.4 | 1.2.2 |
+| rappdirs | 0.3.3 | 0.3.4 |
+| rlang | 1.1.6 | 1.3.0 |
+| stringi | 1.8.7 | 1.8.9 |
+| stringr | 1.5.1 | 1.6.0 |
+| tibble | 3.2.1 | 3.3.1 |
+| tidyr | 1.3.1 | 1.3.2 |
+| timechange | 0.3.0 | 0.4.0 |
+| utf8 | 1.2.4 | 1.2.6 |
+| vctrs | 0.6.5 | 0.7.3 |
+| withr | 3.0.2 | 3.0.3 |
+| yaml | 2.3.10 | 2.3.12 |
+| zip | 2.3.2 | 3.0.2 |
+| Matrix | 1.7-3 | 1.7-4 |
+| base | 4.5.0 | 4.5.2 |
+| cluster | 2.1.8.1 | 2.1.8.2 |
+| compiler | 4.5.0 | 4.5.2 |
+| datasets | 4.5.0 | 4.5.2 |
+| foreign | 0.8-90 | 0.8-91 |
+| grDevices | 4.5.0 | 4.5.2 |
+| graphics | 4.5.0 | 4.5.2 |
+| grid | 4.5.0 | 4.5.2 |
+| lattice | 0.22-5 | 0.22-9 |
+| methods | 4.5.0 | 4.5.2 |
+| mgcv | 1.9-1 | 1.9-4 |
+| parallel | 4.5.0 | 4.5.2 |
+| splines | 4.5.0 | 4.5.2 |
+| stats | 4.5.0 | 4.5.2 |
+| stats4 | 4.5.0 | 4.5.2 |
+| survival | 3.8-3 | 3.8-6 |
+| tcltk | 4.5.0 | 4.5.2 |
+| tools | 4.5.0 | 4.5.2 |
+| utils | 4.5.0 | 4.5.2 |
 
 ## For agents
 
