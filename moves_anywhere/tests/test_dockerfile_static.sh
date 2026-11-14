@@ -2,7 +2,8 @@
 # test_dockerfile_static.sh ###################################################
 #
 # What:      Static checks on moves_anywhere/Dockerfile (no docker needed): the ~1 GB MOVES tree is
-#            written in ONE layer and the database dump never survives in an image layer.
+#            written in ONE layer, the database dump never survives in an image layer, and (3.1.0)
+#            the Go toolchain and software-properties-common are not left in the image.
 # Does:      Joins backslash continuations, greps the instructions, prints PASS or FAIL per assertion.
 # Called by: Developer tool: test of the Dockerfile. Not run by launch.sh.
 # Reads:     moves_anywhere/Dockerfile
@@ -15,8 +16,8 @@ D="$(cd "$(dirname "$0")/.." && pwd)/Dockerfile"
 FAILS=0
 check() { if eval "$2"; then echo "PASS  $1"; else echo "FAIL  $1"; FAILS=$((FAILS + 1)); fi; }
 
-# Join backslash continuations so each Dockerfile instruction is one line.
-INS=$(sed 's/\r$//' "$D" | sed -e ':a' -e '/\$/N; s/\\n//; ta')
+# Drop comment lines, then join backslash continuations so each Dockerfile instruction is one line.
+INS=$(sed 's/\r$//' "$D" | grep -v '^[[:space:]]*#' | sed -e ':a' -e '/\\$/N; s/\\\n//; ta')
 big=$(printf '%s\n' "$INS" | grep -E '^RUN .*setupdb\.sh' | grep -v 'chmod \+x /cat/scripts')
 nbig=$(printf '%s\n' "$big" | grep -c .)
 
@@ -37,7 +38,15 @@ check "no gcsfuse" '! grep -qi "gcsfuse" "$D"'
 check "no google-cloud-cli" '! grep -qi "google-cloud-cli" "$D"'
 check "compile RUN kept" 'printf "%s\n" "$INS" | grep -q "ant compileall"'
 check "debug property kept" 'grep -q "moves.keepDebugData" "$D"'
-check "release labels present" 'grep -q "^LABEL version=\"3\.0\.0\"" "$D" && grep -q "org.opencontainers.image.source=\"https://github.com/timothyfraser/moves_anywhere\"" "$D" && grep -q "org.opencontainers.image.revision=" "$D" && grep -q "org.opencontainers.image.licenses=\"Apache-2.0\"" "$D"'
+check "Go is installed only in the compile RUN, and purged there" '[ "$(printf "%s
+" "$INS" | grep -c "golang-go")" = 1 ] && printf "%s
+" "$INS" | grep -E "^RUN .*install .*golang-go" | grep -q "ant go64.*apt-get purge"'
+check "the compile RUN ends by proving go is gone" 'printf "%s
+" "$INS" | grep "ant go64" | grep -q "! command -v go"'
+check "no software-properties-common (system Python requests, urllib3, certifi)" '! grep -q "software-properties-common" <(grep -v "^#" "$D")'
+check "python3 installed explicitly (the run scripts need it)" 'printf "%s
+" "$INS" | grep -E "^RUN apt-get .*install" | grep -q " python3 "'
+check "release labels present" 'grep -q "^LABEL version=\"3\.1\.0\"" "$D" && grep -q "org.opencontainers.image.source=\"https://github.com/timothyfraser/moves_anywhere\"" "$D" && grep -q "org.opencontainers.image.revision=" "$D" && grep -q "org.opencontainers.image.licenses=\"Apache-2.0\"" "$D"'
 check "no development labels" '! grep -qiE "status=\"development\"|UNDER DEVELOPMENT|3\.0-dev" "$D"'
 
 echo

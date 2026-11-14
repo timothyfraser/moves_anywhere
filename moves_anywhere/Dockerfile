@@ -1,9 +1,10 @@
 # Dockerfile ##################################################################
 #
-# What:      The moves-anywhere v3 image (release 3.0.0; v2 is the previous image).
-# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Go and R with pinned packages; fetches
+# What:      The moves-anywhere v3 image (release 3.1.0; 3.0.0 and v2 are the previous images).
+# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Python 3 and R with pinned packages; fetches
 #            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
-#            compiles MOVES; copies in scripts/ and installs catr.
+#            compiles MOVES with a Go toolchain that lives only inside that one step (3.1.0);
+#            copies in scripts/ and installs catr.
 # Called by: buildme_cloud.sh (docker buildx build). Checked by tests/test_dockerfile_static.sh.
 # Reads:     setenv.sh, my.cnf, setupdb.sh, scripts/ (the build context)
 # Writes:    the image
@@ -29,10 +30,10 @@ WORKDIR cat
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
+# Go is not installed here: the compile step below installs it and removes it again (3.1.0).
 RUN apt-get update && apt-get install -y \
     mariadb-server \
     openjdk-11-jdk \
-    golang-go \
     git \
     ant \
     unzip \
@@ -45,8 +46,12 @@ RUN apt-get update && apt-get install -y \
 
 # Upgrade R
 # Install dependencies
+# python3: the run scripts use it (standard library only). lsb-release: the R repository line below.
+# software-properties-common is not installed (3.1.0): nothing used it, and it brought in the system
+# Python packages requests, urllib3 and certifi.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
+    python3 \
+    lsb-release \
     dirmngr \
     gnupg \
     curl \
@@ -112,11 +117,21 @@ RUN set -e &&     mkdir -p EPA_MOVES_Model && cd EPA_MOVES_Model &&     git init
 # Compile MOVES (Java and Go) at build time, so no run compiles anything.
 # D29: keepDebugData becomes a JVM property, default false, so a RUN can opt in with
 # JAVA_TOOL_OPTIONS=-Dmoves.keepDebugData=true (task_launch_moves.sh sets it when parameters.json has "debug": true).
-RUN cd /cat/EPA_MOVES_Model && \
+# 3.1.0: the Go toolchain (Ubuntu golang-go, as in 3.0.0) is installed, used by `ant go64`, and purged in
+# this one RUN, with its build cache, so no layer keeps it. MOVES does not call `go` at run time.
+RUN set -e && apt-get update && \
+    dpkg-query -W -f='${Package}\n' | sort > /tmp/pkgs_before && \
+    apt-get install -y --no-install-recommends golang-go && \
+    dpkg-query -W -f='${Package}\n' | sort > /tmp/pkgs_after && \
+    cd /cat/EPA_MOVES_Model && \
     sed -i 's/static final boolean keepDebugData = false;/static final boolean keepDebugData = Boolean.getBoolean("moves.keepDebugData");/' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     grep -q 'Boolean.getBoolean("moves.keepDebugData")' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     ant compileall && \
-    ant go64
+    ant go64 && \
+    test -x calc/externalcalculatorgo64.exe && test -x generators/externalgenerator64.exe && \
+    apt-get purge -y $(comm -13 /tmp/pkgs_before /tmp/pkgs_after) && \
+    rm -rf /tmp/pkgs_before /tmp/pkgs_after /var/lib/apt/lists/* /root/.cache/go-build /root/go && \
+    ! command -v go
 
 
 # ESTABLISH WORKING DIRECTORY
@@ -143,9 +158,9 @@ RUN Rscript /cat/scripts/task_install_catr.R && Rscript -e "library(catr); cat('
 # Label the image
 LABEL title="moves-anywhere"
 LABEL description="standalone docker-moves image for customized MOVES estimation on any OS. Cloud version."
-LABEL version="3.0.0"
-LABEL org.opencontainers.image.version="3.0.0"
-LABEL org.opencontainers.image.description="moves-anywhere v3.0.0: EPA MOVES on any OS in one Docker container (ticket mode, run manifest, replication kit)."
+LABEL version="3.1.0"
+LABEL org.opencontainers.image.version="3.1.0"
+LABEL org.opencontainers.image.description="moves-anywhere v3.1.0: EPA MOVES on any OS in one Docker container (ticket mode, run manifest, replication kit)."
 LABEL org.opencontainers.image.source="https://github.com/timothyfraser/moves_anywhere"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.revision="${GIT_REVISION}"
