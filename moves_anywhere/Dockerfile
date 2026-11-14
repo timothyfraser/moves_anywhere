@@ -3,7 +3,7 @@
 # What:      The moves-anywhere v3 image (release 3.1.0; 3.0.0 and v2 are the previous images).
 # Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Python 3 and R with pinned packages; fetches
 #            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
-#            compiles MOVES with a Go toolchain that lives only inside that one step (3.1.0);
+#            compiles MOVES (Go: a current go.dev release that lives only inside that one step, 3.1.0);
 #            copies in scripts/ and installs catr.
 # Called by: buildme_cloud.sh (docker buildx build). Checked by tests/test_dockerfile_static.sh.
 # Reads:     setenv.sh, my.cnf, setupdb.sh, scripts/ (the build context)
@@ -117,20 +117,26 @@ RUN set -e &&     mkdir -p EPA_MOVES_Model && cd EPA_MOVES_Model &&     git init
 # Compile MOVES (Java and Go) at build time, so no run compiles anything.
 # D29: keepDebugData becomes a JVM property, default false, so a RUN can opt in with
 # JAVA_TOOL_OPTIONS=-Dmoves.keepDebugData=true (task_launch_moves.sh sets it when parameters.json has "debug": true).
-# 3.1.0: the Go toolchain (Ubuntu golang-go, as in 3.0.0) is installed, used by `ant go64`, and purged in
-# this one RUN, with its build cache, so no layer keeps it. MOVES does not call `go` at run time.
-RUN set -e && apt-get update && \
-    dpkg-query -W -f='${Package}\n' | sort > /tmp/pkgs_before && \
-    apt-get install -y --no-install-recommends golang-go && \
-    dpkg-query -W -f='${Package}\n' | sort > /tmp/pkgs_after && \
+# 3.1.0: EPA's Go source (calc/ and generators/, unchanged) is compiled with a current Go release from
+# go.dev, checked against its published SHA-256, used by `ant go64` and deleted in this same RUN with its
+# build cache, so no layer keeps a Go toolchain. MOVES does not call `go` at run time. 3.0.0 compiled the
+# same source with Ubuntu's golang-go (Go 1.13.8). GOAMD64=v1 (the default) keeps plain x86-64 floating
+# point, no fused multiply-add. 3.1.0 shipped only after its outputs matched 3.0.0 exactly.
+ARG GO_VERSION=1.27.4
+ARG GO_SHA256=7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840
+RUN set -e && \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tgz && \
+    echo "${GO_SHA256}  /tmp/go.tgz" | sha256sum -c - && \
+    tar -C /tmp -xzf /tmp/go.tgz && rm -f /tmp/go.tgz && \
+    export PATH="/tmp/go/bin:$PATH" GOTOOLCHAIN=local GOAMD64=v1 GOCACHE=/tmp/gocache GOPATH=/tmp/gopath && \
+    test "$(go env GOVERSION)" = "go${GO_VERSION}" && \
     cd /cat/EPA_MOVES_Model && \
     sed -i 's/static final boolean keepDebugData = false;/static final boolean keepDebugData = Boolean.getBoolean("moves.keepDebugData");/' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     grep -q 'Boolean.getBoolean("moves.keepDebugData")' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     ant compileall && \
     ant go64 && \
     test -x calc/externalcalculatorgo64.exe && test -x generators/externalgenerator64.exe && \
-    apt-get purge -y $(comm -13 /tmp/pkgs_before /tmp/pkgs_after) && \
-    rm -rf /tmp/pkgs_before /tmp/pkgs_after /var/lib/apt/lists/* /root/.cache/go-build /root/go && \
+    rm -rf /tmp/go /tmp/gocache /tmp/gopath /root/.config/go && hash -r && \
     ! command -v go
 
 

@@ -3,7 +3,7 @@
 #
 # What:      Static checks on moves_anywhere/Dockerfile (no docker needed): the ~1 GB MOVES tree is
 #            written in ONE layer, the database dump never survives in an image layer, and (3.1.0)
-#            the Go toolchain and software-properties-common are not left in the image.
+#            no Go toolchain and no software-properties-common are left in the image.
 # Does:      Joins backslash continuations, greps the instructions, prints PASS or FAIL per assertion.
 # Called by: Developer tool: test of the Dockerfile. Not run by launch.sh.
 # Reads:     moves_anywhere/Dockerfile
@@ -38,14 +38,13 @@ check "no gcsfuse" '! grep -qi "gcsfuse" "$D"'
 check "no google-cloud-cli" '! grep -qi "google-cloud-cli" "$D"'
 check "compile RUN kept" 'printf "%s\n" "$INS" | grep -q "ant compileall"'
 check "debug property kept" 'grep -q "moves.keepDebugData" "$D"'
-check "Go is installed only in the compile RUN, and purged there" '[ "$(printf "%s
-" "$INS" | grep -c "golang-go")" = 1 ] && printf "%s
-" "$INS" | grep -E "^RUN .*install .*golang-go" | grep -q "ant go64.*apt-get purge"'
-check "the compile RUN ends by proving go is gone" 'printf "%s
-" "$INS" | grep "ant go64" | grep -q "! command -v go"'
-check "no software-properties-common (system Python requests, urllib3, certifi)" '! grep -q "software-properties-common" <(grep -v "^#" "$D")'
-check "python3 installed explicitly (the run scripts need it)" 'printf "%s
-" "$INS" | grep -E "^RUN apt-get .*install" | grep -q " python3 "'
+go_run=$(printf '%s\n' "$INS" | grep -E '^RUN .*ant go64')
+check "no Ubuntu golang-go anywhere" '! printf "%s\n" "$INS" | grep -q "golang-go"'
+check "Go comes from go.dev at a pinned version, checked by SHA-256" 'printf "%s\n" "$INS" | grep -q "^ARG GO_VERSION=1\." && printf "%s\n" "$INS" | grep -Eq "^ARG GO_SHA256=[0-9a-f]{64}$" && printf "%s\n" "$go_run" | grep -q "go.dev/dl/go\${GO_VERSION}.linux-amd64.tar.gz.*sha256sum -c"'
+check "the compile RUN deletes the toolchain and proves go is gone" 'printf "%s\n" "$go_run" | grep -q "ant go64.*rm -rf /tmp/go .*! command -v go"'
+check "plain x86-64 floating point (GOAMD64=v1)" 'printf "%s\n" "$go_run" | grep -q "GOAMD64=v1"'
+check "no software-properties-common (system Python requests, urllib3, certifi)" '! printf "%s\n" "$INS" | grep -q "software-properties-common"'
+check "python3 installed explicitly (the run scripts need it)" 'printf "%s\n" "$INS" | grep -E "^RUN apt-get .*install" | grep -q " python3 "'
 check "release labels present" 'grep -q "^LABEL version=\"3\.1\.0\"" "$D" && grep -q "org.opencontainers.image.source=\"https://github.com/timothyfraser/moves_anywhere\"" "$D" && grep -q "org.opencontainers.image.revision=" "$D" && grep -q "org.opencontainers.image.licenses=\"Apache-2.0\"" "$D"'
 check "no development labels" '! grep -qiE "status=\"development\"|UNDER DEVELOPMENT|3\.0-dev" "$D"'
 
