@@ -125,7 +125,7 @@ remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/c
 | Image | Status | Notes |
 |----|----|----|
 | `tmf77/moves-anywhere:v3` (`v3.1`, `v3.1.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
-| `tmf77/moves-anywhere:v3.0.0` | Previous release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain and the system Python packages that 3.1.0 removes. |
+| `tmf77/moves-anywhere:v3.0.0` | Previous release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain, Ubuntu's Ant and rclone, and the system Python packages that 3.1.0 removes or replaces. |
 | `tmf77/moves-anywhere:v2` | Older release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
 
 ## Citation
