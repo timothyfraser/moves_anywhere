@@ -4,7 +4,7 @@
 # Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Python 3 and R with pinned packages; fetches
 #            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
 #            compiles MOVES (Go: a current go.dev release that lives only inside that one step, 3.1.0);
-#            copies in scripts/ and installs catr.
+#            installs rclone from its official release (3.1.0); copies in scripts/ and installs catr.
 # Called by: buildme_cloud.sh (docker buildx build). Checked by tests/test_dockerfile_static.sh.
 # Reads:     setenv.sh, my.cnf, setupdb.sh, scripts/ (the build context)
 # Writes:    the image
@@ -17,8 +17,8 @@ FROM ubuntu:20.04
 # MOVES_COMMIT: the exact USEPA/EPA_MOVES_Model commit baked into the image (the one v2 shipped).
 # Debug data (MOVES keepDebugData) is a RUNTIME switch (parameters.json "debug": true); see task_launch_moves.sh.
 ARG MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
-# GIT_REVISION: the moves_anywhere commit the image is built from (--build-arg GIT_REVISION=<sha>).
-ARG GIT_REVISION=unknown
+# GIT_REVISION (the moves_anywhere commit) is declared just before the labels at the end, so a new commit
+# does not invalidate the build cache of every step (3.1.0).
 
 # Create directory
 RUN mkdir cat
@@ -30,7 +30,8 @@ WORKDIR cat
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
-# Go is not installed here: the compile step below installs it and removes it again (3.1.0).
+# Go is not installed here: the compile step below fetches it and removes it again (3.1.0).
+# rclone is not installed from Ubuntu (its 1.50.2 was built with Go 1.13.8): see the rclone step below (3.1.0).
 RUN apt-get update && apt-get install -y \
     mariadb-server \
     openjdk-11-jdk \
@@ -40,7 +41,6 @@ RUN apt-get update && apt-get install -y \
     sudo \
     libmariadb-dev \
     libxml2-dev \
-    rclone \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -139,6 +139,18 @@ RUN set -e && \
     rm -rf /tmp/go /tmp/gocache /tmp/gopath /root/.config/go && hash -r && \
     ! command -v go
 
+# rclone, for sync mode (MOVES_IO=sync: task_fetch_inputs.sh, task_push_outputs.sh). 3.1.0 installs the
+# official rclone release, pinned by version and by the SHA-256 that rclone publishes (SHA256SUMS on
+# github.com/rclone/rclone/releases and downloads.rclone.org), instead of Ubuntu's rclone 1.50.2.
+ARG RCLONE_VERSION=1.75.2
+ARG RCLONE_SHA256=349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+RUN set -e && \
+    curl -fsSL "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip" -o /tmp/rclone.zip && \
+    echo "${RCLONE_SHA256}  /tmp/rclone.zip" | sha256sum -c - && \
+    unzip -q -j /tmp/rclone.zip "rclone-v${RCLONE_VERSION}-linux-amd64/rclone" -d /usr/bin && \
+    chmod 0755 /usr/bin/rclone && rm -f /tmp/rclone.zip && \
+    test "$(rclone version | head -1)" = "rclone v${RCLONE_VERSION}"
+
 
 # ESTABLISH WORKING DIRECTORY
 WORKDIR /cat
@@ -162,6 +174,8 @@ RUN R -e "library(RMariaDB); library(RMySQL); library(httr)"
 RUN Rscript /cat/scripts/task_install_catr.R && Rscript -e "library(catr); cat('catr', as.character(packageVersion('catr')), '\n')"
 
 # Label the image
+# GIT_REVISION: the moves_anywhere commit the image is built from (--build-arg GIT_REVISION=<sha>).
+ARG GIT_REVISION=unknown
 LABEL title="moves-anywhere"
 LABEL description="standalone docker-moves image for customized MOVES estimation on any OS. Cloud version."
 LABEL version="3.1.0"
