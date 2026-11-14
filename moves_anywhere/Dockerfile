@@ -1,9 +1,11 @@
 # Dockerfile ##################################################################
 #
-# What:      The moves-anywhere v3 image (release 3.0.0; v2 is the previous image).
-# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Go and R with pinned packages; fetches
+# What:      The moves-anywhere v3 image (release 3.1.0; 3.0.0 and v2 are the previous images).
+# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Python 3 and R with pinned packages; fetches
 #            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
-#            compiles MOVES; copies in scripts/ and installs catr.
+#            links MOVES's bundled Ant (3.1.0); compiles MOVES (Go: a current go.dev release that lives
+#            only inside that one step, 3.1.0);
+#            installs rclone from its official release (3.1.0); copies in scripts/ and installs catr.
 # Called by: buildme_cloud.sh (docker buildx build). Checked by tests/test_dockerfile_static.sh.
 # Reads:     setenv.sh, my.cnf, setupdb.sh, scripts/ (the build context)
 # Writes:    the image
@@ -16,8 +18,8 @@ FROM ubuntu:20.04
 # MOVES_COMMIT: the exact USEPA/EPA_MOVES_Model commit baked into the image (the one v2 shipped).
 # Debug data (MOVES keepDebugData) is a RUNTIME switch (parameters.json "debug": true); see task_launch_moves.sh.
 ARG MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
-# GIT_REVISION: the moves_anywhere commit the image is built from (--build-arg GIT_REVISION=<sha>).
-ARG GIT_REVISION=unknown
+# GIT_REVISION (the moves_anywhere commit) is declared just before the labels at the end, so a new commit
+# does not invalidate the build cache of every step (3.1.0).
 
 # Create directory
 RUN mkdir cat
@@ -29,24 +31,28 @@ WORKDIR cat
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
+# Go is not installed here: the compile step below fetches it and removes it again (3.1.0).
+# rclone is not installed from Ubuntu (its 1.50.2 was built with Go 1.13.8): see the rclone step below (3.1.0).
+# Ant is not installed from Ubuntu (1.10.7): MOVES's own bundled Ant is used, see the Ant step below (3.1.0).
 RUN apt-get update && apt-get install -y \
     mariadb-server \
     openjdk-11-jdk \
-    golang-go \
     git \
-    ant \
     unzip \
     sudo \
     libmariadb-dev \
     libxml2-dev \
-    rclone \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade R
 # Install dependencies
+# python3: the run scripts use it (standard library only). lsb-release: the R repository line below.
+# software-properties-common is not installed (3.1.0): nothing used it, and it brought in the system
+# Python packages requests, urllib3 and certifi.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    software-properties-common \
+    python3 \
+    lsb-release \
     dirmngr \
     gnupg \
     curl \
@@ -109,14 +115,49 @@ ENV MOVES_COMMIT=$MOVES_COMMIT
 SHELL ["/bin/bash", "-c"]
 RUN set -e &&     mkdir -p EPA_MOVES_Model && cd EPA_MOVES_Model &&     git init -q &&     git remote add origin https://github.com/USEPA/EPA_MOVES_Model.git &&     git fetch -q --depth 1 origin "$MOVES_COMMIT" &&     git checkout -q FETCH_HEAD &&     test "$(git rev-parse HEAD)" = "$MOVES_COMMIT" &&     rm -rf .git && cd /cat &&     mv -f /cat/stage/setenv.sh /cat/EPA_MOVES_Model/setenv.sh && rmdir /cat/stage &&     unzip -q EPA_MOVES_Model/database/Setup/movesdb20241112.zip -d EPA_MOVES_Model/database/Setup &&     chown -R mysql:mysql /cat &&     chmod -R 6777 /cat &&     chmod +x /cat/setupdb.sh &&     /cat/setupdb.sh &&     rm -f EPA_MOVES_Model/database/Setup/movesdb20241112.sql EPA_MOVES_Model/database/Setup/movesdb20241112.zip
 
+# Ant: the Apache Ant that EPA bundles in the MOVES tree (ant/, 1.10.15), the one MOVES's setenv.sh puts on
+# PATH, linked into /usr/local/bin so the compile below and the run scripts (`sudo -u mysql ant run`; sudo's
+# secure_path searches /usr/local/bin first) use it. 3.0.0 used Ubuntu's ant 1.10.7. EPA's files are unchanged.
+RUN ln -s /cat/EPA_MOVES_Model/ant/bin/ant /usr/local/bin/ant && \
+    ant -version | grep -q "Apache Ant(TM) version 1.10.15 "
+
 # Compile MOVES (Java and Go) at build time, so no run compiles anything.
 # D29: keepDebugData becomes a JVM property, default false, so a RUN can opt in with
 # JAVA_TOOL_OPTIONS=-Dmoves.keepDebugData=true (task_launch_moves.sh sets it when parameters.json has "debug": true).
-RUN cd /cat/EPA_MOVES_Model && \
+# 3.1.0: EPA's Go source (calc/ and generators/, unchanged) is compiled with a current Go release from
+# go.dev, checked against its published SHA-256, used by `ant go64` and deleted in this same RUN with its
+# build cache, so no layer keeps a Go toolchain. MOVES does not call `go` at run time. 3.0.0 compiled the
+# same source with Ubuntu's golang-go (Go 1.13.8). GOAMD64=v1 (the default) keeps plain x86-64 floating
+# point, no fused multiply-add. 3.1.0 shipped only after its outputs matched 3.0.0 exactly.
+ARG GO_VERSION=1.27.4
+ARG GO_SHA256=7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840
+RUN set -e && \
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tgz && \
+    echo "${GO_SHA256}  /tmp/go.tgz" | sha256sum -c - && \
+    tar -C /tmp -xzf /tmp/go.tgz && rm -f /tmp/go.tgz && \
+    export PATH="/tmp/go/bin:$PATH" GOTOOLCHAIN=local GOAMD64=v1 GOCACHE=/tmp/gocache GOPATH=/tmp/gopath && \
+    test "$(go env GOVERSION)" = "go${GO_VERSION}" && \
+    cd /cat/EPA_MOVES_Model && \
     sed -i 's/static final boolean keepDebugData = false;/static final boolean keepDebugData = Boolean.getBoolean("moves.keepDebugData");/' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     grep -q 'Boolean.getBoolean("moves.keepDebugData")' gov/epa/otaq/moves/master/framework/OutputProcessor.java && \
     ant compileall && \
-    ant go64
+    ant go64 && \
+    test -x calc/externalcalculatorgo64.exe && test -x generators/externalgenerator64.exe && \
+    rm -rf /tmp/go /tmp/gocache /tmp/gopath /root/.config/go && hash -r && \
+    ! command -v go
+
+# rclone, for sync mode (MOVES_IO=sync: task_fetch_inputs.sh, task_push_outputs.sh). 3.1.0 installs the
+# official rclone release, pinned by version and by the SHA-256 that rclone publishes (SHA256SUMS on
+# github.com/rclone/rclone/releases and downloads.rclone.org), instead of Ubuntu's rclone 1.50.2.
+# The build arguments do not start with RCLONE_: rclone reads RCLONE_<FLAG> variables as flags.
+ARG PIN_RCLONE_VERSION=1.76.0
+ARG PIN_RCLONE_SHA256=b00f00b3266c3764413afe599d3ec316f6f43b3e0ea8a0bc1d186d2133e46df7
+RUN set -e && \
+    curl -fsSL "https://github.com/rclone/rclone/releases/download/v${PIN_RCLONE_VERSION}/rclone-v${PIN_RCLONE_VERSION}-linux-amd64.zip" -o /tmp/rclone.zip && \
+    echo "${PIN_RCLONE_SHA256}  /tmp/rclone.zip" | sha256sum -c - && \
+    unzip -q -j /tmp/rclone.zip "rclone-v${PIN_RCLONE_VERSION}-linux-amd64/rclone" -d /usr/bin && \
+    chmod 0755 /usr/bin/rclone && rm -f /tmp/rclone.zip && \
+    test "$(rclone version | head -1)" = "rclone v${PIN_RCLONE_VERSION}"
 
 
 # ESTABLISH WORKING DIRECTORY
@@ -141,11 +182,13 @@ RUN R -e "library(RMariaDB); library(RMySQL); library(httr)"
 RUN Rscript /cat/scripts/task_install_catr.R && Rscript -e "library(catr); cat('catr', as.character(packageVersion('catr')), '\n')"
 
 # Label the image
+# GIT_REVISION: the moves_anywhere commit the image is built from (--build-arg GIT_REVISION=<sha>).
+ARG GIT_REVISION=unknown
 LABEL title="moves-anywhere"
 LABEL description="standalone docker-moves image for customized MOVES estimation on any OS. Cloud version."
-LABEL version="3.0.0"
-LABEL org.opencontainers.image.version="3.0.0"
-LABEL org.opencontainers.image.description="moves-anywhere v3.0.0: EPA MOVES on any OS in one Docker container (ticket mode, run manifest, replication kit)."
+LABEL version="3.1.0"
+LABEL org.opencontainers.image.version="3.1.0"
+LABEL org.opencontainers.image.description="moves-anywhere v3.1.0: EPA MOVES on any OS in one Docker container (ticket mode, run manifest, replication kit)."
 LABEL org.opencontainers.image.source="https://github.com/timothyfraser/moves_anywhere"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.revision="${GIT_REVISION}"

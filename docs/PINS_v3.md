@@ -28,8 +28,25 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 
 | Argument | Default | Effect |
 |---|---|---|
-| `MOVES_COMMIT` | the commit above | commit checked out after cloning |
-| `KEEP_DEBUG` | `false` | `true` applies the `keepDebugData = true` edit before compiling. v2 applied that edit on every run, so v2 always kept debug data. |
+| `MOVES_COMMIT` | the commit above | commit fetched (shallow) and checked out |
+| `GIT_REVISION` | `unknown` | the moves_anywhere commit, written to the `org.opencontainers.image.revision` label |
+| `GO_VERSION` | `1.27.4` (3.1.0) | the go.dev Go release used to compile MOVES's two Go programs, then deleted in the same build step |
+| `GO_SHA256` | the go.dev checksum of `go1.27.4.linux-amd64.tar.gz` | the download is checked against it; a mismatch stops the build |
+| `PIN_RCLONE_VERSION` | `1.76.0` (3.1.0) | the official rclone release installed for sync mode |
+| `PIN_RCLONE_SHA256` | rclone's published checksum of `rclone-v1.76.0-linux-amd64.zip` | the download is checked against it; a mismatch stops the build. (The names do not start with `RCLONE_`: rclone reads `RCLONE_<FLAG>` variables as flags.) |
+
+MOVES debug data is a run-time switch (`"debug": true` in `parameters.json`), not a build argument. v2 applied the `keepDebugData = true` edit on every run, so v2 always kept debug data.
+
+## Toolchain around MOVES in v3.1.0
+
+| Tool | 3.0.0 | 3.1.0 |
+|---|---|---|
+| Go (compiles MOVES's two Go programs at build time) | Ubuntu `golang-go`, Go 1.13.8, kept in the image | Go 1.27.4 from go.dev, deleted in the same build step |
+| Ant (compiles and runs MOVES) | Ubuntu `ant` 1.10.7 | the Ant 1.10.15 that EPA ships in the MOVES tree (`ant/`), linked into `/usr/local/bin` |
+| rclone (sync mode only) | Ubuntu `rclone` 1.50.2 (built with Go 1.13.8) | rclone 1.76.0, official release |
+| System Python | `python3` with `requests`, `urllib3`, `certifi` (from `software-properties-common`) | `python3` only, standard library |
+
+EPA's source (`calc/` and `generators/` at `MOVES_COMMIT`) is unchanged. `GOAMD64=v1` (the default) keeps plain x86-64 floating point. EPA's own prebuilt Windows tools in `tools/` (built by EPA with Go 1.21) and the Java libraries in `libs/` are left as shipped. Apart from the two Go programs, every file under `/cat/EPA_MOVES_Model` is byte-identical to 3.0.0, and the R packages are the same as the v3.0.0 table below.
 
 ## What v3 pins that v2 left floating
 

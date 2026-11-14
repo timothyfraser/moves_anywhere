@@ -9,3 +9,5 @@ inputs2/
 secret/
 dev/
 defaults/
+**/__pycache__/
+**/*.pyc
