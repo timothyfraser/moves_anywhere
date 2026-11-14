@@ -142,14 +142,15 @@ RUN set -e && \
 # rclone, for sync mode (MOVES_IO=sync: task_fetch_inputs.sh, task_push_outputs.sh). 3.1.0 installs the
 # official rclone release, pinned by version and by the SHA-256 that rclone publishes (SHA256SUMS on
 # github.com/rclone/rclone/releases and downloads.rclone.org), instead of Ubuntu's rclone 1.50.2.
-ARG RCLONE_VERSION=1.75.2
-ARG RCLONE_SHA256=349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+# The build arguments do not start with RCLONE_: rclone reads RCLONE_<FLAG> variables as flags.
+ARG PIN_RCLONE_VERSION=1.75.2
+ARG PIN_RCLONE_SHA256=349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
 RUN set -e && \
-    curl -fsSL "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip" -o /tmp/rclone.zip && \
-    echo "${RCLONE_SHA256}  /tmp/rclone.zip" | sha256sum -c - && \
-    unzip -q -j /tmp/rclone.zip "rclone-v${RCLONE_VERSION}-linux-amd64/rclone" -d /usr/bin && \
+    curl -fsSL "https://github.com/rclone/rclone/releases/download/v${PIN_RCLONE_VERSION}/rclone-v${PIN_RCLONE_VERSION}-linux-amd64.zip" -o /tmp/rclone.zip && \
+    echo "${PIN_RCLONE_SHA256}  /tmp/rclone.zip" | sha256sum -c - && \
+    unzip -q -j /tmp/rclone.zip "rclone-v${PIN_RCLONE_VERSION}-linux-amd64/rclone" -d /usr/bin && \
     chmod 0755 /usr/bin/rclone && rm -f /tmp/rclone.zip && \
-    test "$(rclone version | head -1)" = "rclone v${RCLONE_VERSION}"
+    test "$(rclone version | head -1)" = "rclone v${PIN_RCLONE_VERSION}"
 
 
 # ESTABLISH WORKING DIRECTORY

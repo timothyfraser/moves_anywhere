@@ -46,7 +46,7 @@ check "plain x86-64 floating point (GOAMD64=v1)" 'printf "%s\n" "$go_run" | grep
 check "no software-properties-common (system Python requests, urllib3, certifi)" '! printf "%s\n" "$INS" | grep -q "software-properties-common"'
 check "python3 installed explicitly (the run scripts need it)" 'printf "%s\n" "$INS" | grep -E "^RUN apt-get .*install" | grep -q " python3 "'
 check "no Ubuntu rclone (its 1.50.2 was built with Go 1.13.8)" '! printf "%s\n" "$INS" | grep -E "^RUN apt-get .*install" | grep -qw "rclone"'
-check "rclone comes from its official release at a pinned version, checked by SHA-256" 'printf "%s\n" "$INS" | grep -Eq "^ARG RCLONE_SHA256=[0-9a-f]{64}$" && printf "%s\n" "$INS" | grep "^RUN .*rclone/releases/download" | grep -q "sha256sum -c"'
+check "rclone comes from its official release at a pinned version, checked by SHA-256" 'printf "%s\n" "$INS" | grep -Eq "^ARG PIN_RCLONE_SHA256=[0-9a-f]{64}$" && printf "%s\n" "$INS" | grep "^RUN .*rclone/releases/download" | grep -q "sha256sum -c"'
 check "GIT_REVISION is declared after every RUN (a new commit keeps the build cache)" '[ "$(printf "%s\n" "$INS" | grep -n "^ARG GIT_REVISION" | cut -d: -f1)" -gt "$(printf "%s\n" "$INS" | grep -n "^RUN " | tail -1 | cut -d: -f1)" ]'
 check "release labels present" 'grep -q "^LABEL version=\"3\.1\.0\"" "$D" && grep -q "org.opencontainers.image.source=\"https://github.com/timothyfraser/moves_anywhere\"" "$D" && grep -q "org.opencontainers.image.revision=" "$D" && grep -q "org.opencontainers.image.licenses=\"Apache-2.0\"" "$D"'
 check "no development labels" '! grep -qiE "status=\"development\"|UNDER DEVELOPMENT|3\.0-dev" "$D"'
