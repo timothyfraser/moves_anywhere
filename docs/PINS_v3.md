@@ -28,8 +28,16 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 
 | Argument | Default | Effect |
 |---|---|---|
-| `MOVES_COMMIT` | the commit above | commit checked out after cloning |
-| `KEEP_DEBUG` | `false` | `true` applies the `keepDebugData = true` edit before compiling. v2 applied that edit on every run, so v2 always kept debug data. |
+| `MOVES_COMMIT` | the commit above | commit fetched (shallow) and checked out |
+| `GIT_REVISION` | `unknown` | the moves_anywhere commit, written to the `org.opencontainers.image.revision` label |
+| `GO_VERSION` | `1.27.4` (3.1.0) | the go.dev Go release used to compile MOVES's two Go programs, then deleted in the same build step |
+| `GO_SHA256` | the go.dev checksum of `go1.27.4.linux-amd64.tar.gz` | the download is checked against it; a mismatch stops the build |
+
+MOVES debug data is a run-time switch (`"debug": true` in `parameters.json`), not a build argument. v2 applied the `keepDebugData = true` edit on every run, so v2 always kept debug data.
+
+## Go in v3.1.0
+
+3.0.0 compiled EPA's Go source (`calc/` and `generators/` at `MOVES_COMMIT`) with Ubuntu's `golang-go`, Go 1.13.8, and kept that toolchain in the image. 3.1.0 compiles the same, unchanged source with Go 1.27.4 from go.dev and deletes the toolchain in the same build step, so the image holds no Go compiler. `GOAMD64=v1` (the default) keeps plain x86-64 floating point. EPA's own prebuilt Windows tools in `tools/` (built by EPA with Go 1.21) are left as shipped; they do not run on Linux.
 
 ## What v3 pins that v2 left floating
 

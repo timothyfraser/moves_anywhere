@@ -10,9 +10,9 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   Contributors: Erin Murphy, Junna Chen, Mahak Bindal, Shungo Najima, Carl Closs
 -   Institution: Gao Labs @ Cornell University
 
-> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.0.0`) is the current release, and `run.sh` and
-> `run.ps1` use it by default. `tmf77/moves-anywhere:v2` is the previous image and is unchanged. See the
-> [changelog](CHANGELOG.md) for what changed.
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`) is the current release, and `run.sh`
+> and `run.ps1` use it by default. `v3.0.0` and `tmf77/moves-anywhere:v2` are the previous images and are
+> unchanged. See the [changelog](CHANGELOG.md) for what changed.
 
 ## Contents
 
@@ -124,8 +124,9 @@ remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/c
 
 | Image | Status | Notes |
 |----|----|----|
-| `tmf77/moves-anywhere:v3` (`v3.0.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
-| `tmf77/moves-anywhere:v2` | Previous release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
+| `tmf77/moves-anywhere:v3` (`v3.1`, `v3.1.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
+| `tmf77/moves-anywhere:v3.0.0` | Previous release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain and the system Python packages that 3.1.0 removes. |
+| `tmf77/moves-anywhere:v2` | Older release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
 
 ## Citation
 
