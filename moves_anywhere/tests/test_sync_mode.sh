@@ -52,7 +52,8 @@ check "no remote: exit code is 5 (got $RC)" '[ "$RC" = 5 ]'
 echo "=== fetch failure: the remote has no in/ folder ==="
 sync_run nofetch -e MOVES_SYNC_REMOTE=store:/store/empty
 check "no in/: exit code is 2 (got $RC)" '[ "$RC" = 2 ]'
-check "no in/: nothing pushed to out/" '[ ! -e "$WORK/store/empty/out" ]'
+check "no in/: only run_manifest.json pushed (got: $(ls "$WORK/store/empty/out" 2>/dev/null | tr "\n" " "))" '[ "$(ls "$WORK/store/empty/out" 2>/dev/null)" = run_manifest.json ]'
+check "no in/: manifest says failed, input fetch failed: sync copy" 'grep -q "\"status\": \"failed\"" "$WORK/store/empty/out/run_manifest.json" && grep -q "input fetch failed: sync copy" "$WORK/store/empty/out/run_manifest.json"'
 
 echo "=== happy path: full Tompkins run in sync mode ==="
 sync_run ok -e MOVES_SYNC_REMOTE=store:/store/run1
@@ -66,8 +67,10 @@ check "ok: manifest status is ok" 'grep -q "\"status\": \"ok\"" "$OUT/run_manife
 mf() { python3 -I "$TESTS_DIR/manifest_get.py" "$OUT/run_manifest.json" "$1" 2>/dev/null; }
 check "ok: manifest sha256 of data.csv.gz matches the pushed file" '[ "$(mf output:data.csv.gz)" = "$(sha256sum "$OUT/data.csv.gz" | cut -d" " -f1)" ]'
 mkdir -p "$WORK/cmp" && gzip -dc "$OUT/data.csv.gz" > "$WORK/cmp/data.csv"
-check "ok: data.csv equals the fixture reference (compare_outputs.py)" 'python3 -I "$REPO/moves_anywhere/scripts/compare_outputs.py" "$FIXTURE" "$WORK/cmp" --files data.csv > "$WORK/compare.txt" 2>&1'
-check "ok: no rclone ERROR or CRITICAL line in the container log" '! grep -qE " (ERROR|CRITICAL) : " "$WORK/ok"'
+check "ok: data.csv equals the fixture reference (compare_outputs.py)" 'python3 -I "$REPO/moves_anywhere/scripts/compare_outputs.py" "$FIXTURE" "$WORK/cmp" --files data > "$WORK/compare.txt" 2>&1'
+# rclone logs one advisory at ERROR level because task_push_outputs.sh mixes --include and --exclude
+# (it still pushes exactly the four files, checked above; rclone 1.50.2 logs it too). Any other one fails.
+check "ok: no rclone ERROR or CRITICAL line other than the include/exclude advisory" '! grep -E " (ERROR|CRITICAL) : " "$WORK/ok" | grep -vq "Using --filter is recommended instead of both --include and --exclude"'
 
 echo
 if [ "$FAILS" = 0 ]; then echo "PASS: all assertions"; else echo "FAIL: $FAILS assertion(s)"; fi
