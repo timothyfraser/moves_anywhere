@@ -1,9 +1,10 @@
 # Dockerfile ##################################################################
 #
 # What:      The moves-anywhere v3 image (release 3.1.0; 3.0.0 and v2 are the previous images).
-# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Ant, Python 3 and R with pinned packages; fetches
+# Does:      Builds on ubuntu:20.04: MariaDB, Java 11, Python 3 and R with pinned packages; fetches
 #            EPA MOVES at MOVES_COMMIT and loads its default database in one layer (setupdb.sh);
-#            compiles MOVES (Go: a current go.dev release that lives only inside that one step, 3.1.0);
+#            links MOVES's bundled Ant (3.1.0); compiles MOVES (Go: a current go.dev release that lives
+#            only inside that one step, 3.1.0);
 #            installs rclone from its official release (3.1.0); copies in scripts/ and installs catr.
 # Called by: buildme_cloud.sh (docker buildx build). Checked by tests/test_dockerfile_static.sh.
 # Reads:     setenv.sh, my.cnf, setupdb.sh, scripts/ (the build context)
@@ -32,11 +33,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Install dependencies
 # Go is not installed here: the compile step below fetches it and removes it again (3.1.0).
 # rclone is not installed from Ubuntu (its 1.50.2 was built with Go 1.13.8): see the rclone step below (3.1.0).
+# Ant is not installed from Ubuntu (1.10.7): MOVES's own bundled Ant is used, see the Ant step below (3.1.0).
 RUN apt-get update && apt-get install -y \
     mariadb-server \
     openjdk-11-jdk \
     git \
-    ant \
     unzip \
     sudo \
     libmariadb-dev \
@@ -114,6 +115,12 @@ ENV MOVES_COMMIT=$MOVES_COMMIT
 SHELL ["/bin/bash", "-c"]
 RUN set -e &&     mkdir -p EPA_MOVES_Model && cd EPA_MOVES_Model &&     git init -q &&     git remote add origin https://github.com/USEPA/EPA_MOVES_Model.git &&     git fetch -q --depth 1 origin "$MOVES_COMMIT" &&     git checkout -q FETCH_HEAD &&     test "$(git rev-parse HEAD)" = "$MOVES_COMMIT" &&     rm -rf .git && cd /cat &&     mv -f /cat/stage/setenv.sh /cat/EPA_MOVES_Model/setenv.sh && rmdir /cat/stage &&     unzip -q EPA_MOVES_Model/database/Setup/movesdb20241112.zip -d EPA_MOVES_Model/database/Setup &&     chown -R mysql:mysql /cat &&     chmod -R 6777 /cat &&     chmod +x /cat/setupdb.sh &&     /cat/setupdb.sh &&     rm -f EPA_MOVES_Model/database/Setup/movesdb20241112.sql EPA_MOVES_Model/database/Setup/movesdb20241112.zip
 
+# Ant: the Apache Ant that EPA bundles in the MOVES tree (ant/, 1.10.15), the one MOVES's setenv.sh puts on
+# PATH, linked into /usr/local/bin so the compile below and the run scripts (`sudo -u mysql ant run`; sudo's
+# secure_path searches /usr/local/bin first) use it. 3.0.0 used Ubuntu's ant 1.10.7. EPA's files are unchanged.
+RUN ln -s /cat/EPA_MOVES_Model/ant/bin/ant /usr/local/bin/ant && \
+    ant -version | grep -q "Apache Ant(TM) version 1.10.15 "
+
 # Compile MOVES (Java and Go) at build time, so no run compiles anything.
 # D29: keepDebugData becomes a JVM property, default false, so a RUN can opt in with
 # JAVA_TOOL_OPTIONS=-Dmoves.keepDebugData=true (task_launch_moves.sh sets it when parameters.json has "debug": true).
@@ -143,8 +150,8 @@ RUN set -e && \
 # official rclone release, pinned by version and by the SHA-256 that rclone publishes (SHA256SUMS on
 # github.com/rclone/rclone/releases and downloads.rclone.org), instead of Ubuntu's rclone 1.50.2.
 # The build arguments do not start with RCLONE_: rclone reads RCLONE_<FLAG> variables as flags.
-ARG PIN_RCLONE_VERSION=1.75.2
-ARG PIN_RCLONE_SHA256=349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+ARG PIN_RCLONE_VERSION=1.76.0
+ARG PIN_RCLONE_SHA256=b00f00b3266c3764413afe599d3ec316f6f43b3e0ea8a0bc1d186d2133e46df7
 RUN set -e && \
     curl -fsSL "https://github.com/rclone/rclone/releases/download/v${PIN_RCLONE_VERSION}/rclone-v${PIN_RCLONE_VERSION}-linux-amd64.zip" -o /tmp/rclone.zip && \
     echo "${PIN_RCLONE_SHA256}  /tmp/rclone.zip" | sha256sum -c - && \
