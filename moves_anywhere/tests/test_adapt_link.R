@@ -141,7 +141,7 @@ check(any(notes$item == "vehicle mix, links 1, 2, 3, 4" & notes$source == "defau
 check(any(notes$item == "vehicle mix, links 5" & notes$source == "user"), "user mix note")
 
 # No drive schedule file, no _ file
-B = new_bucket(base_link[1:2, ])
+B = new_bucket(base_link[c(1, 3, 6), ])
 run(B)
 check(!file.exists(paste0(B, "/_driveschedulesecondlink.csv")), "no drive schedule file when none given")
 
@@ -166,9 +166,11 @@ chk_link(bad() %>% mutate(zoneID = 5), paste0("zoneID 5 is not ", geoid * 10), "
 chk_link(bad(linkLength = NA), "link 1 has no linkLength", "blank length")
 chk_link(bad(linkVolume = NA), "link 1 has no linkVolume", "blank volume (aadt is ignored)")
 chk_link(bad(linkVolume = NA) %>% mutate(aadt = 20000), "link 1 has no linkVolume", "blank volume with aadt")
+# The runspec selects road types 1, 4 and 5: a link table with no road type 4 link is refused
+chk_link(base_link[c(1, 6), ], "runspec road type 4 has no link in link.csv", "runspec road type without a link")
 
 # The mix and schedule checks need a good _link.csv
-B = new_bucket(base_link[c(1, 6), ])
+B = new_bucket(base_link[c(1, 3, 6), ])
 adapt_link(rs, B)
 write_csv(data.frame(linkID = 9, sourceTypeID = 21, sourceTypeHourFraction = 1), paste0(B, "/linksourcetypehour.csv"))
 fails_with(adapt_linksourcetypehour(rs, B), "not in link.csv", "mix for unknown link")
@@ -194,12 +196,12 @@ write_csv(data.frame(linkID = 1, secondID = 1, speed = -1), paste0(B, "/drivesch
 fails_with(adapt_driveschedulesecondlink(rs, B), "negative speed", "negative schedule speed")
 
 # Default mix errors
-B = new_bucket(base_link[c(1, 6), ])
+B = new_bucket(base_link[c(1, 3, 6), ])
 file.remove(paste0(B, "/_sourcetypeyearvmt.csv"))
 fails_with(adapt_link(rs, B), "default vehicle mix needs sourcetypeyearvmt; give linksourcetypehour.csv", "no sourcetypeyearvmt")
-B = new_bucket(base_link[c(1, 6), ])
+B = new_bucket(base_link[c(1, 3, 6), ])
 write_csv(data.frame(yearID = 2022, sourceTypeID = st, VMT = 0), paste0(B, "/_sourcetypeyearvmt.csv"))
-fails_with(adapt_link(rs, B), "no default vehicle mix for road type 5; give linksourcetypehour.csv", "zero weights")
+fails_with(adapt_link(rs, B), "no default vehicle mix for road type 4; give linksourcetypehour.csv", "zero weights")
 
 # 4. Result ####
 unlink(root, recursive = TRUE)

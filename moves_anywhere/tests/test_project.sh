@@ -6,8 +6,8 @@
 #               say "Project-scale run", outputs match the gold copies exactly (compare_outputs.py --project).
 #            2. Runs again in the same folder with a parameters.json added: still no data.csv, same result
 #               (so the first run's outputs are not read back as inputs).
-#            3. Three refused runs, each in a fresh copy: hour range 8 to 9, link.csv missing, a vehicle mix
-#               that sums to 0.9. Each must exit non-zero, write no linkdata.csv and print its reason.
+#            3. Four refused runs, each in a fresh copy: hour range 8 to 9, link.csv missing, a vehicle mix
+#               that sums to 0.9, a road type with no link. Each must exit non-zero, write no linkdata.csv and print its reason.
 #            One container at a time. A full fixture run takes about 8 minutes of MOVES; a refusal is quick.
 # Called by: tests/run_gate.sh (step project). Also run by hand.
 # Reads:     moves_anywhere/inputs_project/ (4 input files + gold linkdata.csv, movesoutput.csv,
@@ -111,7 +111,7 @@ if [ "$ONLY_REFUSALS" = 0 ]; then
   fi
 fi
 
-# 3. Step 3: three refusals, each in a fresh copy ####
+# 3. Step 3: four refusals, each in a fresh copy ####
 # refuse <label> <expected reason>: the folder $TMP/<label> is already edited; run and check
 refuse() {
   local label=$1 reason=$2 d="$TMP/$1" rc
@@ -136,6 +136,12 @@ echo "=== 3c. refusal: vehicle mix sums to 0.9"
 fresh_copy "$TMP/mix" || exit 2
 printf 'linkID,sourceTypeID,sourceTypeHourFraction\n1,21,0.5\n1,31,0.4\n' > "$TMP/mix/linksourcetypehour.csv"
 refuse mix "vehicle mix for link 1 sums to 0.9, not 1"
+
+echo "=== 3d. refusal: a road type in the run file has no link"
+fresh_copy "$TMP/road" || exit 2
+# Link 4 is the only link on road type 4; the run file still selects road type 4.
+grep -v '^4,' "$TMP/road/link.csv" > "$TMP/road/link.tmp" && mv "$TMP/road/link.tmp" "$TMP/road/link.csv"
+refuse road "runspec road type 4 has no link in link.csv"
 
 echo
 if [ "$FAILS" = 0 ]; then echo "PASS: all assertions"; else echo "FAIL: $FAILS assertion(s)"; fi

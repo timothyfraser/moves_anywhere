@@ -129,6 +129,25 @@ project_check = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", BUCKET = "i
   invisible(TRUE)
 }
 
+#' Stop if MOVES's own input validation is on in a county with no inspection (I/M) programme
+#' @param .runspec path to the run's runspec (XML)
+#' @param BUCKET inputs folder, after the county adapters have run
+#' @description With <skipdomaindatabasevalidation selected="false"/>, MOVES checks every input
+#'   table before it runs. A county with no I/M programme has an empty imcoverage table, MOVES
+#'   counts that as "not ready", prints no reason, and exits 0 (measured: Washtenaw County, MI,
+#'   and Tompkins County, NY, with an empty imcoverage.csv). The MOVES window has a "No I/M
+#'   Program" box for this; the command line does not. County run files written by
+#'   catr::custom_rs() skip that validation, which is why county runs do not meet this.
+project_check_im = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", BUCKET = "inputs"){
+  x = xml2::read_xml(.runspec)
+  skip = project_attr(x, "//skipdomaindatabasevalidation", "selected")
+  validating = length(skip) == 0 || tolower(trimws(skip[1])) != "true"
+  if(validating && !"_imcoverage.csv" %in% tolower(dir(BUCKET))){
+    stop("no I/M programme here: set skipdomaindatabasevalidation to true")
+  }
+  invisible(TRUE)
+}
+
 # 2. County tables ####
 
 #' Read one county table for a project run, filtered to the run's time

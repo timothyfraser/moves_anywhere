@@ -106,6 +106,15 @@ if(rs$mode == "inv"){
     # MOVES exits 0 even when it refuses a run, so check that it wrote results
     if(nrow(readr::read_csv("inputs/movesoutput.csv", show_col_types = FALSE)) == 0){
       msg = "MOVES produced no results: see moveslog"
+      # Add MOVES's own first error line, and keep its log next to the inputs
+      log = "EPA_MOVES_Model/moveslog.txt"
+      if(file.exists(log)){
+        errors = grep(" ERROR: ", readLines(log, warn = FALSE), value = TRUE)
+        if(length(errors) > 0){
+          msg = substr(paste0("MOVES produced no results: ", trimws(sub("^.* ERROR: ", "", errors[1]))), 1, 110)
+        }
+        invisible(file.copy(log, "inputs/moveslog.txt", overwrite = TRUE))
+      }
       if(dir.exists("/cat/run")){ writeLines(msg, "/cat/run/stop_reason", sep = "") }
       message(msg)
       quit(save = "no", status = 1)

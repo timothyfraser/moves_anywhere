@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased (planned 3.2.0)
+
+Adds project-scale runs: individual road links and parking lots for one hour. Guide: [docs/README_project_scale.md](docs/README_project_scale.md).
+
+### What changed
+
+- **Project-scale runs from a folder.** A run file with `<modeldomain value="PROJECT"/>` is a project run. Give `rs_custom.xml` and `link.csv` (plus `offnetworklink.csv` for a parking lot, and optional vehicle mix, drive schedules and operating-mode tables) to the same `run.sh`. The image fills in the vehicle mix, link speed, grade, engine starts, soak times and the county tables, and records each default it used.
+- **`linkdata.csv`.** The result of a project run: one row per link, pollutant, process, vehicle type and fuel, with grams, miles, hours, starts and vehicles. A project run never writes `data.csv`. `diagnostics.txt` lists each link and the defaults used. `linkdata.csv.gz` is the result in `run_manifest.json`.
+- **Refusals with reasons.** A project run file that breaks rules R1 to R10 (one county, year, month, day type and hour; hourly link output; grams, miles, hours; inventory mode; custom database) or bad link inputs stop the run with a one-line reason, because MOVES itself accepts such a command and produces nothing.
+- **`LEVEL=project` helper.** `task_runspec.R` makes a project run file from `GEOID`, `YEAR`, `MONTH`, `DAY`, `HOUR` and optional `ROADTYPES`.
+
+### What did not change
+
+- County runs: the same scripts path, with every change to an existing script behind a project-only branch. The gate's county fixture checks this.
+- The run manifest schema: `manifest_version` stays 1.
+
+### What is not included
+
+- Ticket mode (the CAT website's order path) does not carry project runs yet.
+- Volume from a daily traffic count (an `aadt` column is ignored).
+- MOVES6: the image stays on MOVES5.
+- Not tested: evaporative emissions, rate mode at project scale, runs with more than 7 links.
+
+Checks: (filled in after the gate)
+
 ## 3.1.0
 
 Image `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`). `v3.0.0` and `v2` are unchanged and stay available.

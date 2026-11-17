@@ -63,6 +63,10 @@ Tables below borrowed from Cloud MOVES paper.
 
 <sup>1</sup> **AVFT** stands for 'Alternate Vehicle Fuel and Technologies' input table.
 
+## Project-scale tables
+
+A project run (one hour, individual road links) uses five more tables: `link`, `linksourcetypehour`, `driveschedulesecondlink`, `offnetworklink` and `opmodedistribution`. You supply `link.csv` (and `offnetworklink.csv` if there is a parking lot); the others are optional and the image fills in defaults. The adapters write the checked versions as `_link.csv` and so on. The files, columns, defaults and limits are in the [project-scale guide](README_project_scale.md).
+
 ## MariaDB Tables Used by Adapt Functions
 
 This section lists all MariaDB database tables that are accessed by the adapt functions in `moves_anywhere/moves_anywhere/scripts/adapt_*.R` when performing MOVES input table adaptation. These tables are read from the default MOVES database to generate adapted input tables.

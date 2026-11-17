@@ -92,9 +92,12 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 ## Documentation
 
+Besides county runs, MOVES Anywhere can run **project scale**: individual road links and parking lots for one hour. You give a `link.csv`, and the image fills in the rest from county data. Read the [project-scale guide](docs/README_project_scale.md) first, because project runs are meant for screening and research, not as a substitute for project traffic data.
+
 | Guide | Read it when you want to... |
 |----|----|
 | [MOVES inputs](docs/README_MOVES_inputs.md) | know which input tables MOVES needs and what goes in them |
+| [Project-scale runs](docs/README_project_scale.md) | estimate single road links and parking lots for one hour |
 | [The pipeline scripts](docs/README_scripts.md) | see what happens inside the container, step by step |
 | [The `catr` package](docs/README_catr.md) | write runspecs and work with results in R |
 | [The run manifest](docs/RUN_MANIFEST.md) | read or check `run_manifest.json` |

@@ -225,6 +225,8 @@ if(is_project(.runspec)){
   # Start clean, so a table left by an earlier run in this folder is never loaded
   unlink(paste0(BUCKET, "/_", c("link", "linksourcetypehour", "driveschedulesecondlink",
                                 "offnetworklink", "opmodedistribution", "project_inputs"), ".csv"))
+  # A county with no I/M programme cannot pass MOVES's own validation: say so now
+  run_adapter("project runspec", project_check_im(.runspec = .runspec, BUCKET = BUCKET))
   run_adapter("link", {
     source("scripts/adapt_link.R")
     adapt_link(.runspec = .runspec, BUCKET = BUCKET)

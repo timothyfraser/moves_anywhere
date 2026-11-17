@@ -215,6 +215,11 @@ adapt_link = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", BUCKET = "inpu
   bad = which(is_road & is.na(vol))
   if(length(bad) > 0){ stop(paste0("link ", id[bad[1]], " has no linkVolume")) }
 
+  # Every road type selected in the runspec needs at least one link. MOVES refuses the run
+  # otherwise ("link is missing roadTypeID(s) ...") and still exits 0.
+  unused = setdiff(spec$roadtypes, road)
+  if(length(unused) > 0){ stop(paste0("runspec road type ", unused[1], " has no link in link.csv")) }
+
   # Fills
   used_default = any(is.na(county)) || any(is.na(zone)) || any(is.na(grade))
   county[is.na(county)] = geoid

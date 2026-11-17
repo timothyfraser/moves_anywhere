@@ -141,6 +141,23 @@ check(nrow(notes) == 2 && identical(names(notes), c("item", "source", "detail"))
 
 unlink(made, recursive = TRUE)
 
+# No I/M programme: refused only when MOVES's validation is on and no _imcoverage.csv was written
+im_dir = tempfile("im"); dir.create(im_dir)
+im_rs = file.path(im_dir, "rs_custom.xml")
+invisible(file.copy("moves_anywhere/inputs_project/rs_custom.xml", im_rs))
+im_try = function(){ tryCatch({ project_check_im(im_rs, BUCKET = im_dir); "" }, error = function(e) conditionMessage(e)) }
+if(im_try() != "no I/M programme here: set skipdomaindatabasevalidation to true"){
+  failures = c(failures, "project_check_im: validation on and no _imcoverage.csv should stop")
+}
+writeLines("a,b", file.path(im_dir, "_imcoverage.csv"))
+if(im_try() != ""){ failures = c(failures, "project_check_im: an _imcoverage.csv should pass") }
+invisible(file.remove(file.path(im_dir, "_imcoverage.csv")))
+im_x = xml2::read_xml(im_rs)
+xml2::xml_set_attr(xml2::xml_find_first(im_x, "//skipdomaindatabasevalidation"), "selected", "true")
+xml2::write_xml(im_x, im_rs)
+if(im_try() != ""){ failures = c(failures, "project_check_im: validation skipped should pass") }
+unlink(im_dir, recursive = TRUE)
+
 if(length(failures) > 0){
   cat("FAIL\n", paste0("  ", failures, collapse = "\n"), "\n", sep = "")
   quit(status = 1)
