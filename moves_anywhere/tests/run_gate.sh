@@ -2,17 +2,19 @@
 # run_gate.sh #################################################################
 #
 # What:      The gate: builds the image from a commit and runs every check, one after another.
-# Does:      Runs 10 steps (static, compare-unit, build, fixture, compare, manifest, pack, ticket,
-#            bad-table, sha), never two containers at once, keeps going after a failure, and prints one
+# Does:      Runs 12 steps (static, compare-unit, build, fixture, compare, manifest, pack, ticket,
+#            bad-table, sha, project-unit, project), never two containers at once, keeps going after a failure, and prints one
 #            summary line per step. The image is built from a clean `git archive HEAD` export, so it gets
 #            the committed LF scripts and the working tree is never touched.
 # Called by: Developer tool: the release gate. Not run by launch.sh.
-# Reads:     moves_anywhere/ (committed), moves_anywhere/inputs_ny (inputs and gold outputs), Docker
+# Reads:     moves_anywhere/ (committed), moves_anywhere/inputs_ny (inputs and gold outputs),
+#            moves_anywhere/inputs_project (project-scale fixture), Docker
 # Writes:    moves_anywhere/tests/.work/gate/ (one log per step); temp folders, removed on exit unless --keep
 # Exits:     the number of failed steps (0 = gate passed); 2 on a usage error or if not run from the repo root
 # Usage: bash moves_anywhere/tests/run_gate.sh [--image <name:tag>] [--skip-build] [--only <step>]
 #                                              [--allow-dirty] [--keep]
 # Run from the repository root. Default image: moves-anywhere:gate-<short git sha>.
+# --only runs one step: static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project
 ###############################################################################
 
 set -uo pipefail
@@ -21,10 +23,10 @@ set -uo pipefail
 export PYTHONDONTWRITEBYTECODE=1
 
 MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
-STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha"
+STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project"
 IMAGE=""; SKIP_BUILD=0; ONLY=""; ALLOW_DIRTY=0; KEEP=0
 
-usage() { sed -n "16,19p" "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n "14,17p" "$0" | sed 's/^# \{0,1\}//'; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --image) [ $# -ge 2 ] || { usage >&2; exit 2; }; IMAGE="$2"; shift 2 ;;
@@ -76,7 +78,7 @@ run_step() {
   # A step that needs the image, or the finished fixture run, is skipped when that earlier step did not pass
   # (the earlier FAIL already fails the gate; running on would only bury the real cause).
   case "$name" in
-    fixture|ticket|bad-table)
+    fixture|ticket|bad-table|project)
       if [ -z "$ONLY" ] && [ "$BUILD_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: no image, see step build)"; return; fi ;;
     compare|manifest|pack|sha)
       if [ -z "$ONLY" ] && [ "$FIXTURE_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: the fixture run did not finish)"; return; fi ;;
@@ -182,6 +184,27 @@ step_sha() {
   return 0
 }
 
+# project-unit: no Docker. The R unit tests and the project pack test.
+step_project_unit() {
+  if ! command -v Rscript >/dev/null 2>&1; then
+    echo "SKIP: Rscript is not on PATH, so the project R unit tests were not run"; return 99
+  fi
+  local t bad=0
+  for t in test_project_functions test_adapt_link test_adapt_offnetwork test_importer_project test_linkdata test_runspec_project; do
+    if [ ! -f "moves_anywhere/tests/$t.R" ]; then
+      [ "$t" = test_runspec_project ] && { echo "(no $t.R, skipped)"; continue; }
+      echo "missing moves_anywhere/tests/$t.R"; bad=1; continue
+    fi
+    echo "--- $t.R"
+    Rscript "moves_anywhere/tests/$t.R" || bad=1
+  done
+  echo "--- test_pack_project.sh"
+  bash moves_anywhere/tests/test_pack_project.sh || bad=1
+  return "$bad"
+}
+
+step_project() { bash moves_anywhere/tests/test_project.sh --image "$IMAGE"; }
+
 # 4. Run them, strictly in order ####
 T_ALL=$SECONDS
 run_step 1  static       step_static
@@ -194,6 +217,8 @@ run_step 7  pack         step_pack
 run_step 8  ticket       step_ticket
 run_step 9  bad-table    step_bad_table
 run_step 10 sha          step_sha
+run_step 11 project-unit step_project_unit
+run_step 12 project      step_project
 
 # 5. Summary ####
 echo

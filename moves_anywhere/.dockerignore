@@ -1,6 +1,7 @@
 rsconnect/
 dev/
 inputs_ny/
+inputs_project/
 defaults/
 buildme.sh
 dev.sh

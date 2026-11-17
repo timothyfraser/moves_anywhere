@@ -140,6 +140,8 @@ Field rules:
 - `callbacks`: always an empty array. There is no webhook. **The manifest is the callback**:
   the platform learns the run finished when `run_manifest.json` lands.
 
+**Project scale.** Ticket mode does not carry project-scale runs yet: the ticket has no upload address for `linkdata.csv.gz`, so a project run pushed through a ticket fails with `required output missing: linkdata.csv.gz`. Use mounted or sync mode.
+
 **Output names.** The platform lists, and the container pushes, exactly these objects:
 
 | Mode (`parameters.json` `mode`) | Output names | `required` |

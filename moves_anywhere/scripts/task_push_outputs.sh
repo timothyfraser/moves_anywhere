@@ -46,8 +46,12 @@ names = sorted(l.strip() for l in open(stored) if l.strip())
 status = os.environ["STATUS"]
 if status == "ok" and m.get("manifest_version") and m.get("status") in ("ok", "failed"):
     # the pack manifest: push it unchanged, unless a required output never made it
-    if m["status"] == "ok" and m.get("mode", "inv") == "inv" and "data.csv.gz" not in names:
-        m["status"] = "failed"; m["stop_reason"] = "required output missing: data.csv.gz"
+    req = "data.csv.gz"  # a project run (modeldomain PROJECT) writes linkdata.csv.gz instead
+    try:
+        if "modeldomain value=\"project\"" in open(os.path.join(inp, "rs_custom.xml"), errors="replace").read().lower(): req = "linkdata.csv.gz"
+    except OSError: pass
+    if m["status"] == "ok" and m.get("mode", "inv") == "inv" and req not in names:
+        m["status"] = "failed"; m["stop_reason"] = "required output missing: " + req
         json.dump(m, open(p, "w"), indent=2, sort_keys=True)
     sys.exit(0)
 try: tk = json.load(open(ticket))
@@ -94,10 +98,10 @@ refetch() {
 if [ "$MOVES_IO" = "sync" ]; then
   [ -n "$MOVES_SYNC_REMOTE" ] || { echo "---MOVES_SYNC_REMOTE is not set"; exit 5; }
   : > "$STORED"
-  for n in data.csv.gz moveslog.txt.gz replication.tar.xz; do [ -f "$IN/$n" ] && echo "$n" >> "$STORED"; done
+  for n in data.csv.gz linkdata.csv.gz moveslog.txt.gz replication.tar.xz; do [ -f "$IN/$n" ] && echo "$n" >> "$STORED"; done
   write_manifest; sync_status
   rclone --config /dev/null copy "$IN" "$MOVES_SYNC_REMOTE/out" --exclude run_manifest.json \
-    --include 'data.csv.gz' --include 'moveslog.txt.gz' --include 'replication.tar.xz' || exit 4
+    --include 'data.csv.gz' --include 'linkdata.csv.gz' --include 'moveslog.txt.gz' --include 'replication.tar.xz' || exit 4
   rclone --config /dev/null copyto "$IN/run_manifest.json" "$MOVES_SYNC_REMOTE/out/run_manifest.json" || exit 4
   [ "$STATUS" = ok ]; exit $?
 fi

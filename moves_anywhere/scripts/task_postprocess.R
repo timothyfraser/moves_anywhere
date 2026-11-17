@@ -2,12 +2,16 @@
 #
 # What:      Task to postprocess MOVES data
 # Does:      Inventory runs: write movesoutput and movesactivityoutput as .csvs, then
-#            inputs/data.csv unless it is a randomized training run. Rate runs: write the rate tables.
+#            inputs/data.csv unless it is a randomized training run. Project-scale runs: write
+#            inputs/linkdata.csv instead (never data.csv), or stop if MOVES produced no rows.
+#            Rate runs: write the rate tables.
 # Called by: launch.sh, step 11 of launch.sh
-# Reads:     inputs/rs_custom.xml, inputs/parameters.json, MOVES output database (moves)
+# Reads:     inputs/rs_custom.xml, inputs/parameters.json, MOVES output database (moves);
+#            project runs: inputs/_link.csv
 # Writes:    inputs/movesoutput.csv, inputs/movesactivityoutput.csv, data.rds, inputs/data.csv;
+#            project runs: inputs/linkdata.csv, /cat/run/stop_reason (when MOVES made no results);
 #            rates: inputs/rateper*.csv, inputs/startspervehicle.csv, inputs/movesrun.csv
-# Needs:     scripts/task_get_data.R; dplyr, readr, DBI, dbplyr, RMariaDB, catr, purrr, tidyr, stringr, jsonlite, RMySQL
+# Needs:     scripts/task_get_data.R, scripts/project_functions.R, scripts/task_get_linkdata.R; dplyr, readr, DBI, dbplyr, RMariaDB, catr, purrr, tidyr, stringr, jsonlite, RMySQL
 ###############################################################################
 
 # Reset working directory
@@ -26,6 +30,8 @@ library(stringr, warn.conflicts = FALSE, quietly = TRUE)
 
 # Load helper function
 source("scripts/task_get_data.R")
+source("scripts/project_functions.R")
+source("scripts/task_get_linkdata.R")
 
 # Load environmental variables
 # source("setenv.r")
@@ -44,7 +50,8 @@ if(rs$mode == "inv"){
   
   
   # Does your directory contain a parameters file?
-  has_json = file.exists("inputs/parameters.json")
+  project = is_project("inputs/rs_custom.xml")
+  has_json = file.exists("inputs/parameters.json") & !project
   
   
   #rs_to_parameters(path_rs = "inputs/rs_custom.xml", path_parameters = "inputs/parameters.json", tablename = NULL, user = 1, order = 1, by = 1:16, multiple = FALSE, return = FALSE)
@@ -92,6 +99,18 @@ if(rs$mode == "inv"){
       read_rds("data.rds") %>% write_csv("inputs/data.csv")
     }
     
+  }
+  
+  # Project-scale run: link-level results, and never a data.csv (that file means a county-year)
+  if(project){
+    # MOVES exits 0 even when it refuses a run, so check that it wrote results
+    if(nrow(readr::read_csv("inputs/movesoutput.csv", show_col_types = FALSE)) == 0){
+      msg = "MOVES produced no results: see moveslog"
+      if(dir.exists("/cat/run")){ writeLines(msg, "/cat/run/stop_reason", sep = "") }
+      message(msg)
+      quit(save = "no", status = 1)
+    }
+    get_linkdata("inputs")
   }
   
 

@@ -39,7 +39,7 @@ task_pack() (
   # Not user inputs: files the pipeline itself writes at the top of the folder.
   not_user() {
     case "$1" in
-      data.csv|movesoutput.csv|movesactivityoutput.csv) return 0 ;;
+      data.csv|linkdata.csv|movesoutput.csv|movesactivityoutput.csv) return 0 ;;
       rateperhour.csv|ratepervehicle.csv|rateperdistance.csv|rateperstart.csv) return 0 ;;
       startspervehicle.csv|rateperprofile.csv|movesrun.csv) return 0 ;;
     esac
@@ -114,7 +114,7 @@ EOF
     [ -f "$f" ] && tsv_row "$f" >> "$work/inputs.tsv"
   done
   # Outputs: the objects the platform expects (docs/RUN_TICKET.md), those present.
-  for f in data.csv.gz rateperhour.csv.gz ratepervehicle.csv.gz rateperdistance.csv.gz \
+  for f in data.csv.gz linkdata.csv.gz rateperhour.csv.gz ratepervehicle.csv.gz rateperdistance.csv.gz \
            rateperstart.csv.gz startspervehicle.csv.gz rateperprofile.csv.gz movesrun.csv.gz \
            moveslog.txt.gz replication.tar.xz; do
     [ -f "$f" ] && tsv_row "$f" >> "$work/outputs.tsv"
@@ -143,6 +143,8 @@ EOF
   # run, whatever exit codes came before: ok must never describe a run with nothing in it.
   if [ "$status" = "ok" ]; then
     need=data.csv
+    # A project run writes linkdata.csv and never data.csv.
+    grep -qi 'modeldomain value="PROJECT"' rs_custom.xml 2>/dev/null && need=linkdata.csv
     grep -qi 'modelscale value="Rates"' rs_custom.xml 2>/dev/null && need=rateperdistance.csv
     if [ ! -s "$need" ] && [ ! -s "$need.gz" ]; then
       status=failed; reason="MOVES produced no results: see moveslog"

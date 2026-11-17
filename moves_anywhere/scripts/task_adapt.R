@@ -40,6 +40,8 @@ library(dplyr, warn.conflicts = FALSE, quietly = TRUE)
 library(readr, warn.conflicts = FALSE, quietly = TRUE)
 # Load functions
 source("scripts/adapt_functions.R")
+# Project-scale helpers (MOVES domain PROJECT: road links, one hour); used only when the runspec asks for it
+source("scripts/project_functions.R")
 
 # First useful line of an error message: no cli bullets, ANSI colour codes or backticks; "" if none
 adapt_first_line = function(msg){
@@ -72,6 +74,17 @@ run_adapter = function(name, expr){
     message(paste0("ERROR: adapt failed on ", name, ": ", gsub("[[:space:]]*\n[[:space:]]*", " | ", full)))
     quit(save = "no", status = 1)
   })
+}
+
+# PROJECT RUNSPEC (project-scale runs only) ######
+# MOVES refuses a project runspec with more than one hour, day or month but still exits 0,
+# so the rules are checked here, before anything else runs.
+if(is_project(.runspec)){
+  cat("
+
+---PROJECT RUNSPEC-----------------------
+")
+  run_adapter("project runspec", project_check(.runspec = .runspec, BUCKET = BUCKET))
 }
 
 # IDENTIFIERS ####################################
@@ -201,6 +214,29 @@ run_adapter("zonemonthhour", {
   adapt_zonemonthhour(.runspec = .runspec)
 })
 
+
+## PROJECT LINKS (project-scale runs only) ###############
+# Runs last: the link defaults are built from the county tables written above.
+if(is_project(.runspec)){
+  cat("
+
+---PROJECT LINK TABLES----------------------
+")
+  # Start clean, so a table left by an earlier run in this folder is never loaded
+  unlink(paste0(BUCKET, "/_", c("link", "linksourcetypehour", "driveschedulesecondlink",
+                                "offnetworklink", "opmodedistribution", "project_inputs"), ".csv"))
+  run_adapter("link", {
+    source("scripts/adapt_link.R")
+    adapt_link(.runspec = .runspec, BUCKET = BUCKET)
+    adapt_linksourcetypehour(.runspec = .runspec, BUCKET = BUCKET)
+    adapt_driveschedulesecondlink(.runspec = .runspec, BUCKET = BUCKET)
+  })
+  run_adapter("offnetwork", {
+    source("scripts/adapt_offnetwork.R")
+    adapt_offnetworklink(.runspec = .runspec, BUCKET = BUCKET)
+    adapt_opmodedistribution(.runspec = .runspec, BUCKET = BUCKET)
+  })
+}
 
 ## CLEANUP ############################################
 gc() # clear cache

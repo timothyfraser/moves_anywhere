@@ -3,10 +3,13 @@
 # What:      Summarize results quickly for diagnostics
 # Does:      Inventory runs: write CO2e Emissions (98) and Vehicle Population to
 #            inputs/diagnostics.txt, or remove it if either output .csv is missing.
+#            Project-scale runs: write a per-link table (miles, CO2, NOx, starts) and the list of
+#            inputs filled in by default, from inputs/linkdata.csv.
 # Called by: launch.sh, step 13 of launch.sh
-# Reads:     inputs/rs_custom.xml, inputs/movesoutput.csv, inputs/movesactivityoutput.csv
+# Reads:     inputs/rs_custom.xml, inputs/movesoutput.csv, inputs/movesactivityoutput.csv;
+#            project runs: inputs/linkdata.csv, inputs/_link.csv, inputs/_project_inputs.csv
 # Writes:    inputs/diagnostics.txt
-# Needs:     dplyr, readr, catr
+# Needs:     dplyr, readr, catr, scripts/project_functions.R, scripts/task_get_linkdata.R
 ###############################################################################
 
 # Set working directory
@@ -16,6 +19,8 @@ setwd("/cat")
 library(dplyr, warn.conflicts = FALSE, quietly = TRUE)
 library(readr, warn.conflicts = FALSE, quietly = TRUE)
 library(catr, warn.conflicts = FALSE, quietly = TRUE)
+source("scripts/project_functions.R")
+source("scripts/task_get_linkdata.R")
 
 
 FOLDER = "inputs"
@@ -25,49 +30,76 @@ rs = catr::translate_rs(.runspec = paste0(FOLDER, "/rs_custom.xml"))
 
 if(rs$mode == "inv"){
   
-  epath = paste0(FOLDER, "/movesoutput.csv")
-  if(file.exists(epath)){
-    e = epath  %>%
-      read_csv(show_col_types = FALSE) %>%
-      filter(pollutantID == 98)
-    if(nrow(e) > 0){
-      e = e %>%
-        summarize(emissions = sum(emissionQuant, na.rm = TRUE)) %>%
-        with(emissions)
-    }else{
-      e = NA_character_
+  if(is_project(paste0(FOLDER, "/rs_custom.xml"))){
+    
+    # Project-scale run: one line per link, then the inputs that were filled in
+    lpath = paste0(FOLDER, "/linkdata.csv")
+    if(file.exists(lpath)){
+      s = linkdata_summary(
+        linkdata = read_csv(lpath, show_col_types = FALSE),
+        link = read_csv(paste0(FOLDER, "/_link.csv"), show_col_types = FALSE))
+      lines = c(
+        "Project-scale run: one hour, results by link (grams, miles)",
+        "link,roadtype,description,miles,co2_g,nox_g,co2_g_per_mile,nox_g_per_mile,starts",
+        paste(s$link, s$roadtype, s$description, round(s$miles, 3), round(s$co2, 1), round(s$nox, 1),
+              ifelse(is.na(s$co2_per_mile), "", round(s$co2_per_mile, 1)),
+              ifelse(is.na(s$nox_per_mile), "", round(s$nox_per_mile, 3)),
+              round(s$starts, 1), sep = ","))
+      ipath = paste0(FOLDER, "/_project_inputs.csv")
+      if(file.exists(ipath)){
+        pin = read_csv(ipath, show_col_types = FALSE)
+        lines = c(lines, "", "Inputs filled in by default or supplied by you:",
+                  paste(pin[[1]], pin[[2]], pin[[3]], sep = " | "))
+      }
+      write_lines(x = lines, file = paste0(FOLDER, "/diagnostics.txt"))
     }
-  }
-  
-  apath = paste0(FOLDER, "/movesactivityoutput.csv")
-  
-  
-  if(file.exists(apath)){
-    a = apath %>% 
-      read_csv(show_col_types = FALSE) %>%
-      filter(activityTypeID == 6)
-    if(nrow(a) > 0){
-      a = a %>%
-        summarize(activity = sum(activity, na.rm = TRUE)) %>%
-        with(activity)
-    }else{
-      a = NA_character_
-    }
-  }
-  
-  dpath = paste0(FOLDER, "/diagnostics.txt")
-  if(file.exists(epath) & file.exists(apath)){
-    write_lines(
-      x = c(
-        paste0("CO2e Emissions (98): ", round(e,1) ),
-        paste0("Vehicle Population: ", round(a, 1) )
-      ),
-      file = dpath
-    )
+    
   }else{
-    unlink(dpath, force = TRUE)
-  }
   
+    epath = paste0(FOLDER, "/movesoutput.csv")
+    if(file.exists(epath)){
+      e = epath  %>%
+        read_csv(show_col_types = FALSE) %>%
+        filter(pollutantID == 98)
+      if(nrow(e) > 0){
+        e = e %>%
+          summarize(emissions = sum(emissionQuant, na.rm = TRUE)) %>%
+          with(emissions)
+      }else{
+        e = NA_character_
+      }
+    }
+  
+    apath = paste0(FOLDER, "/movesactivityoutput.csv")
+  
+  
+    if(file.exists(apath)){
+      a = apath %>% 
+        read_csv(show_col_types = FALSE) %>%
+        filter(activityTypeID == 6)
+      if(nrow(a) > 0){
+        a = a %>%
+          summarize(activity = sum(activity, na.rm = TRUE)) %>%
+          with(activity)
+      }else{
+        a = NA_character_
+      }
+    }
+  
+    dpath = paste0(FOLDER, "/diagnostics.txt")
+    if(file.exists(epath) & file.exists(apath)){
+      write_lines(
+        x = c(
+          paste0("CO2e Emissions (98): ", round(e,1) ),
+          paste0("Vehicle Population: ", round(a, 1) )
+        ),
+        file = dpath
+      )
+    }else{
+      unlink(dpath, force = TRUE)
+    }
+  
+  }
 }
  
 # setwd(paste0(rstudioapi::getActiveProject(), "/moves_anywhere"))

@@ -3,11 +3,12 @@
 #
 # What:      Script to import a set of files using an importer.xml
 # Does:      Copies inputs/importer.xml into EPA_MOVES_Model/, then runs the MOVES
-#            custom database importer as the mysql user.
+#            custom database importer as the mysql user. A project run then counts the rows
+#            loaded into each link table (task_check_import.R).
 # Called by: launch.sh, step 9 of launch.sh (sourced)
 # Reads:     /cat/inputs/importer.xml, /cat/EPA_MOVES_Model/MOVESConfiguration.txt
 # Writes:    /cat/EPA_MOVES_Model/importer.xml, MOVESConfiguration.txt (edited in place), custom input database
-# Exits:     1 if it cannot change directory, cannot copy importer.xml, or mysql cannot read it
+# Exits:     1 if it cannot change directory, cannot copy importer.xml, or mysql cannot read it; 1 if a project run's link table has the wrong number of rows
 ###############################################################################
 
 # MOVES Setup ###################################
@@ -62,6 +63,11 @@ ls -l /cat/inputs/_sourcetypeagedistribution.csv
 # Changing to mysql user and running the custom database importer
 echo ------------running importer------------
 sudo -u mysql bash -c 'ant dbimporter -Dimport="/cat/EPA_MOVES_Model/importer.xml"'
+
+# Project-scale runs only: ant reports success even when a table fails to load, so count the rows
+if grep -qi 'modeldomain value="PROJECT"' /cat/inputs/rs_custom.xml; then
+  Rscript /cat/scripts/task_check_import.R || exit 1
+fi
 
 # Reset directory
 cd "/cat"
