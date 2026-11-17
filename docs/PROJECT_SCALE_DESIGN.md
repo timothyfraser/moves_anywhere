@@ -27,6 +27,11 @@ not hidden.
 | Link attributes other than traffic (vehicle mix, speed if unknown, grade, engine starts and soak times on a parking lot) | Yes, as county averages | Built. Measured on one county; one external comparison in progress. |
 | The links themselves (where the road is, how long, how much traffic) | Not from MOVES or its database. Would need road and traffic data from elsewhere | Not built. A separate research question. |
 
+- What drives a result: vehicle-miles first (traffic volume x length, which always come from the
+  user), then the emission rate per mile. Across real roads volume varies by a factor of thousands and
+  the CO2 rate by about two, so getting the traffic right matters most. The rate still matters for
+  comparing scenarios on one road, and for NOx and particulates, where vehicle age and truck share move
+  it by two to three times.
 - So the honest pitch is: **bring your links (length and traffic volume), and the image fills in the
   rest with county averages and tells you which values were defaults.** It is a screening and research
   tool. It does not replace project traffic data in a regulatory analysis.
@@ -56,7 +61,7 @@ MOVES Anywhere was written with three kinds of analysis in mind. They are not eq
 | Kind | What it is in MOVES terms | State in MOVES Anywhere |
 |---|---|---|
 | County inventory | County scale (`modeldomain SINGLE`), output by county, usually a whole year | In production since version 1. A test gate reproduces a reference county run byte for byte. |
-| County run with finer output ("link" or "edge" output) | County scale, but `geographicoutputdetail LINK` and hourly output. As we understand MOVES's documentation, a "link" at county scale is a road type within the county, not a real road segment. We have not verified that here | The run-file writer (`catr::custom_rs(.geoaggregation = "link", .timeaggregation = "hour")`) writes such a file. **We have not run one end to end in this work**, and the results step (`data.csv`) was written for county-year totals. Treat it as untested. It is on the task list (section 11). |
+| County run with finer output ("link" or "edge" output) | County scale, but `geographicoutputdetail LINK` and hourly output. As we understand MOVES's documentation, a "link" at county scale is a road type within the county, not a real road segment. We have not verified that here | The run-file writer (`catr::custom_rs(.geoaggregation = "link", .timeaggregation = "hour")`) writes such a file. Tim Fraser ran this kind of run when he built MOVESAI and confirmed that it computes. There was no outside result to compare it with then, and there is none now. It was not re-run in this work, so nothing here adds to or subtracts from that. Re-running it with the tests we now have is on the task list (section 11). |
 | Project scale | `modeldomain PROJECT`: real links, one hour | This work. Built and tested as described below. |
 
 One thing we did learn about the middle row: the helper for project runs calls `custom_rs()` with
@@ -298,7 +303,12 @@ What happened, in order, because the failures are the useful part:
    command line prints nothing. The MOVES window has a "No I/M Program" tick box for this; the command
    line has no equivalent. County run files written by `catr` switch that validation off, which is why
    county runs never met the problem. We added a rule that says so up front (section 8.3).
-3. **Third attempt:** results are recorded in section 7.5 when the run finishes.
+3. **Third attempt, with MOVES's validation off in the run file: it ran** (521 s of MOVES). Carbon
+   monoxide on the free-flow links: 3.47 g per vehicle-mile, against EPA's printed 2.74 (27% higher).
+   On the queue link: 16.8 g per vehicle-hour, against 5.57 (three times higher). Passenger cars alone
+   were 3.35 and 14.6, so the vehicle mix does not explain the gap. We cannot separate the MOVES
+   version, the fleet ages, the fuel and the weather with what EPA printed. MOVES3 is also several
+   versions old. We do not treat this as a validation, in either direction.
 
 The Tompkins variant of the same three links (July 2022, so not comparable with EPA's January 2025
 numbers) is informative by itself: 391 g CO2 and 3.68 g CO per mile at 45 mph, and 3.59 kg CO2 and
@@ -309,13 +319,52 @@ it would be badly wrong.
 
 ### 7.4 An internal check: does a project run built only from defaults agree with a county run?
 
-Designed, inputs built, not yet run at the time of writing. Results go in section 7.5.
-
 The idea: run Tompkins County at county scale for the same hour, with output by road type. Then build a
 project run that imitates it: for each of two road types, one link per speed bin, with miles in
 proportion to the county's speed distribution, and the default vehicle mix (32 links, 10,000 miles per
 road type). Compare grams per mile by road type. Both runs use the same engine and the same county
 tables, so a large gap would mean the project inputs we build do not mean what we think they mean.
+
+Result (the 32-link run took 1,882 s of MOVES):
+
+| Per mile, project against county | Urban freeways | Other urban roads |
+|---|---|---|
+| Average speed | identical (48.51 mph) | identical (25.59 mph) |
+| CO2, energy, SO2 | +4.6% | +4.3% |
+| Tyre wear | +0.4% | +1.7% |
+| Brake wear | -6.6% | -3.5% |
+| CO | +44% | +48% |
+| Hydrocarbons | +88% | +85% |
+| NOx | +114% | +94% |
+| Exhaust PM2.5 | +188% | +165% |
+
+The activity we build is right: the speeds agree to five figures. The gap is in the emission rates, and
+it has the signature of vehicle age (little effect on CO2, a large effect on the pollutants that old
+vehicles emit far more of).
+
+The MOVES source explains it. At county scale MOVES converts the share of *vehicles* of each age into a
+share of *travel*, weighting each age by how many miles vehicles of that age drive; newer vehicles drive
+more (`TotalActivityGenerator.java`: "TravelFraction = FractionWithinHPMSVType x relativeMAR"). At
+project scale it uses the registration share directly as the share of the traffic on the link
+(`ProjectTAG.java`: "linkVolume x sourceTypeHourFraction x ageFraction"). For Tompkins County the
+average car on the register is 12.1 years old; weighted by travel it is 9.8. For long-haul trucks the
+figures are 13.9 and 8.3.
+
+So the same county fleet, handed to MOVES the same way, gives about twice the NOx and two to three
+times the exhaust particulates per mile at project scale. This is how MOVES works, not a fault in the
+link tables, and it may be what EPA intends: at project scale the age table is meant to describe the
+vehicles on that road. It is still a choice we make by default, and section 9 treats it as the most
+important open question. The confirmation run is in 7.5: with travel-weighted ages the gap closes to under 2% for NOx and
+exhaust particulates.
+
+The same source file holds one more rule worth knowing: a vehicle's time on a link is capped at one
+hour (`least(linkLength / linkAvgSpeed, 1.0)`). A link too long to cross in the hour is silently
+shortened.
+
+A by-product: the county-scale one-hour run produced its MOVES results and then crashed in the
+existing summary step (`Error in round(a, 1): non-numeric argument`), because hourly output has no
+vehicle-population rows. That is a fault in release 3.1.0's county path for hourly runs. It is not
+changed here and is on the task list.
 
 ### 7.5 Results added after this document was first written
 
@@ -323,11 +372,12 @@ tables, so a large gap would mean the project inputs we build do not mean what w
 
 | Check | Result |
 |---|---|
-| EPA example, Washtenaw County, third attempt | |
-| County run against project run built from defaults | |
-| Full test gate on the image built from the branch (12 steps, including the county reference run) | |
-| Fixture run twice: identical results | |
-| The fourth refusal (a road type with no link) | |
+| EPA example, Washtenaw County, third attempt | Ran. CO 27% above EPA's printed MOVES3 figure on free-flow links, three times above it at idle; unexplained (section 7.3) |
+| County run against project run built from defaults | CO2 within 5%; NOx, CO, hydrocarbons and exhaust PM2.5 1.5 to 2.9 times higher at project scale (section 7.4) |
+| The same project links with travel-weighted vehicle ages (16 links, urban roads) | Agrees with the county run: CO2 +0.1%, CO -0.1%, hydrocarbons 0.0%, NOx +1.5%, exhaust PM2.5 +1.8%, tyre wear +1.4%, brake wear +3.4%. Vehicle age weighting accounts for the whole gap. 1,487 s of MOVES |
+| Full test gate on the image built from the branch (12 steps, including the county reference run) | Not run on the final commit. The build step alone passed on the first commit |
+| Fixture run twice: identical results | Not run (part of the gate) |
+| The fourth refusal (a road type with no link) | Offline test passes; the container test waits for the gate |
 
 ## 8. Design decisions that a reader should know about
 
@@ -388,6 +438,13 @@ replication kit), so silent repairs would make that record untrue.
 ## 9. Red team: how this can be wrong or misused
 
 Written by the people who built it, trying to break it. Ordered by how much damage each could do.
+
+**Read this one first. It was found after the list was written.** With the county's registration ages
+as the default, project-scale NOx, CO, hydrocarbons and exhaust particulates per mile are 1.5 to 2.9
+times what a county-scale run gives for the same fleet, road type, hour and speeds (section 7.4). CO2
+is within 5%. Anyone comparing a project result with a county inventory, or quoting project-scale
+criteria pollutants from defaults, needs to know this. Whether the default should stay as EPA's usual
+practice (registration ages) or become travel-weighted ages is undecided.
 
 1. **Defaults that look like data.** A user gives lengths and volumes, gets grams to six digits, and
    forgets that the vehicle mix, speed, fuel, fleet age and start behaviour were county or national
@@ -473,11 +530,14 @@ dependency.
 
 | Item | Kind | Note |
 |---|---|---|
-| Finish the three pending checks in 7.5 | In progress | |
+| Finish the pending checks in 7.5 | In progress | |
+| Vehicle ages at project scale: registration or travel-weighted (section 7.4) | Needs a decision | Changes the reference results if changed |
+| Hourly county runs crash in the summary step (section 7.4) | Backlog, county path | |
+| Warn or refuse when a link is too long to cross in the hour | Backlog | |
 | Independent review of the code | Done once (section 9, item 13) | A person should still read it before any merge |
 | Extended idle and hotelling hours as columns of `linkdata.csv` | Backlog | Today they are only in the raw activity file |
 | Check a user's operating-mode table against the run's vehicle types and pollutants | Backlog | |
-| Test county-scale runs with link and hourly output (section 3) | Backlog | Long assumed to work, never tested end to end |
+| Re-run county-scale runs with link and hourly output (section 3) and put them under test | Backlog | Run and confirmed to compute when MOVESAI was built; no automated test and no reference result exists |
 | Check every link and pollutant appears in the output (red team 5) | Backlog | |
 | Warn on 0 mph links in `diagnostics.txt` (red team 7) | Backlog | |
 | A flag on each `linkdata.csv` row for "used a default" (red team 1) | Backlog | |
