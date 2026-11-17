@@ -206,7 +206,9 @@ trucks.
 Assumption: vehicles in this lot behave like the average vehicle in the county. That is wrong for most
 real lots (a commuter car park at 5 pm, a depot at 6 am). EPA's guidance says there are no default
 values for these inputs and that they should come from the project. We provide a default so a run can
-be made, we label it in the results, and we recommend replacing it.
+be made, we label it in the results, and we recommend replacing it. The default also leaves out two
+refinements MOVES applies to starts at county scale: the adjustment by month and the adjustment by
+vehicle age.
 
 ### 6.4 Soak times
 
@@ -337,6 +339,15 @@ results into shared county data. A project result must never be mistaken for one
 miles, hours, starts, vehicles). If someone copies a `parameters.json` from a county run into the
 folder, there is still no `data.csv`; a test checks this.
 
+Folders get reused, so the two kinds of result are also kept apart when an old file is lying around. A
+project run refuses to start in a folder that already holds a `data.csv`. A county run in a folder that
+holds an old `linkdata.csv` ignores it: each kind of run compresses, lists and uploads only its own
+result. (The independent review found that the first version shipped whichever stale file was there.)
+
+`sourcehours` in `linkdata.csv` is MOVES's "source hours operating": hours of driving on road links.
+Extended idle and hotelling hours on a parking lot are not a column; they are in the raw
+`movesactivityoutput.csv`. So a truck stop shows grams from idling next to zero `sourcehours`.
+
 ### 8.2 County runs must not change
 
 Every edit to an existing script sits behind one question: does the run file say `PROJECT`? A county run
@@ -353,8 +364,10 @@ fails without a message when it fails that way. So:
 - If the run file has validation on and the county has no inspection table, the run stops with
   `no I/M programme here: set skipdomaindatabasevalidation to true`.
 - The helper that writes project run files switches validation off, as `catr` does for county files.
-- Our own rules (12 for the run file, plus checks on every link table) stand in for it. They are
-  narrower than MOVES's validation. That is a real loss of protection; see section 9.
+- Our own rules stand in for it: ten on the run file, three more on the folder (every selected road
+  type has a link, the inspection rule above, and no county result already in the folder), plus checks
+  on every link table. They are narrower than MOVES's validation. That is a real loss of protection;
+  see section 9.
 
 ### 8.4 Refuse rather than repair
 
@@ -394,12 +407,16 @@ Written by the people who built it, trying to break it. Ordered by how much dama
    we did not think of would produce numbers.
 5. **We only detect an empty result, not a partly empty one.** If MOVES produced CO2 but silently
    dropped a pollutant, or produced nothing for one link, the run would pass. There is no check that
-   every link and every requested pollutant appears in the output.
+   every link and every requested pollutant appears in the output. The review found one concrete way
+   to get there: a user's soak-time table covering only some vehicle types switched off the defaults
+   for all the others. That case is fixed (the gaps are now filled and counted in `diagnostics.txt`),
+   but the general check is still missing. A user's own operating-mode table is also only checked for
+   blanks, range and sums, not for whether its vehicle types and pollutants match the run.
 6. **One hour is easy to misuse.** Multiplying one hour by 24, or by 8,760, is wrong: traffic, speeds,
    temperature and starts all change by hour. The tool does one hour per run and has no helper for many
    hours yet.
 7. **A 0 mph link means "everyone idles for an hour".** See 7.3. The per-link table prints a large total
-   with zero miles and no warning.
+   with zero miles. `diagnostics.txt` now adds a note for each such link; `linkdata.csv` does not.
 8. **One average speed is not a traffic stream.** A link at the mean speed understates the effect of
    congestion, because slow driving emits disproportionately. For intersections EPA recommends
    operating-mode distributions or drive schedules, not an average speed. The tool accepts both but
@@ -418,10 +435,14 @@ Written by the people who built it, trying to break it. Ordered by how much dama
     have hundreds of links. We do not know how time grows.
 13. **How it was built.** The code was written in one day by AI agents working from a written plan, with
     one orchestrating agent reviewing diffs and running every container test. The plan was reviewed
-    independently before coding. The code has not yet had an independent review, and no person has read
-    all of it. Two defects were found after the agents reported their units done (vehicle counts came
-    out as zero in the results file; one test would have compared the new code with itself once it was
-    committed). Assume there are more.
+    independently before coding, and the code was reviewed once by a separate agent that had not
+    written it. No person has read all of it. Defects found after the writing agents reported their
+    units done: vehicle counts came out as zero in the results file; one test would have compared the
+    new code with itself once committed; stale result files from an earlier run in the same folder were
+    shipped with the wrong kind of run; a partial soak-time table dropped every default; a run file
+    using single quotes was read as a project run by some scripts and a county run by others. All are
+    fixed. The review found no way for the change to alter a county run in a clean folder. Assume there
+    are more defects of the same kinds.
 14. **County averages come from the default database's national tables**, not from the county, for
     speeds, road type shares, hourly shares, starts and ages. "County average" in this document often
     means "national pattern applied to the county's mileage". Only vehicle counts and annual mileage are
@@ -453,7 +474,9 @@ dependency.
 | Item | Kind | Note |
 |---|---|---|
 | Finish the three pending checks in 7.5 | In progress | |
-| Independent review of the code | To do | Before any merge |
+| Independent review of the code | Done once (section 9, item 13) | A person should still read it before any merge |
+| Extended idle and hotelling hours as columns of `linkdata.csv` | Backlog | Today they are only in the raw activity file |
+| Check a user's operating-mode table against the run's vehicle types and pollutants | Backlog | |
 | Test county-scale runs with link and hourly output (section 3) | Backlog | Long assumed to work, never tested end to end |
 | Check every link and pollutant appears in the output (red team 5) | Backlog | |
 | Warn on 0 mph links in `diagnostics.txt` (red team 7) | Backlog | |

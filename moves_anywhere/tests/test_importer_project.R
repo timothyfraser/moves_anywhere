@@ -69,8 +69,12 @@ old_file = tempfile(fileext = ".R"); tmps = c(tmps, old_file)
 old_code = suppressWarnings(system2("git", c("show", "v3.1.0:moves_anywhere/scripts/importer.R"),
                                     stdout = TRUE, stderr = FALSE))
 if(length(old_code) < 50){
-  cat("note: git tag v3.1.0 not available here; the county byte-for-byte check was skipped
-")
+  # The gate sets PROJECT_TESTS_STRICT=1: a skipped check must not read as a pass there
+  if(Sys.getenv("PROJECT_TESTS_STRICT") == "1"){
+    check(FALSE, "git tag v3.1.0 is not available, so the county byte-for-byte check could not run")
+  }else{
+    cat("note: git tag v3.1.0 not available here; the county byte-for-byte check was skipped", fill = TRUE)
+  }
 }else{
   writeLines(old_code, old_file)
   env_old = new.env()

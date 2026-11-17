@@ -142,6 +142,16 @@ adapt_opmodedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", 
       if(!columns[i] %in% names(supplied)){ stop(paste0("opmodedistribution.csv needs column ", spelled[i])) }
     }
     supplied = supplied %>% select(all_of(columns))
+    # No blanks and no text: a blank fraction would pass the sum check and load as nothing
+    for(i in seq_along(columns)){
+      supplied[[columns[i]]] = suppressWarnings(as.numeric(supplied[[columns[i]]]))
+      if(any(is.na(supplied[[columns[i]]]))){
+        stop(paste0("opmodedistribution.csv has a blank or non-numeric ", spelled[i]))
+      }
+    }
+    if(any(supplied$opmodefraction < 0 | supplied$opmodefraction > 1)){
+      stop("opmodedistribution.csv opModeFraction must be 0 to 1")
+    }
     if(any(supplied$hourdayid != spec$hourday)){
       stop(paste0("opmodedistribution.csv hourDayID must be ", spec$hourday))
     }
@@ -162,10 +172,7 @@ adapt_opmodedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", 
   data = supplied
   appended = FALSE
   if(nrow(found$off) > 0 && length(spec$start_polprocess) > 0){
-    if(!is.null(supplied) && any(supplied$linkid %in% found$off$linkid)){
-      project_note(item = "start soak times (opmodedistribution)", source = "user",
-                   detail = "supplied opmodedistribution.csv", BUCKET = BUCKET)
-    }else{
+    {
       soak = project_read("startsopmodedistribution", .runspec, BUCKET, spec = spec) %>%
         select(sourcetypeid, ageid, opmodeid, opmodefraction)
       ages = project_read("sourcetypeagedistribution", .runspec, BUCKET, spec = spec) %>%
@@ -179,14 +186,30 @@ adapt_opmodedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", 
         mutate(opmodefraction = opmodefraction / sum(opmodefraction)) %>%
         ungroup() %>%
         filter(sourcetypeid %in% spec$sourcetypes)
-      if(nrow(weighted) > 0){
-        defaults = tidyr::crossing(weighted, polprocessid = spec$start_polprocess) %>%
-          mutate(hourdayid = spec$hourday, linkid = found$off$linkid[1]) %>%
-          select(all_of(columns))
+      defaults = tidyr::crossing(weighted, polprocessid = spec$start_polprocess) %>%
+        mutate(hourdayid = spec$hourday, linkid = found$off$linkid[1]) %>%
+        select(all_of(columns))
+      pairs_all = nrow(distinct(defaults, sourcetypeid, polprocessid))
+      # Keep the user's soak times where given, and fill only the vehicle type x pollutant pairs
+      # the user left out. (Dropping every default because one pair was supplied would leave the
+      # other vehicle types with no start operating modes, and the run would still end ok.)
+      if(!is.null(supplied)){
+        given = supplied %>% filter(linkid %in% found$off$linkid) %>% distinct(sourcetypeid, polprocessid)
+        defaults = defaults %>% anti_join(given, by = c("sourcetypeid", "polprocessid"))
+      }
+      pairs_default = nrow(distinct(defaults, sourcetypeid, polprocessid))
+      if(pairs_default > 0){
         data = bind_rows(supplied, defaults)
         appended = TRUE
+        detail = "startsopmodedistribution weighted by vehicle age"
+        if(pairs_default < pairs_all){
+          detail = paste0(detail, ", for ", pairs_default, " of ", pairs_all, " vehicle type x pollutant pairs")
+        }
         project_note(item = "start soak times (opmodedistribution)", source = "default",
-                     detail = "startsopmodedistribution weighted by vehicle age", BUCKET = BUCKET)
+                     detail = detail, BUCKET = BUCKET)
+      }else if(pairs_all > 0){
+        project_note(item = "start soak times (opmodedistribution)", source = "user",
+                     detail = "supplied opmodedistribution.csv", BUCKET = BUCKET)
       }
     }
   }

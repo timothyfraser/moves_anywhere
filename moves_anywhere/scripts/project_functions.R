@@ -125,6 +125,10 @@ project_check = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", BUCKET = "i
   if(!same(value, "custom")){ stop(paste0("scaleinputdatabase must be custom (found ", value, ")")) }
   files = tolower(dir(BUCKET))
   if(!"link.csv" %in% files){ stop("link.csv is missing from the inputs folder") }
+  # A county result in the same folder would sit next to the link results and could be taken for them
+  if(any(c("data.csv", "data.csv.gz") %in% files)){
+    stop("folder holds a county result (data.csv); use a new folder")
+  }
 
   invisible(TRUE)
 }

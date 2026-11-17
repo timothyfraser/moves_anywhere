@@ -187,7 +187,7 @@ step_sha() {
 # project-unit: no Docker. The R unit tests and the project pack test.
 step_project_unit() {
   if ! command -v Rscript >/dev/null 2>&1; then
-    echo "SKIP: Rscript is not on PATH, so the project R unit tests were not run"; return 99
+    echo "FAIL: Rscript is not on PATH, so the project R unit tests could not run"; return 1
   fi
   local t bad=0
   for t in test_project_functions test_adapt_link test_adapt_offnetwork test_importer_project test_linkdata test_runspec_project; do
@@ -196,7 +196,7 @@ step_project_unit() {
       echo "missing moves_anywhere/tests/$t.R"; bad=1; continue
     fi
     echo "--- $t.R"
-    Rscript "moves_anywhere/tests/$t.R" || bad=1
+    PROJECT_TESTS_STRICT=1 Rscript "moves_anywhere/tests/$t.R" || bad=1
   done
   echo "--- test_pack_project.sh"
   bash moves_anywhere/tests/test_pack_project.sh || bad=1

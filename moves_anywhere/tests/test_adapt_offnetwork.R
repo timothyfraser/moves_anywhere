@@ -163,9 +163,12 @@ supplied = data.frame(sourceTypeID = 21, hourDayID = 85, linkID = 7, polProcessI
 d = bucket(user_off = user_off, user_op = supplied)
 adapt_opmodedistribution(rs(d), d)
 op3 = read_csv(file.path(d, "_opmodedistribution.csv"), show_col_types = FALSE)
-check(nrow(op3) == 2 && near(op3$opModeFraction, c(0.3, 0.7)), "supplied off-network rows suppress defaults")
+mine = op3[op3$sourceTypeID == 21 & op3$polProcessID == 202, ]
+check(nrow(mine) == 2 && all(near(sort(mine$opModeFraction), c(0.3, 0.7))), "supplied soak rows are kept for their pair")
+check(nrow(op3) == 2 + (13 * n_start - 1) * 2, "defaults fill only the pairs the user left out")
 notes = read_csv(file.path(d, "_project_inputs.csv"), show_col_types = FALSE)
-check(notes$source[notes$item == "start soak times (opmodedistribution)"] == "user", "soak note user")
+check(notes$source[notes$item == "start soak times (opmodedistribution)"] == "default", "soak note default when only some pairs were supplied")
+check(grepl(" of ", notes$detail[notes$item == "start soak times (opmodedistribution)"]), "soak note counts the pairs")
 
 # Supplied rows for a road link only: kept, and defaults appended for the off-network link
 road = data.frame(sourceTypeID = 21, hourDayID = 85, linkID = 1, polProcessID = 101,

@@ -39,6 +39,7 @@ A project run file is a county run file with different settings. The image refus
 10. The input database is `custom`, and `link.csv` is in the folder.
 11. Every road type the run file selects has at least one link in `link.csv`.
 12. In a county with no vehicle inspection (I/M) programme, MOVES's own input validation is off: `<skipdomaindatabasevalidation selected="true"/>`. With it on, MOVES treats the empty inspection table as missing and stops without a reason. The helper below writes it off, as `catr` does for county run files; the rules here do the checking instead.
+13. The folder holds no county result (`data.csv` or `data.csv.gz`) from an earlier run. Use a new folder for a project run.
 
 The domain is `<modeldomain value="PROJECT"/>`, which is what tells the image this is a project run. You can write the file by hand, or let the helper `task_runspec.R` make it. Set `LEVEL=project` and give `GEOID`, `YEAR`, `MONTH`, `DAY` (2 for weekend, 5 for weekday) and `HOUR` (1 to 24; hour 8 is 7:00 to 7:59) as environment variables. `ROADTYPES` (for example `1,4,5`) is optional; without it the helper reads the road types in `inputs/link.csv`. The helper keeps only the processes tested at project scale (running exhaust, brake wear, tire wear, crankcase running exhaust, and with road type 1 also starts, crankcase start, extended idle and auxiliary power) and checks the result against the rules above.
 
@@ -73,7 +74,7 @@ Defaults are county averages. A link's traffic volume and length always come fro
 | `pollutant`, `process`, `sourcetype`, `fueltype` | MOVES codes (90 is CO2, 3 is NOx). |
 | `emissions` | Grams in the hour. |
 | `vmt` | Miles traveled in the hour. |
-| `sourcehours` | Hours of operation. |
+| `sourcehours` | Hours of driving (MOVES's "source hours operating"). Extended idle and hotelling hours on a parking lot are not here; they are in `movesactivityoutput.csv`. |
 | `starts` | Engine starts. |
 | `vehicles` | Vehicle population. |
 
@@ -104,6 +105,8 @@ start soak times (opmodedistribution) | default | startsopmodedistribution weigh
 
 (Links 2 to 6 are left out here; the real file lists all seven.) A project run never writes `data.csv`, because that file means a county-year. `run_manifest.json` lists `linkdata.csv.gz` as the result. The adapted tables `_link.csv` and `_offnetworklink.csv` stay in the folder and show the values MOVES used.
 
+A road link with `linkAvgSpeed` 0 is an idling queue. MOVES counts every vehicle in its volume as idling for the whole hour, so its grams are a rate per vehicle-hour times the volume. Scale them by the real delay. `diagnostics.txt` prints a note for each such link.
+
 ## When a run is refused
 
 MOVES itself accepts a bad project command and then produces nothing, so the image checks first. The run stops with a reason, writes no `linkdata.csv`, and exits non-zero.
@@ -125,6 +128,8 @@ MOVES itself accepts a bad project command and then produces nothing, so the ima
 | `linkID 4 is repeated` | Give each link its own number. |
 | `link 2 has no linkVolume` | Give every road link a volume. |
 | `vehicle mix for link 1 sums to 0.9, not 1` | Make the shares add up to 1. |
+| `vehicle mix for link 1 has a share outside 0 to 1` | Every share is between 0 and 1. |
+| `folder holds a county result (data.csv); use a new folder` | Run the project in its own folder. |
 | `off-network link needs offnetworklink.csv` | Add the file. |
 | `offnetworklink.csv sourceTypeID not in the run's vehicle types` | Use vehicle types the run file selects. |
 | `MOVES produced no results: ...` | MOVES refused the run. The reason ends with MOVES's own first error line; `moveslog.txt` in the folder has the rest. |

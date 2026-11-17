@@ -65,7 +65,7 @@ echo ------------running importer------------
 sudo -u mysql bash -c 'ant dbimporter -Dimport="/cat/EPA_MOVES_Model/importer.xml"'
 
 # Project-scale runs only: ant reports success even when a table fails to load, so count the rows
-if grep -qi 'modeldomain value="PROJECT"' /cat/inputs/rs_custom.xml; then
+if grep -Eqi "<modeldomain[[:space:]]+value[[:space:]]*=[[:space:]]*[\"']PROJECT[\"']" /cat/inputs/rs_custom.xml; then
   Rscript /cat/scripts/task_check_import.R || exit 1
 fi
 

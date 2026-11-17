@@ -20,7 +20,11 @@ IN="inputs"
 rc=0
 
 # Inventory mode writes data.csv (a project run writes linkdata.csv instead); rate mode writes the rate tables instead.
-for f in data.csv linkdata.csv moveslog.txt rateperhour.csv ratepervehicle.csv rateperdistance.csv \
+# Each kind of run compresses only its own result, so a result file left in this folder by an
+# earlier run of the other kind is never shipped.
+RESULT=data.csv
+grep -Eqi "<modeldomain[[:space:]]+value[[:space:]]*=[[:space:]]*[\"']PROJECT[\"']" "$IN/rs_custom.xml" 2>/dev/null && RESULT=linkdata.csv
+for f in "$RESULT" moveslog.txt rateperhour.csv ratepervehicle.csv rateperdistance.csv \
          rateperstart.csv startspervehicle.csv rateperprofile.csv movesrun.csv; do
   if [ -f "$IN/$f" ]; then
     gzip -c "$IN/$f" > "$IN/$f.gz.part" && mv -f "$IN/$f.gz.part" "$IN/$f.gz" \

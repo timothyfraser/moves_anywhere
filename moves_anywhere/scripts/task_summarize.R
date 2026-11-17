@@ -35,16 +35,25 @@ if(rs$mode == "inv"){
     # Project-scale run: one line per link, then the inputs that were filled in
     lpath = paste0(FOLDER, "/linkdata.csv")
     if(file.exists(lpath)){
-      s = linkdata_summary(
-        linkdata = read_csv(lpath, show_col_types = FALSE),
-        link = read_csv(paste0(FOLDER, "/_link.csv"), show_col_types = FALSE))
+      lk = read_csv(paste0(FOLDER, "/_link.csv"), show_col_types = FALSE)
+      s = linkdata_summary(linkdata = read_csv(lpath, show_col_types = FALSE), link = lk)
+      # A real CSV table, so a comma in a link's description cannot shift the columns
+      table = data.frame(
+        link = s$link, roadtype = s$roadtype,
+        description = ifelse(is.na(s$description), "", as.character(s$description)),
+        miles = round(s$miles, 3), co2_g = round(s$co2, 1), nox_g = round(s$nox, 1),
+        co2_g_per_mile = round(s$co2_per_mile, 1), nox_g_per_mile = round(s$nox_per_mile, 3),
+        starts = round(s$starts, 1))
       lines = c(
         "Project-scale run: one hour, results by link (grams, miles)",
-        "link,roadtype,description,miles,co2_g,nox_g,co2_g_per_mile,nox_g_per_mile,starts",
-        paste(s$link, s$roadtype, s$description, round(s$miles, 3), round(s$co2, 1), round(s$nox, 1),
-              ifelse(is.na(s$co2_per_mile), "", round(s$co2_per_mile, 1)),
-              ifelse(is.na(s$nox_per_mile), "", round(s$nox_per_mile, 3)),
-              round(s$starts, 1), sep = ","))
+        strsplit(readr::format_csv(table, na = ""), "\n")[[1]])
+      # A road link at 0 mph is easy to misread: say what MOVES did with it
+      still = lk$linkID[lk$roadTypeID != 1 & !is.na(lk$linkAvgSpeed) & lk$linkAvgSpeed == 0]
+      if(length(still) > 0){
+        lines = c(lines, "", paste0(
+          "Note: link ", still, " has speed 0. MOVES counts every vehicle in its volume as idling ",
+          "for the whole hour. Scale its grams by the real delay."))
+      }
       ipath = paste0(FOLDER, "/_project_inputs.csv")
       if(file.exists(ipath)){
         pin = read_csv(ipath, show_col_types = FALSE)
@@ -52,6 +61,9 @@ if(rs$mode == "inv"){
                   paste(pin[[1]], pin[[2]], pin[[3]], sep = " | "))
       }
       write_lines(x = lines, file = paste0(FOLDER, "/diagnostics.txt"))
+    }else{
+      # No link results: do not leave an earlier run's diagnostics in the folder
+      unlink(paste0(FOLDER, "/diagnostics.txt"), force = TRUE)
     }
     
   }else{

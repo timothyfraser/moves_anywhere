@@ -141,6 +141,18 @@ check(nrow(notes) == 2 && identical(names(notes), c("item", "source", "detail"))
 
 unlink(made, recursive = TRUE)
 
+# A county result (data.csv) in the folder is refused: it could be taken for the link results
+cr_dir = tempfile("county_result"); dir.create(cr_dir)
+invisible(file.copy("moves_anywhere/inputs_project/rs_custom.xml", cr_dir))
+writeLines("linkID", file.path(cr_dir, "link.csv"))
+writeLines("x", file.path(cr_dir, "data.csv"))
+cr_msg = tryCatch({ project_check(file.path(cr_dir, "rs_custom.xml"), BUCKET = cr_dir); "" },
+                  error = function(e) conditionMessage(e))
+if(cr_msg != "folder holds a county result (data.csv); use a new folder"){
+  failures = c(failures, paste("county result in the folder should stop, got:", cr_msg))
+}
+unlink(cr_dir, recursive = TRUE)
+
 # No I/M programme: refused only when MOVES's validation is on and no _imcoverage.csv was written
 im_dir = tempfile("im"); dir.create(im_dir)
 im_rs = file.path(im_dir, "rs_custom.xml")

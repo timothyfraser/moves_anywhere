@@ -54,6 +54,9 @@ if(LEVEL == "project"){
   catr::custom_rs(
     .geoid = GEOID, .year = YEAR, .pollutants = c(98, 3, 2, 31, 33, 110, 100, 106, 107, 116, 117),
     .rate = FALSE, .level = "county", .geoaggregation = "link", .timeaggregation = "hour",
+    # MOVES's own input validation off, as for county runspecs: it cannot pass in a county with no
+    # I/M programme and fails without a message there (project_check_im in project_functions.R)
+    .skipvalidation = TRUE,
     .path = "inputs/rs_custom.xml"
   )
   source("scripts/project_functions.R")

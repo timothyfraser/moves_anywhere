@@ -73,7 +73,13 @@ link_user_mix = function(BUCKET = "inputs"){
 link_default_mix = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_MOVES_Model/rs_custom.xml"){
   vmt = tryCatch(
     project_read("sourcetypeyearvmt", .runspec, BUCKET, default = FALSE, spec = spec),
-    error = function(e){ stop("default vehicle mix needs sourcetypeyearvmt; give linksourcetypehour.csv") })
+    error = function(e){
+      # Only "not found" becomes this advice; any other error (a malformed file) is passed on as it is
+      if(grepl("no sourcetypeyearvmt table found", conditionMessage(e), fixed = TRUE)){
+        stop("default vehicle mix needs sourcetypeyearvmt; give linksourcetypehour.csv")
+      }
+      stop(e)
+    })
   month = project_read("monthvmtfraction", .runspec, BUCKET, spec = spec)
   day = project_read("dayvmtfraction", .runspec, BUCKET, spec = spec)
   hour = project_read("hourvmtfraction", .runspec, BUCKET, spec = spec)
@@ -290,6 +296,8 @@ adapt_linksourcetypehour = function(.runspec = "EPA_MOVES_Model/rs_custom.xml", 
     if(length(bad) > 0){ stop(paste0("linksourcetypehour.csv has rows for off-network link ", user$linkID[bad[1]])) }
     bad = which(!user$sourceTypeID %in% spec$sourcetypes)
     if(length(bad) > 0){ stop(paste0("linksourcetypehour.csv has sourceTypeID ", user$sourceTypeID[bad[1]], " not in the runspec")) }
+    bad = which(is.na(user$sourceTypeHourFraction) | user$sourceTypeHourFraction < 0 | user$sourceTypeHourFraction > 1)
+    if(length(bad) > 0){ stop(paste0("vehicle mix for link ", user$linkID[bad[1]], " has a share outside 0 to 1")) }
     sums = tapply(user$sourceTypeHourFraction, user$linkID, sum)
     for(l in names(sums)){
       if(is.na(sums[[l]]) || abs(sums[[l]] - 1) > 0.0001){
