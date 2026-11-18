@@ -36,7 +36,10 @@ done
 
 [ -n "$INPUTS" ] || { usage >&2; exit 2; }
 [ -d "$INPUTS" ] || { echo "run.sh: no such folder: $INPUTS" >&2; exit 2; }
-[ -f "$INPUTS/rs_custom.xml" ] || { echo "run.sh: $INPUTS has no rs_custom.xml" >&2; exit 2; }
+# A project folder may leave rs_custom.xml out: its parameters.json says "level": "project" and the image writes the run file
+if [ ! -f "$INPUTS/rs_custom.xml" ] && ! grep -Eqi '"level"[[:space:]]*:[[:space:]]*"project"' "$INPUTS/parameters.json" 2>/dev/null; then
+  echo "run.sh: $INPUTS has no rs_custom.xml (a project run may leave it out if parameters.json says \"level\": \"project\")" >&2; exit 2
+fi
 command -v docker >/dev/null 2>&1 || { echo "run.sh: Docker is not installed or not on PATH" >&2; exit 3; }
 docker info >/dev/null 2>&1 || { echo "run.sh: Docker is not running" >&2; exit 3; }
 
