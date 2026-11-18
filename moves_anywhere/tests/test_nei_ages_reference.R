@@ -80,6 +80,20 @@ check(near(get("06037", 2023L, 21, 0:40), 1 / 41), "2023 table used as given")
 # fails loudly on a missing type
 check(inherits(try(build_ages_reference(inputs %>% filter(!(countyID == "06037" & sourceTypeID == 11)), national), silent = TRUE), "try-error"), "missing type stops")
 
+# negative shares: type 54 in a 2020 county with age 5 negative -> clamped to 0, table non-negative, sums to 1
+neg_in = mk2020("39001")
+neg_in$ageFraction[neg_in$sourceTypeID == 54 & neg_in$ageID == 5] = -0.01
+# type 43 with only negative/zero shares -> national table
+neg_in$ageFraction[neg_in$sourceTypeID == 43] = ifelse(neg_in$ageID[neg_in$sourceTypeID == 43] == 3, -0.5, 0)
+nres = build_ages_reference(neg_in, national)
+ng = function(s, a) nres$ageFraction[nres$sourceTypeID == s & nres$ageID %in% a]
+check(all(nres$ageFraction >= 0), "negative: no negative share left")
+check(near(ng(54, 5), 0), "negative: type 54 age 5 is 0")
+check(near(sum(ng(54, 0:40)), 1), "negative: type 54 sums to 1")
+check(near(ng(43, 0:40), (0:40 + 1) / 861), "negative: all-zero type takes national table")
+nneg = attr(nres, "negatives")
+check(nrow(nneg) == 2 && near(nneg$negative_sum[nneg$sourceTypeID == 54], -0.01), "negative: record lists both types")
+
 if(length(failures) > 0){ cat("FAIL:\n", paste0(" - ", failures, collapse = "\n"), "\n", sep = ""); quit(status = 1) }
 cat("PASS: test_nei_ages_reference
 ")

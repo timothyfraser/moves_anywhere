@@ -74,28 +74,42 @@ build_ages_reference = function(inputs, national){
   x = inputs %>% transmute(geoid = sprintf("%05d", as.integer(countyID)), year = as.integer(yearID),
                            sourceTypeID = as.integer(sourceTypeID), ageID = as.integer(ageID), ageFraction)
   if(anyDuplicated(x[, c("geoid", "year", "sourceTypeID", "ageID")]) > 0){ stop("duplicate county-year-type-age rows in the inputs") }
+  # negative shares (EPA's data has some, e.g. type 54 in 13 Ohio counties): record, set to 0; a type with no
+  # positive share left takes the national table for the year (applied after the conversion, below)
+  negatives = x %>% filter(ageFraction < 0) %>% group_by(geoid, year, sourceTypeID) %>%
+    summarise(ages = paste(sort(ageID), collapse = " "), negative_sum = sum(ageFraction), .groups = "drop")
+  x = x %>% mutate(ageFraction = pmax(ageFraction, 0))
+  all_zero = x %>% group_by(geoid, year, sourceTypeID) %>% summarise(s = sum(ageFraction), .groups = "drop") %>%
+    filter(s <= 0) %>% select(geoid, year, sourceTypeID)
   # per county-year table: ages to 30 are converted, ages to 40 are used as given
-  top = x %>% group_by(geoid, year) %>% summarise(top = max(ageID), .groups = "drop")
+  top =x %>% group_by(geoid, year) %>% summarise(top = max(ageID), .groups = "drop")
   if(any(!top$top %in% c(30L, 40L))){ stop("a county table has a top age that is neither 30 nor 40") }
   old = x %>% inner_join(top %>% filter(top == 30L) %>% select(geoid, year), by = c("geoid", "year"))
   new = x %>% inner_join(top %>% filter(top == 40L) %>% select(geoid, year), by = c("geoid", "year"))
   out = bind_rows(if(nrow(old) > 0) convert_ages_30_to_40(old), new)
   # long-haul types: national default for the year
   nat = national %>% transmute(year = as.integer(yearID), sourceTypeID = as.integer(sourceTypeID),
-                               ageID = as.integer(ageID), nat = ageFraction) %>%
-    filter(sourceTypeID %in% long_haul)
+                               ageID = as.integer(ageID), nat = ageFraction)
   yrs = unique(out$year)
   if(any(!yrs %in% nat$year)){ stop("national table lacks a year present in the inputs") }
-  lh = out %>% distinct(geoid, year) %>% inner_join(nat, by = "year", relationship = "many-to-many") %>%
+  nat_lh = nat %>% filter(sourceTypeID %in% long_haul)
+  lh = out %>% distinct(geoid, year) %>% inner_join(nat_lh, by = "year", relationship = "many-to-many") %>%
     transmute(geoid, year, sourceTypeID, ageID, ageFraction = nat)
-  out = bind_rows(out %>% filter(!sourceTypeID %in% long_haul), lh)
+  # types with no positive share after the clamp: national table for the year
+  az = all_zero %>% filter(!sourceTypeID %in% long_haul) %>%
+    inner_join(nat, by = c("year", "sourceTypeID"), relationship = "many-to-many") %>%
+    transmute(geoid, year, sourceTypeID, ageID, ageFraction = nat)
+  out = bind_rows(out %>% filter(!sourceTypeID %in% long_haul) %>%
+                    anti_join(az %>% distinct(geoid, year, sourceTypeID), by = c("geoid", "year", "sourceTypeID")), az, lh)
   # renormalise each county-year-type to sum to exactly 1; every type must have ages 0 to 40
   out = out %>% group_by(geoid, year, sourceTypeID) %>%
     mutate(n_ages = n(), ageFraction = ageFraction / sum(ageFraction)) %>% ungroup()
   if(any(out$n_ages != 41L)){ stop("a county-year-type does not have 41 ages") }
   types = out %>% group_by(geoid, year) %>% summarise(n = n_distinct(sourceTypeID), .groups = "drop")
   if(any(types$n != 13L)){ stop("a county-year does not have all 13 vehicle types") }
-  out %>% select(geoid, year, sourceTypeID, ageID, ageFraction) %>% arrange(geoid, year, sourceTypeID, ageID)
+  out = out %>% select(geoid, year, sourceTypeID, ageID, ageFraction) %>% arrange(geoid, year, sourceTypeID, ageID)
+  attr(out, "negatives") = as.data.frame(negatives)
+  out
 }
 
 read_age_inputs = function(paths){
@@ -116,7 +130,14 @@ main = function(args){
   if(length(paths) == 0 || length(nat) != 1 || length(out) != 1){ stop("usage: --in <paths...> --national <csv> --out <file.rds>") }
   t0 = Sys.time()
   res = build_ages_reference(read_age_inputs(paths), read_csv(nat, col_types = "iiid", progress = FALSE))
+  neg = attr(res, "negatives"); attr(res, "negatives") = NULL
   saveRDS(res, file = out)
+  write_csv(neg %>% transmute(geoid, year, sourceTypeID, ages, negative_sum), paste0(out, ".negatives.csv"))
+  for(y in sort(unique(res$year))){
+    ny = neg %>% filter(year == y)
+    cat(sprintf("%d: negative shares set to 0: %d counties, types %s\n", y, n_distinct(ny$geoid),
+                if(nrow(ny) == 0) "none" else paste(sort(unique(ny$sourceTypeID)), collapse = "/")))
+  }
   cat(sprintf("rows %d, counties %d, years %s, size %.2f MB, %.0f s\n", nrow(res), n_distinct(res$geoid),
               paste(sort(unique(res$year)), collapse = "/"), file.size(out) / 1e6,
               as.numeric(difftime(Sys.time(), t0, units = "secs"))))
