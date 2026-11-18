@@ -141,6 +141,16 @@ One live build, then one run of MOVES on its output (Tompkins County, NY, 2022, 
 
 This is one place and one hour. It shows that the builder's output runs in MOVES; it does not show the traffic numbers are right for any road.
 
+### Against measured counts: Manhattan, 2022
+
+A second build, in Manhattan (`-73.9760,40.7435,-73.9705,40.7470`, First Avenue to the FDR Drive, about East 34th to 37th Street; a July weekday, 7:00 to 7:59), wrote 19 links. Its hour volumes were compared with measured counts for the same hour of a weekday. <!-- source: wave3/counts_check.md -->
+
+- The builder's volumes were higher than the counts in 6 of 8 one-direction comparisons: builder over measured, median 1.38, range 0.87 to 1.96. <!-- source: wave3/counts_manhattan.csv -->
+- The best comparison is the Queens Midtown Tunnel approach, against the MTA's hourly toll counts for 20 weekdays of July 2022. Both directions together: 6,378 vehicles from the builder against 4,619 measured (1.38). The split was the wrong way round for this hour: the builder sent 59% toward Queens (HPMS's direction factor, which does not say which direction is the busy one), and 58% went toward Manhattan. <!-- source: wave3/counts_check.md -->
+- The street counts are weaker: the nearest New York City counts are from 2015 to 2024, outside July, and some cover a single day.
+
+So, in this place and hour, the builder's hour volumes were about a third too high, and its direction split at a peak hour should not be trusted. Give your own counts in `link.csv` when you have them.
+
 ## Limits and misuse
 
 - **No counts on most local streets.** See the remainder above. Its volume is an average, not a measurement.
