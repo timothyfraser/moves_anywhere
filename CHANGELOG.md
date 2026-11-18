@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (planned 3.2.0)
+## 3.2.0 (release candidate)
 
 Adds project-scale runs: individual road links and parking lots for one hour. Guide: [docs/README_project_scale.md](docs/README_project_scale.md).
 

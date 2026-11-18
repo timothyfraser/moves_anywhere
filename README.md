@@ -10,8 +10,9 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   Contributors: Erin Murphy, Junna Chen, Mahak Bindal, Shungo Najima, Carl Closs
 -   Institution: Gao Labs @ Cornell University
 
-> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`) is the current release, and `run.sh`
-> and `run.ps1` use it by default. `v3.0.0` and `tmf77/moves-anywhere:v2` are the previous images and are
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`) is still the current release (3.1.0), and
+> `run.sh` and `run.ps1` use it by default. Release 3.2.0 (project-scale runs) is the coming release, built and
+> tested from this branch; its Docker tags are not published yet. `v3.0.0` and `tmf77/moves-anywhere:v2` are the previous images and are
 > unchanged. See the [changelog](CHANGELOG.md) for what changed.
 
 ## Contents
@@ -128,6 +129,7 @@ remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/c
 | Image | Status | Notes |
 |----|----|----|
 | `tmf77/moves-anywhere:v3` (`v3.1`, `v3.1.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
+| `3.2.0` (not published yet) | Coming release | Built and tested from this branch; no Docker tag exists yet. Adds project-scale runs; see the [changelog](CHANGELOG.md). |
 | `tmf77/moves-anywhere:v3.0.0` | Previous release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain, Ubuntu's Ant and rclone, and the system Python packages that 3.1.0 removes or replaces. |
 | `tmf77/moves-anywhere:v2` | Older release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
 

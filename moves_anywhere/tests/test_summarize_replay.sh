@@ -14,6 +14,7 @@
 # Exits:     the number of failed checks (0 = all passed); 2 on a usage or setup error
 # Usage: bash moves_anywhere/tests/test_summarize_replay.sh [--image <name:tag>] [--prove] [--keep]
 # Needs Docker and the image (default tmf77/moves-anywhere:v3.1.0). The image's script is at /cat/scripts.
+#   The default stays 3.1.0 on purpose: --prove needs the unpatched script, which only the 3.1.0 image still has.
 ###############################################################################
 
 IMAGE="${IMAGE:-tmf77/moves-anywhere:v3.1.0}"; PROVE=0; KEEP=0
