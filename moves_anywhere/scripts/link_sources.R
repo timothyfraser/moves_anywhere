@@ -133,25 +133,71 @@ LINKS_HPMS_TEXT = "route_id"
 #' The layer's county field is county_id: a SmallInteger holding the 3-digit county code as a number
 #' (Tompkins NY 36109 = 109); verified on NY, TX and WY 2025 (tests/fixtures/links/hpms_fields_notes.md)
 #' @param fips five-digit county FIPS string; the state part is not used (the layer is one state)
-links_county_where = function(fips){
+#' @param field the layer's name for the county field (county_code on 2019-2020 layers)
+links_county_where = function(fips, field = "county_id"){
   if(length(fips) != 1 || is.na(fips) || !grepl("^[0-9]{5}$", fips)){
     stop("a county place must be a 5-digit FIPS string")
   }
-  paste0("county_id=", as.integer(substr(fips, 3, 5)))
+  paste0(field, "=", as.integer(substr(fips, 3, 5)))
+}
+
+# 4b. Layer field names ####
+
+`%||%` = function(a, b){ if(is.null(a)){ b } else { a } }
+
+# FHWA's layers name the same field differently in different years (measured 2026-11-18, unit B9;
+# tests/fixtures/links/hpms_fields_notes.md): the canonical lower-case name, then the other names it has had
+LINKS_HPMS_ALIASES = list(route_id = "routeid", begin_point = "beginpoint", end_point = "endpoint",
+                          data_year = "year_record", section_length = c("section_len", "sectionlength"),
+                          county_id = "county_code", urban_id = "urban_code")
+# fields a layer must have (after aliases) to be used; county_id too for a county place.
+# section_length (derived from mileposts) and data_year (the layer's year) have fallbacks; the rest may be NA
+LINKS_HPMS_REQUIRED = c("route_id", "begin_point", "end_point", "aadt", "f_system", "urban_id",
+                        "facility_type", "through_lanes")
+
+#' Map each canonical field to the layer's own field name, from the layer metadata (case-insensitive)
+#' @param meta layer metadata (`<layer url>?f=json`): JSON text or a parsed list
+#' @return list(map = named character canonical -> actual, present fields only; oid = the layer's object
+#'   id field; fields = FALSE when the metadata listed no fields, and the canonical names are assumed)
+links_hpms_field_map = function(meta){
+  if(is.character(meta)){ meta = jsonlite::fromJSON(meta, simplifyVector = FALSE) }
+  if(!is.null(meta$error)){
+    stop(paste0("layer metadata request returned an error: ", meta$error$message %||% "no message"))
+  }
+  canon = unique(c(LINKS_HPMS_FIELDS, "county_id"))
+  if(is.null(meta$fields) || length(meta$fields) == 0){
+    return(list(map = stats::setNames(canon, canon), oid = "objectid", fields = FALSE))
+  }
+  nm = vapply(meta$fields, function(f){ as.character(f$name) }, "")
+  low = tolower(nm)
+  map = character(0)
+  for(f in canon){
+    for(cand in c(f, LINKS_HPMS_ALIASES[[f]])){
+      i = match(cand, low)
+      if(!is.na(i)){ map[[f]] = nm[i]; break }
+    }
+  }
+  oid = if(!is.null(meta$objectIdField)){ as.character(meta$objectIdField) } else { "objectid" }
+  list(map = map, oid = oid, fields = TRUE)
 }
 
 #' Parse one GeoJSON page of sections into a data frame
 #' A MultiLineString keeps its parts joined in order into one lon/lat matrix; parts says how many.
 #' @param txt GeoJSON text
-#' @return data frame with the fields (lower-case), parts, and list-column geometry
-links_parse_sections = function(txt){
+#' @param map named character, canonical field -> the layer's field (links_hpms_field_map); NULL = same names
+#' @return data frame with the fields under their canonical lower-case names, parts, and list-column geometry
+links_parse_sections = function(txt, map = NULL){
   j = jsonlite::fromJSON(txt, simplifyVector = FALSE)
+  if(!is.null(j$error)){ stop(paste0("feature request returned an error: ", j$error$message %||% "no message")) }
   ft = j$features
   n = length(ft)
   num = function(v){ if(is.null(v)){ NA_real_ } else { as.numeric(v) } }
+  # property names compared in lower case; each canonical field is read under the layer's own name
+  props = lapply(ft, function(f){ p = f$properties; if(length(p) > 0){ names(p) = tolower(names(p)) }; p })
   out = list()
   for(f in LINKS_HPMS_FIELDS){
-    col = lapply(seq_len(n), function(i){ ft[[i]]$properties[[f]] })
+    key = tolower(if(!is.null(map) && f %in% names(map)){ map[[f]] } else { f })
+    col = lapply(seq_len(n), function(i){ props[[i]][[key]] })
     if(f %in% LINKS_HPMS_TEXT){
       out[[f]] = vapply(col, function(v){ if(is.null(v)){ NA_character_ } else { as.character(v) } }, "")
     } else {
@@ -179,7 +225,21 @@ links_parse_sections = function(txt){
   df
 }
 
+#' Read a layer's metadata (saved like every request) and check it has the fields the builder needs
+#' @return list(rs, map, oid, missing): missing = required canonical fields the layer lacks
+links_hpms_layer = function(rs, need, save_dir, fetch){
+  meta = links_get(rs$url, query = list(f = "json"), save_dir = save_dir, fetch = fetch)
+  fm = links_hpms_field_map(meta)
+  if(!fm$fields){ message("HPMS layer ", rs$service, ": metadata lists no fields; asking for the canonical names") }
+  list(rs = rs, map = fm$map, oid = fm$oid, missing = setdiff(need, names(fm$map)))
+}
+
 #' Fetch the HPMS sections for a place
+#' Before the features, one metadata request (`<layer>?f=json`) maps each canonical field to the layer's
+#' own name (see LINKS_HPMS_ALIASES); the request names the layer's fields and the result is renamed to
+#' the canonical names. A layer without section_length gets end_point - begin_point (attribute `derived`);
+#' one without data_year gets the layer's year. A layer missing any other required field is replaced by
+#' the state's newest layer (message and attribute `layer_note`); if that also lacks it, the fetch stops.
 #' @param place box c(west, south, east, north) in WGS84, or a 5-digit county FIPS string
 #' @param state two-letter state (picks the layer)
 #' @param year run year; nearest layer year wins (see links_resolve_hpms); NULL = use max_year rule
@@ -187,33 +247,72 @@ links_parse_sections = function(txt){
 #' @param save_dir folder for the saved responses and requests.csv
 #' @param fetch function(url) -> list(status, body) for tests; NULL = curl
 #' @param page_size features per request (the service limit is 2000)
-#' @param listing service listing handed to the resolver (tests); NULL = request it live
-#' @return tibble, one row per section, with attributes service and year
+#' @param listing service listing handed to the resolver (tests); NULL = request it live (saved)
+#' @return tibble, one row per section, with attributes service, year, layer_note (NULL when the resolved
+#'   layer was used) and derived (named character: field -> how it was filled; NULL when none)
 links_fetch_hpms = function(place, state, year = NULL, max_year = NULL, save_dir, fetch = NULL,
                             page_size = 2000L, listing = NULL){
+  is_county = is.character(place)
+  if(is_county){
+    links_county_where(place)
+  } else if(!(is.numeric(place) && length(place) == 4 && !anyNA(place))){
+    stop("place must be c(west, south, east, north) or a 5-digit county FIPS string")
+  }
+  if(is.null(listing)){ listing = links_get(LINKS_HOSTED, query = list(f = "json"), save_dir = save_dir, fetch = fetch) }
+  need = c(LINKS_HPMS_REQUIRED, if(is_county){ "county_id" })
   rs = links_resolve_hpms(state, max_year = max_year, listing = listing, year = year)
-  base = list(outFields = paste(LINKS_HPMS_FIELDS, collapse = ","), outSR = 4326, f = "geojson",
-              orderByFields = "objectid")
-  if(is.character(place)){
-    base = c(list(where = links_county_where(place)), base)
-  } else if(is.numeric(place) && length(place) == 4 && !anyNA(place)){
+  lay = links_hpms_layer(rs, need, save_dir, fetch)
+  layer_note = NULL
+  if(length(lay$missing) > 0){
+    first_missing = lay$missing
+    newest = links_resolve_hpms(state, listing = listing)
+    if(identical(newest$service, rs$service)){
+      stop(paste0("HPMS layer ", rs$service, " for state ", toupper(state), " has no field ",
+                  paste(first_missing, collapse = ", "), ", and it is the newest layer for the state"))
+    }
+    layer_note = paste0(rs$service, " has no field ", paste(first_missing, collapse = ", "),
+                        "; used the newest layer for the state, ", newest$service, ", instead")
+    message("HPMS: ", layer_note)
+    lay = links_hpms_layer(newest, need, save_dir, fetch)
+    if(length(lay$missing) > 0){
+      stop(paste0("HPMS layer ", newest$service, " for state ", toupper(state), " has no field ",
+                  paste(lay$missing, collapse = ", "), " (tried after ", rs$service, ", which has no field ",
+                  paste(first_missing, collapse = ", "), ")"))
+    }
+    rs = newest
+  }
+  map = lay$map
+  ask = unname(map[intersect(LINKS_HPMS_FIELDS, names(map))])
+  base = list(outFields = paste(ask, collapse = ","), outSR = 4326, f = "geojson", orderByFields = lay$oid)
+  if(is_county){
+    base = c(list(where = links_county_where(place, field = map[["county_id"]])), base)
+  } else {
     base = c(list(where = "1=1", geometry = paste(place, collapse = ","), geometryType = "esriGeometryEnvelope",
                   inSR = 4326, spatialRel = "esriSpatialRelIntersects"), base)
-  } else {
-    stop("place must be c(west, south, east, north) or a 5-digit county FIPS string")
   }
   pages = list()
   offset = 0L
   repeat{
     q = c(base, list(resultOffset = offset, resultRecordCount = page_size))
     txt = links_get(paste0(rs$url, "/query"), query = q, save_dir = save_dir, fetch = fetch)
-    pg = links_parse_sections(txt)
+    pg = links_parse_sections(txt, map = map)
     pages[[length(pages) + 1]] = pg
     if(nrow(pg) < page_size){ break }
     offset = offset + as.integer(page_size)
   }
   out = do.call(rbind, pages)
+  derived = character(0)
+  if(!"section_length" %in% names(map)){
+    out$section_length = out$end_point - out$begin_point
+    derived[["section_length"]] = "derived from mileposts (end_point - begin_point); the layer has no section length field"
+  }
+  if(!"data_year" %in% names(map)){
+    out$data_year = rep(as.numeric(rs$year), nrow(out))
+    derived[["data_year"]] = paste0("the layer's year (", rs$year, "); the layer has no data year field")
+  }
   attr(out, "service") = rs$service
   attr(out, "year") = rs$year
+  attr(out, "layer_note") = layer_note
+  attr(out, "derived") = if(length(derived) > 0){ derived } else { NULL }
   out
 }

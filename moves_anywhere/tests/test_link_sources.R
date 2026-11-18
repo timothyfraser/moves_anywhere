@@ -100,9 +100,15 @@ check(nrow(read.csv(file.path(d2, "requests.csv"))) == 3 && file.exists(file.pat
 fx = paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2025_ithaca_box_40.geojson", warn = FALSE), collapse = "
 ")
 box = c(-76.55, 42.40, -76.44, 42.48)
+meta25 = paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2025_layer_meta.json", warn = FALSE), collapse = "
+")
+meta22 = paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2022_layer_meta.json", warn = FALSE), collapse = "
+")
+# serve the layer metadata for <layer>?f=json, else hand the URL to f
+with_meta = function(f, meta = meta25){ function(url){ if(grepl("FeatureServer/0?f=json", url, fixed = TRUE)){ list(status = 200L, body = charToRaw(meta)) } else { f(url) } } }
 d5 = mkdir()
 sec = links_fetch_hpms(box, "NY", save_dir = d5, listing = lst,
-                       fetch = function(url){ list(status = 200L, body = charToRaw(fx)) })
+                       fetch = with_meta(function(url){ list(status = 200L, body = charToRaw(fx)) }))
 check(nrow(sec) == 40, "fixture parses to 40 rows")
 check(all(c(LINKS_HPMS_FIELDS, "parts", "geometry") %in% names(sec)), "fixture has the listed fields")
 check(is.character(sec$route_id) && all(vapply(sec[LINKS_HPMS_FIELDS[-1]], is.numeric, TRUE)), "field types")
@@ -112,7 +118,9 @@ check(is.list(sec$geometry) && is.matrix(sec$geometry[[1]]) && ncol(sec$geometry
 check(nrow(sec$geometry[[1]]) == 2 && abs(sec$geometry[[1]][1, "lon"] + 76.5006) < 0.001, "geometry values")
 check(identical(attr(sec, "service"), "HPMS_FULL_NY_2025") && identical(attr(sec, "year"), 2025L), "service and year attributes")
 lg5 = read.csv(file.path(d5, "requests.csv"), stringsAsFactors = FALSE)
-check(nrow(lg5) == 1 && grepl("geometryType=esriGeometryEnvelope", lg5$url, fixed = TRUE) &&
+check(nrow(lg5) == 2 && grepl("FeatureServer/0?f=json", lg5$url[1], fixed = TRUE), "metadata requested first")
+lg5 = lg5[2, ]
+check(grepl("geometryType=esriGeometryEnvelope", lg5$url, fixed = TRUE) &&
         grepl("geometry=-76.55%2C42.4%2C-76.44%2C42.48", lg5$url, fixed = TRUE) &&
         grepl("resultOffset=0", lg5$url, fixed = TRUE) && grepl("orderByFields=objectid", lg5$url, fixed = TRUE), "box request")
 check(grepl("%2Caccess_control", lg5$url, fixed = TRUE), "outFields asks for access_control")
@@ -127,7 +135,7 @@ check(grepl("5-digit", msg(links_county_where("109"))), "bad county text")
 d6 = mkdir()
 urls = character(0)
 sec6 = links_fetch_hpms("36109", "NY", save_dir = d6, listing = lst,
-                        fetch = function(url){ urls <<- c(urls, url); list(status = 200L, body = charToRaw(fx)) })
+                        fetch = with_meta(function(url){ urls <<- c(urls, url); list(status = 200L, body = charToRaw(fx)) }))
 check(grepl("where=county_id%3D109", urls[1], fixed = TRUE) && !grepl("geometry=", urls[1], fixed = TRUE), "county request")
 check(grepl("5-digit|box", msg(links_fetch_hpms(c(1, 2), "NY", save_dir = d6, listing = lst))), "bad place")
 
@@ -139,19 +147,19 @@ mkfeat = function(i){
 page = function(ids){ as.character(jsonlite::toJSON(list(type = "FeatureCollection", features = lapply(ids, mkfeat)), auto_unbox = TRUE, null = "null")) }
 d7 = mkdir(); offs = integer(0)
 sec7 = links_fetch_hpms(box, "NY", save_dir = d7, listing = lst, page_size = 3L,
-  fetch = function(url){
+  fetch = with_meta(function(url){
     o = as.integer(sub(".*resultOffset=([0-9]+).*", "\\1", url)); offs <<- c(offs, o)
     list(status = 200L, body = charToRaw(if(o == 0L){ page(1:3) } else { page(4:5) }))
-  })
+  }))
 check(nrow(sec7) == 5 && identical(sec7$route_id, paste0("r", 1:5)), "two pages joined in order")
 check(identical(offs, c(0L, 3L)), "offsets 0 then 3")
-check(nrow(read.csv(file.path(d7, "requests.csv"))) == 2, "two requests logged")
+check(nrow(read.csv(file.path(d7, "requests.csv"))) == 3, "metadata and two pages logged")
 check(all(is.na(sec7$k_factor)) && is.numeric(sec7$k_factor), "absent field is numeric NA")
 # a full last page asks once more and then stops on the empty page
 d8 = mkdir(); offs = integer(0)
 sec8 = links_fetch_hpms(box, "NY", save_dir = d8, listing = lst, page_size = 3L,
-  fetch = function(url){ o = as.integer(sub(".*resultOffset=([0-9]+).*", "\\1", url)); offs <<- c(offs, o)
-    list(status = 200L, body = charToRaw(if(o == 0L){ page(1:3) } else { page(integer(0)) })) })
+  fetch = with_meta(function(url){ o = as.integer(sub(".*resultOffset=([0-9]+).*", "\\1", url)); offs <<- c(offs, o)
+    list(status = 200L, body = charToRaw(if(o == 0L){ page(1:3) } else { page(integer(0)) })) }))
 check(nrow(sec8) == 3 && identical(offs, c(0L, 3L)), "full page then empty page")
 
 # MultiLineString: parts joined in order, parts counted
@@ -160,10 +168,74 @@ pm = links_parse_sections(ml)
 check(nrow(pm) == 2 && pm$parts[1] == 2L && nrow(pm$geometry[[1]]) == 4 && pm$geometry[[1]][3, "lon"] == -76, "multilinestring joined")
 check(pm$parts[2] == 0L && nrow(pm$geometry[[2]]) == 0, "null geometry is an empty matrix")
 
+# 4b. Field names that change by year (unit B9): NY 2022 metadata, synthetic page under 2022 names ####
+
+fm22 = links_hpms_field_map(meta22)
+check(identical(unname(fm22$map[c("route_id", "begin_point", "end_point", "data_year", "county_id")]),
+                c("routeid", "beginpoint", "endpoint", "year_record", "county_id")), "2022 field map")
+check(!"section_length" %in% names(fm22$map) && identical(fm22$oid, "objectid"), "2022: no section length; objectIdField")
+fm25 = links_hpms_field_map(meta25)
+check(all(names(fm25$map) == fm25$map), "2025: every canonical name as is")
+check(grepl("route_id", msg(links_hpms_field_map('{"error":{"code":400,"message":"Field name route_id does not exist"}}'))), "metadata error stops")
+mk22 = function(i){
+  list(type = "Feature", geometry = list(type = "LineString", coordinates = list(c(-76.5, 42.4 + i/100), c(-76.5, 42.41 + i/100))),
+       properties = list(ROUTEID = paste0("r", i), beginpoint = i, endpoint = i + 0.25 * i, f_system = 4, urban_id = 99999,
+                         facility_type = 2, through_lanes = 2, aadt = 1000 * i, county_id = 109))
+}
+page22 = as.character(jsonlite::toJSON(list(type = "FeatureCollection", features = lapply(1:3, mk22)), auto_unbox = TRUE))
+d10 = mkdir(); urls = character(0)
+sec10 = suppressMessages(links_fetch_hpms(box, "NY", year = 2022, save_dir = d10, listing = lst,
+  fetch = with_meta(function(url){ urls <<- c(urls, url); list(status = 200L, body = charToRaw(page22)) }, meta = meta22)))
+q10 = utils::URLdecode(urls[1])
+check(identical(attr(sec10, "service"), "HPMS_FULL_NY_2022") && is.null(attr(sec10, "layer_note")), "2022 layer used as is")
+check(grepl("outFields=routeid,beginpoint,endpoint,", q10, fixed = TRUE) && !grepl("route_id", q10, fixed = TRUE) &&
+        grepl("year_record", q10, fixed = TRUE) && !grepl("section_length", q10, fixed = TRUE), "2022 names requested")
+check(grepl("orderByFields=objectid", q10, fixed = TRUE), "orderByFields from objectIdField")
+check(identical(sec10$route_id, paste0("r", 1:3)) && identical(sec10$begin_point, c(1, 2, 3)) &&
+        identical(sec10$aadt, c(1000, 2000, 3000)), "2022 names renamed to canonical (property case ignored)")
+check(isTRUE(all.equal(sec10$section_length, c(0.25, 0.5, 0.75))) &&
+        grepl("derived from mileposts", attr(sec10, "derived")[["section_length"]]), "section_length derived from mileposts")
+check(identical(sec10$data_year, rep(NA_real_, 3)), "no year_record values: data_year NA, kept as NA for link_build")
+# a layer with no data-year field at all (NY 2023 has none): data_year is the layer's year
+meta_noyr = jsonlite::fromJSON(meta22, simplifyVector = FALSE)
+meta_noyr$fields = Filter(function(f){ f$name != "year_record" }, meta_noyr$fields)
+d11 = mkdir()
+sec11 = links_fetch_hpms(box, "NY", year = 2022, save_dir = d11, listing = lst,
+  fetch = with_meta(function(url){ list(status = 200L, body = charToRaw(page22)) }, meta = as.character(jsonlite::toJSON(meta_noyr, auto_unbox = TRUE, null = "null"))))
+check(identical(sec11$data_year, rep(2022, 3)) && grepl("layer's year", attr(sec11, "derived")[["data_year"]]), "data_year falls back to the layer year")
+# a layer missing aadt: retried with the newest layer for the state, and the fallback recorded
+meta_noaadt = meta_noyr; meta_noaadt$fields = Filter(function(f){ f$name != "aadt" }, meta_noyr$fields)
+meta_noaadt = as.character(jsonlite::toJSON(meta_noaadt, auto_unbox = TRUE, null = "null"))
+d12 = mkdir(); urls = character(0)
+fetch12 = function(url){ urls <<- c(urls, url)
+  if(grepl("NY_2022/FeatureServer/0?f=json", url, fixed = TRUE)){ return(list(status = 200L, body = charToRaw(meta_noaadt))) }
+  if(grepl("NY_2025/FeatureServer/0?f=json", url, fixed = TRUE)){ return(list(status = 200L, body = charToRaw(meta25))) }
+  list(status = 200L, body = charToRaw(fx)) }
+m12 = character(0)
+sec12 = withCallingHandlers(links_fetch_hpms(box, "NY", year = 2022, save_dir = d12, listing = lst, fetch = fetch12),
+                            message = function(e){ m12 <<- c(m12, conditionMessage(e)); invokeRestart("muffleMessage") })
+check(identical(attr(sec12, "service"), "HPMS_FULL_NY_2025") && identical(attr(sec12, "year"), 2025L) && nrow(sec12) == 40, "missing aadt: newest layer used")
+check(grepl("HPMS_FULL_NY_2022 has no field aadt", attr(sec12, "layer_note"), fixed = TRUE) && any(grepl("HPMS_FULL_NY_2025", m12)), "fallback recorded (attribute and message)")
+check(length(urls) == 3 && grepl("NY_2025/FeatureServer/0/query", urls[3], fixed = TRUE), "metadata, newest metadata, then features")
+# the newest also lacks it: stop naming state, layer and field
+m13 = msg(suppressMessages(links_fetch_hpms(box, "NY", year = 2022, save_dir = mkdir(), listing = lst,
+  fetch = function(url){ list(status = 200L, body = charToRaw(meta_noaadt)) })))
+check(grepl("NY", m13) && grepl("HPMS_FULL_NY_2025", m13) && grepl("aadt", m13), "newest lacks aadt too: plain stop")
+# a county place needs county_id: the 2022 layer has it, so the where clause uses it
+d14 = mkdir(); urls = character(0)
+sec14 = links_fetch_hpms("36109", "NY", year = 2022, save_dir = d14, listing = lst,
+  fetch = with_meta(function(url){ urls <<- c(urls, url); list(status = 200L, body = charToRaw(page22)) }, meta = meta22))
+check(grepl("where=county_id%3D109", urls[1], fixed = TRUE), "2022 county where")
+check(identical(links_county_where("06001", field = "county_code"), "county_code=1"), "county where under county_code")
+
 # 5. Live smoke test (skipped unless LINKS_LIVE=1) ####
 
 if(identical(Sys.getenv("LINKS_LIVE"), "1")){
   d9 = mkdir(); t0 = Sys.time()
+  live22 = links_fetch_hpms(box, "NY", year = 2022, save_dir = mkdir())
+  cat("live Ithaca box, year 2022:", nrow(live22), "sections,", attr(live22, "service"), "derived:", paste(names(attr(live22, "derived")), collapse = ","), "
+")
+  check(nrow(live22) >= 1000 && sum(live22$section_length, na.rm = TRUE) > 0, "live 2022 box returns sections")
   live = links_fetch_hpms(box, "NY", save_dir = d9)
   secs = round(as.numeric(difftime(Sys.time(), t0, units = "secs")), 1)
   cat("live Ithaca box:", nrow(live), "sections in", secs, "s,", attr(live, "service"), "

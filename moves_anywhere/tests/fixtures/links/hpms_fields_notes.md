@@ -58,3 +58,25 @@ Layers: `HPMS_FULL_NY_2025`, `HPMS_FULL_TX_2025`, `HPMS_FULL_WY_2025` (`.../Feat
 - `aadt_vt` is `esriFieldTypeString`, alias `AADT_VT`, in all three layers. What its values (such as the
   `A` seen on Wyoming local streets) mean, actual count versus estimate: not stated in the layer metadata
   (no description, no domain). The same holds for `aadt_single_unit_vt` and `aadt_combination_vt`.
+
+## Field names by layer year (checked live 2026-11-18, unit B9)
+
+One metadata request per layer (`.../FeatureServer/0?f=json`). Object id field is `objectid` in all.
+NY 2022 and NY 2025 responses are kept as `hpms_ny2022_layer_meta.json` and `hpms_ny2025_layer_meta.json`.
+
+| Layer | fields | route / mileposts | year | county | urban | length |
+|---|---|---|---|---|---|---|
+| NY 2020 | 76 | route_id, begin_point, end_point | year_record | county_code | urban_code | none |
+| NY 2022 | 101 | routeid, beginpoint, endpoint | year_record | county_id | urban_id | none |
+| NY 2023 | 89 | routeid, beginpoint, endpoint | none | county_id | urban_id | none |
+| NY 2024 | 105 | route_id, begin_point, end_point | data_year | county_id | urban_id | sectionlength |
+| NY 2025 | 105 | route_id, begin_point, end_point | data_year | county_id | urban_id | section_length |
+| TX 2022 | 101 | routeid, beginpoint, endpoint | year_record | county_id | urban_id | none |
+| TX 2025 | 105 | route_id, begin_point, end_point | data_year | county_id | urban_id | section_length |
+| CA 2022 | 101 | routeid, beginpoint, endpoint | year_record | county_id | urban_id | none |
+| CA 2025 | 105 | route_id, begin_point, end_point | data_year | county_id | urban_id | section_length |
+| CA 2019 | 83 | route_id, begin_point, end_point | year_record | county_code | urban_code | none; no aadt_combination |
+
+All have f_system, facility_type, through_lanes, aadt, aadt_single_unit, k_factor, dir_factor,
+speed_limit and access_control. `links_fetch_hpms()` maps these through `LINKS_HPMS_ALIASES` (link_sources.R).
+Not checked: whether county_code / urban_code hold the same values as county_id / urban_id.
