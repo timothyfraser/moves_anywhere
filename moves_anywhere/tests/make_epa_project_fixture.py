@@ -107,13 +107,13 @@ def main(zip_path, outdir):
         ("Answer Key/link_source_type.xlsx", "linkSourceTypeHour", "linksourcetypehour.csv", [], False),
         ("Answer Key/off-network.xlsx", "offNetworkLink", "offnetworklink.csv", ["zoneID"], False),
         ("Answer Key/opmode_distribution.xlsx", "opModeDistribution", "opmodedistribution.csv", [], False),
-        ("Answer Key/hotelling.xlsx", "hotellingActivityDistribution", "workbook_only/hotellingactivitydistribution.csv", [], True),
+        ("Answer Key/hotelling.xlsx", "hotellingActivityDistribution", "hotellingactivitydistribution.csv", [], True),
         ("Answer Key/link_drive_schedule.xlsx", "driveScheduleSecondLink", "driveschedulesecondlink_run2.csv", [], False),
         ("age_distribution.xlsx", "SourceTypeAgeDistribution", "sourcetypeagedistribution.csv", [], True),
         ("fuels.xlsx", "FuelSupply", "fuelsupply.csv", [], True),
         ("fuels.xlsx", "FuelFormulation", "fuelformulation.csv", [], True),
         ("fuels.xlsx", "FuelUsageFraction", "fuelusagefraction.csv", [], True),
-        ("fuels.xlsx", "avft", "workbook_only/avft.csv", [], True),
+        ("fuels.xlsx", "avft", "avft.csv", [], True),
         ("met.xlsx", "zoneMonthHour", "zonemonthhour.csv", [], True),
     ]
     for wbname, sname, outname, drop, fips in plan:
