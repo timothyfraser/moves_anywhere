@@ -78,7 +78,7 @@ if(rs$mode == "inv"){
           summarize(emissions = sum(emissionQuant, na.rm = TRUE)) %>%
           with(emissions)
       }else{
-        e = NA_character_
+        e = NA_real_
       }
     }
   
@@ -94,7 +94,7 @@ if(rs$mode == "inv"){
           summarize(activity = sum(activity, na.rm = TRUE)) %>%
           with(activity)
       }else{
-        a = NA_character_
+        a = NA_real_
       }
     }
   
