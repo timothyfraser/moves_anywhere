@@ -1,29 +1,33 @@
 # adapt_ages_county.R #########################################################
 #
 # What:      county vehicle ages from EPA's NEI tables, for runs that ask for them
-# Does:      Reads the setting AGE_SOURCE (environment) or "age_source" (inputs/parameters.json):
-#            "national" (the default: the national table, exactly as before) or "county". With
-#            "county", looks the run's county up in reference/nei_sourcetypeagedistribution.rds
-#            (EPA's 2020 and 2023 NEI county age tables, ages 0 to 40). In 2020 or 2023 the county's
-#            own rows are used. In any other year the national table for the run year is multiplied,
-#            age by age, by the county-to-national ratio of the nearest inventory year (between 2020
-#            and 2023 the two ratios are interpolated linearly), each ratio capped to 0.25 to 4, and
-#            renormalised to 1 per vehicle type. Long-haul types 53 and 62 always keep the national
-#            table. A missing file or a county not in it falls back to the national table; the run
-#            never fails for that.
+# Does:      Reads the setting AGE_SOURCE (environment, wins) or "age_source" (inputs/parameters.json),
+#            one of three values:
+#            "national" (the default): the national table for the run year, exactly as before.
+#            "county": the county's own NEI table from the nearest inventory year (run years up to
+#            2021 take 2020, 2022 and later take 2023), used as is, with no adjustment by the national
+#            trend, renormalised to 1 per vehicle type.
+#            "county_adjusted": in 2020 or 2023 the county's own rows. In any other year the national
+#            table for the run year is multiplied, age by age, by the county-to-national ratio of the
+#            nearest inventory year (between 2020 and 2023 the two ratios are interpolated linearly),
+#            each ratio capped to 0.25 to 4, and renormalised to 1 per vehicle type.
+#            Both county settings look the run's county up in reference/nei_sourcetypeagedistribution.rds
+#            (EPA's 2020 and 2023 NEI county age tables, ages 0 to 40); long-haul types 53 and 62 always
+#            keep the national table. A missing file or a county not in it falls back to the national
+#            table and says so; the run never fails for that. Any other value stops the run.
 # Called by: adapt_sourcetypeagedistribution.R (sourced there), step 6 of launch.sh
 # Reads:     inputs/parameters.json if present; scripts/reference/nei_sourcetypeagedistribution.rds
 #            (data frame geoid, year, sourceTypeID, ageID, ageFraction)
-# Writes:    inputs/_age_source.txt (one line, only when the setting is "county"), and a row in
-#            inputs/_project_inputs.csv for project runs (project_note)
+# Writes:    inputs/_age_source.txt (one line, only when the setting is county or county_adjusted), and
+#            a row in inputs/_project_inputs.csv for project runs (project_note)
 # Needs:     dplyr, jsonlite; project_functions.R (is_project, project_note) for project runs
 ###############################################################################
 
 # 1. The setting ####
 
-#' Which age table the run asked for: "national" (the default) or "county"
+#' Which age table the run asked for: "national" (the default), "county" or "county_adjusted"
 #' @param BUCKET inputs folder (may hold parameters.json)
-#' @return "national" or "county"; stops on any other value
+#' @return "national", "county" or "county_adjusted"; stops on any other value
 #' @description The environment variable AGE_SOURCE wins; else "age_source" in parameters.json.
 ages_source_mode = function(BUCKET = "inputs"){
   value = Sys.getenv("AGE_SOURCE", unset = "")
@@ -36,8 +40,8 @@ ages_source_mode = function(BUCKET = "inputs"){
   }
   value = tolower(trimws(value))
   if(is.na(value) || value == ""){ return("national") }
-  if(!value %in% c("national", "county")){
-    stop(paste0("age_source must be national or county (found ", value, ")"))
+  if(!value %in% c("national", "county", "county_adjusted")){
+    stop(paste0("age_source must be national, county or county_adjusted (found ", value, ")"), call. = FALSE)
   }
   value
 }
@@ -69,9 +73,18 @@ ages_county_reference = function(path = "scripts/reference/nei_sourcetypeagedist
   ref
 }
 
-# 4. The year method ####
+# 4. The year methods ####
 
-#' Each vehicle type's county-to-national ratio by age for the run year
+#' The inventory year nearest the run year (setting county): with 2020 and 2023, run years up to
+#' 2021 take 2020 and 2022 and later take 2023
+#' @param years inventory years in the reference
+#' @param .year run year
+ages_county_year = function(years, .year){
+  years = sort(unique(years))
+  years[which.min(abs(years - .year))]
+}
+
+#' Each vehicle type's county-to-national ratio by age for the run year (setting county_adjusted)
 #' @param county reference rows for one county (year, sourceTypeID, ageID, ageFraction)
 #' @param national national rows (yearID, sourceTypeID, ageID, ageFraction) for the inventory years
 #' @param .year run year
@@ -114,23 +127,39 @@ ages_county_ratio = function(county, national, .year, cap = c(0.25, 4)){
 #' @param reference the reference data frame (geoid, year, sourceTypeID, ageID, ageFraction)
 #' @param .geoidchar 5-character county code
 #' @param .year run year
+#' @param .mode the setting: "county" (nearest inventory year as is) or "county_adjusted" (national
+#'   trend times the county-to-national ratio)
 #' @param national_types vehicle types that always keep the national table (long-haul 53, 62)
 #' @return list(data = rows for the run year only, line = the note, used = TRUE if county rows were used)
-ages_county_table = function(national, reference, .geoidchar, .year, national_types = c(53, 62)){
+ages_county_table = function(national, reference, .geoidchar, .year, .mode = c("county", "county_adjusted"),
+                             national_types = c(53, 62)){
+  .mode = match.arg(.mode)
   base = national %>% filter(yearID == .year)
   fallback = function(why){ list(data = base, used = FALSE,
-    line = paste0("ages: national default (age_source county asked for, but ", why, ")")) }
+    line = paste0("ages: national default (age_source ", .mode, " asked for, but ", why, ")")) }
   if(is.null(reference)){ return(fallback("the NEI reference file is missing")) }
   county = reference %>%
     filter(as.character(geoid) == .geoidchar, !sourceTypeID %in% national_types) %>%
     select(year, sourceTypeID, ageID, ageFraction)
   if(nrow(county) == 0){ return(fallback(paste0("county ", .geoidchar, " is not in the NEI reference file"))) }
 
-  if(.year %in% county$year){
+  if(.mode == "county"){
+    # The nearest inventory year as is: no national trend, renormalised to 1 per vehicle type
+    t = ages_county_year(county$year, .year)
+    add = county %>%
+      filter(year == t) %>%
+      select(sourceTypeID, ageID, county = ageFraction) %>%
+      semi_join(by = c("sourceTypeID", "ageID"), y = base) %>%
+      group_by(sourceTypeID) %>%
+      filter(sum(county) > 0) %>%
+      mutate(county = county / sum(county)) %>%
+      ungroup()
+    how = paste0("ages: NEI ", t, " county ", .geoidchar, " as is (setting county); long-haul 53 and 62 national")
+  }else if(.year %in% county$year){
     # An inventory year: the county's own rows
     add = county %>% filter(year == .year) %>% select(sourceTypeID, ageID, county = ageFraction)
     how = paste0("ages: NEI ", .year, " county ", .geoidchar, " (EPA county table for ", .year,
-                 "); long-haul 53 and 62 national")
+                 ", setting county_adjusted); long-haul 53 and 62 national")
   }else{
     r = ages_county_ratio(county, national, .year)
     if(is.null(r) || nrow(r) == 0){ return(fallback(paste0("no national table for the NEI years ", paste(sort(unique(county$year)), collapse = " and ")))) }
@@ -147,7 +176,7 @@ ages_county_table = function(national, reference, .geoidchar, .year, national_ty
     far = min(abs(.year - c(2020, 2023))) > 10
     how = paste0("ages: NEI county ", .geoidchar, ", national ", .year, " x county-to-national ratio of ",
                  paste(years, collapse = " and "), if(length(years) == 2){ " (interpolated)" }else{ "" },
-                 ", capped 0.25 to 4; long-haul 53 and 62 national",
+                 ", capped 0.25 to 4 (setting county_adjusted); long-haul 53 and 62 national",
                  if(far){ "; more than 10 years from the NEI years, the county tilt is an assumption" }else{ "" })
   }
   # Replace whole vehicle types only: a type the county table lacks keeps the national rows

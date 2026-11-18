@@ -6,9 +6,11 @@
 # Called by: task_adapt.R, step 6 of launch.sh
 # Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/sourcetypeagedistribution.csv if provided,
 #            otherwise the sourcetypeagedistribution table in the runspec's default database (MariaDB)
-#            With AGE_SOURCE=county (environment) or "age_source": "county" (inputs/parameters.json) and
-#            no user table, the county's NEI ages replace the national ones (adapt_ages_county.R).
-# Writes:    inputs/_sourcetypeagedistribution.csv; inputs/_age_source.txt (only when age_source is county)
+#            With AGE_SOURCE (environment) or "age_source" (inputs/parameters.json) set to county or
+#            county_adjusted and no user table, the county's NEI ages replace the national ones
+#            (adapt_ages_county.R says how each setting builds them).
+# Writes:    inputs/_sourcetypeagedistribution.csv; inputs/_age_source.txt (only when age_source is
+#            county or county_adjusted)
 # Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); adapt_ages_county.R
 #            (sourced below); catr, DBI, RMariaDB, dplyr, stringr, jsonlite
 ###############################################################################
@@ -20,13 +22,13 @@ for(.f in c("scripts/adapt_ages_county.R", "moves_anywhere/scripts/adapt_ages_co
 
 #' Adapt the sourcetypeagedistribution table
 #' @param .runspec path to the run's runspec (XML)
-#' @param .reference the NEI county age table (used only when age_source is county)
+#' @param .reference the NEI county age table (used only when age_source is county or county_adjusted)
 adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml",
                                            .reference = "scripts/reference/nei_sourcetypeagedistribution.rds"){
   
   table = "sourcetypeagedistribution"
   BUCKET = "inputs"
-  # Which age table the run asked for: national (default, unchanged) or county; no stale note survives
+  # Which age table the run asked for: national (default, unchanged), county or county_adjusted; no stale note survives
   if(file.exists(paste0(BUCKET, "/_age_source.txt"))){ unlink(paste0(BUCKET, "/_age_source.txt")) }
   .age_source = if(exists("ages_source_mode", mode = "function")){ ages_source_mode(BUCKET) }else{ "national" }
   
@@ -170,13 +172,14 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
     import_table(data = data, tablename = f$changed, .custom = .custom, adapt = FALSE, save = TRUE, volume = BUCKET)
     
     # The user's table wins over the county table
-    if(.age_source == "county"){
-      ages_source_note("ages: user table (age_source county asked for; the user's sourcetypeagedistribution.csv wins)",
+    if(.age_source %in% c("county", "county_adjusted")){
+      ages_source_note(paste0("ages: user table (age_source ", .age_source,
+                              " asked for; the user's sourcetypeagedistribution.csv wins)"),
                        "user", .runspec = .runspec, BUCKET = BUCKET)
     }
-    
-    # If not provided and the run asked for county ages, use the NEI county table
-  }else if(!f$is_custom && .age_source == "county"){
+
+    # If not provided and the run asked for county ages (either setting), use the NEI county table
+  }else if(!f$is_custom && .age_source %in% c("county", "county_adjusted")){
     # National rows for the run year and the two NEI years (the ratio method needs them)
     custom = connect("mariadb", .custom)
     national = custom %>% tbl(table) %>% 
@@ -184,7 +187,7 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
       collect()
     dbDisconnect(custom)
     result = ages_county_table(national = national, reference = ages_county_reference(.reference),
-                               .geoidchar = .geoidchar, .year = .year)
+                               .geoidchar = .geoidchar, .year = .year, .mode = .age_source)
     import_table(data = result$data, tablename = f$changed, .custom = .custom, adapt = TRUE, save = TRUE, volume = BUCKET)
     ages_source_note(result$line, if(result$used){ "county" }else{ "default" }, .runspec = .runspec, BUCKET = BUCKET)
     
