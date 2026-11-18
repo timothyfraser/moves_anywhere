@@ -49,9 +49,9 @@ The worked example is `moves_anywhere/inputs_project/rs_custom.xml`: Tompkins Co
 
 Run it as you run a county run: `run.sh <folder>`. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
 
-**A second example: EPA's training exercise.** The folder `moves_anywhere/inputs_epa_project/` is a project run taken from EPA's own MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key): a truck terminal and its roads in Washtenaw County, MI (26161), January 2025, a weekday, hour 9, carbon monoxide, five road links and one off-network link. EPA is the source of every number in it; the folder's `README.md` gives the attribution and every change made. Its purpose is a check against someone else's answer: `epa_movesoutput.csv` holds EPA's results, and `tests/compare_epa_project.py` compares a run of the folder with them. The result of that comparison for run 1: <!-- A5: AUD/epa_moves5_exercise/comparison_run1.csv -->
+**A second example: EPA's training exercise.** The folder `moves_anywhere/inputs_epa_project/` is a project run taken from EPA's own MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key): a truck terminal and its roads in Washtenaw County, MI (26161), January 2025, a weekday, hour 9, carbon monoxide, five road links and one off-network link. EPA is the source of every number in it; the folder's `README.md` gives the attribution and every change made. Its purpose is a check against someone else's answer: `epa_movesoutput.csv` holds EPA's results, and `tests/compare_epa_project.py` compares a run of the folder with them. The result of that comparison for run 1 (carbon monoxide, 21 rows of EPA's answer): all 21 rows are within 1 percent of EPA's, and the largest relative difference is 5.0e-8. The run took 188 seconds in all. (A first attempt differed from EPA's answer because it left out two input tables that EPA's run had filled, the fuel and technology table and the hotelling table; with those supplied, the results match.) <!-- source: epa_moves5_exercise/comparison_run1b.csv; epa_moves5_exercise/DIAGNOSIS_run1.md -->
 
-**Two years.** The two-year check (2019 and 2040): <!-- A13: AUD/release/years_2019_2040.csv -->
+**Two years.** The two-year check (2019 and 2040): both years ran with the same pollutant-process set a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040. CO2 per mile in 2040 is about 45 percent of 2019 (link 1: 214 g against 484 g per mile). MOVES took 876 seconds for 2019 and 963 seconds for 2040 on a busy machine (the EPA exercise run took 188 seconds in all). One range check in the same table did not pass: CO2 per mile on the slow queue link (889 g per mile in 2019) and on four 2040 links (190 to 231 g per mile) fell outside the 250 to 700 g window we expected, so do not read that window as a validity limit. <!-- source: release/years_2019_2040.csv; release/years_2019_2040_checks.csv -->
 
 ## What is filled in for you, and how far to trust it
 
@@ -61,7 +61,7 @@ Defaults are county averages. A link's traffic volume and length always come fro
 |----|----|----|
 | Vehicle mix on a road link | The county's yearly mileage by vehicle type, times that month's, day type's and hour's share, times the share on that road type | Always for a truck route, a bus lane or any road whose traffic you know. |
 | Link speed | The county's speed distribution for that road type and hour, averaged as miles divided by hours; or the link's drive schedule | When you know the speed. A real link can be far from the county average. |
-| Grade | 0 (flat) | When the link is not flat. In the fixture, a 4 percent grade changes CO2 on the link by about 45 percent (282,026 g against 194,936 g). |
+| Grade | 0 (flat) | When the link is not flat. In the fixture, a 4 percent grade changes CO2 on the link by about 45 percent (269,937 g against 186,660 g). |
 | Engine starts on a parking lot | Starts per vehicle per day in the county, times that hour's share of the day's starts | Almost always. This is the average vehicle in the county, not your lot. |
 | Extended idle and parked share | 0 and 1 | When trucks idle or park at the site. |
 | Soak times | MOVES's national start operating-mode table for that day type and hour, weighted by the county's vehicle ages | When you know how long vehicles sit. |
@@ -72,7 +72,16 @@ Defaults are county averages. A link's traffic volume and length always come fro
 
 An age table says what share of the *registered* vehicles of a type is each age. Older vehicles are driven fewer miles. At county scale MOVES weights each age by its mileage before it shares out the miles; at project scale it does not, and reads the table as the ages of the traffic on the link. So the image multiplies each age share by MOVES's relative mileage for that age and rescales the shares to add up to 1, for each vehicle type and year. **Travel-weighted** means the ages are those of the vehicles actually driving on the link, not those of the vehicles registered.
 
-The effect of this default on the results (a county run against a project run, with and without it): <!-- A8: county vs project with the default, AUD/release/county_vs_project_default.csv -->
+The effect of this default on the results (a county run against a project run, with and without it). Per-mile difference between the project run and the county run, urban unrestricted roads, in percent:
+
+| Pollutant | Registration ages | Travel-weighted default |
+|---|---|---|
+| NOx | 93.54 | 1.53 |
+| Exhaust PM2.5 | 164.72 | 1.83 |
+| CO2 | 4.28 | 0.08 |
+| CO | 47.52 | -0.06 |
+
+With the default, NOx and exhaust PM2.5 are within 10 percent of the county run and CO2 within 2 percent. <!-- source: release/county_vs_project_default.csv -->
 
 To keep the registration ages instead, set `PROJECT_AGES=registration` in the environment, or put `"project_ages": "registration"` in `parameters.json` in the run folder. The environment variable wins. Any other value stops the run. A `sourcetypeagedistribution.csv` that you supply is used as given, with no weighting. `diagnostics.txt` and `_project_inputs.csv` record which ages were used.
 
@@ -97,17 +106,19 @@ The first rows of the fixture run:
 
 ```text
 year,month,day,hour,geoid,link,roadtype,pollutant,process,sourcetype,fueltype,emissions,vmt,sourcehours,starts,vehicles
-2022,7,5,8,36109,1,5,1,1,11,1,7.139810085296631,5.614389896392822,0.22457599639892575,0,11.228799819946287
+2022,7,5,8,36109,1,5,1,1,11,1,5.41786003112793,5.614389896392822,0.22457599639892575,0,11.228799819946287
 ```
 
-The activity columns repeat on every pollutant row of a link, vehicle type and fuel. Do not add `vmt` down the whole file. **Grams per mile** is the sum of `emissions` divided by the miles, counting miles once per link, vehicle type and fuel. **Grams per second** is grams divided by 3600. For link 1 of the fixture, CO2 is 194,936.1 g in 400 miles: 487.3 g per mile, or 54.1 g per second.
+The activity columns repeat on every pollutant row of a link, vehicle type and fuel. Do not add `vmt` down the whole file. **Grams per mile** is the sum of `emissions` divided by the miles, counting miles once per link, vehicle type and fuel. **Grams per second** is grams divided by 3600. For link 1 of the fixture, CO2 is 186,659.7 g in 400 miles: 466.6 g per mile, or 51.8 g per second. (The reference results were regenerated with travel-weighted ages.) <!-- source: release/gold_change.csv -->
+
+
 
 `diagnostics.txt` holds one line per link and the list of defaults used. This is the real file from the fixture run:
 
 ```text
 link,roadtype,description,miles,co2_g,nox_g,co2_g_per_mile,nox_g_per_mile,starts
-1,5,arterial 25 mph flat,400,194936.1,313.6,487.3,0.784,0
-7,1,parking lot and truck stop (off-network),0,86078.5,727.1,,,76.3
+1,5,arterial 25 mph flat,400,186659.7,167.3,466.6,0.418,0
+7,1,parking lot and truck stop (off-network),0,79646.2,528.2,,,76.3
 
 Inputs filled in by default or supplied by you:
 link 5 linkAvgSpeed | default | 25.59 mph from avgspeeddistribution
@@ -177,6 +188,6 @@ Gate and tests (all from the repository root; Docker for the ones that name an i
 
 - **Fast gate:** `bash moves_anywhere/tests/run_gate.sh --fast`. It runs `static`, `compare-unit`, `build`, `project-unit`, `replay` and only the refusals of `project`; it runs no MOVES. It takes several minutes (the script header says about 6, a measured run about 9). It is for working and is not a release gate: its last lines say so and list the steps left for the full gate. It cannot be combined with `--only`.
 - **Replay test:** `bash moves_anywhere/tests/test_summarize_replay.sh --image <image>` runs only the summary step (`task_summarize.R`) on saved MOVES outputs, with no MOVES run: a county hour with no vehicle-population rows, the county fixture `inputs_ny`, and the project fixture. `--prove` also runs the first case against the image's own script and expects it to fail. The gate runs it as step `replay`.
-- **EPA test:** `bash moves_anywhere/tests/test_epa_project.sh --image <image> [--run2]` runs `inputs_epa_project/` through `run.sh` and checks the exit code, the manifest, that `linkdata.csv` exists and `data.csv` does not, and EPA's run 1 against `movesoutput.csv` through `tests/compare_epa_project.py` (within 1 percent). `--run2` adds EPA's second run. It takes under 10 minutes of MOVES per run. <!-- epa step: the gate step that calls it is not in run_gate.sh yet -->
+- **EPA test:** `bash moves_anywhere/tests/test_epa_project.sh --image <image> [--run2]` runs `inputs_epa_project/` through `run.sh` and checks the exit code, the manifest, that `linkdata.csv` exists and `data.csv` does not, and EPA's run 1 against `movesoutput.csv` through `tests/compare_epa_project.py` (within 1 percent). `--run2` adds EPA's second run. It takes about 3 minutes of MOVES for run 1 (188 seconds in all). It is step 14 (`epa`) of the full gate. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
 
 Rule: every change to an existing script sits behind a project-only branch, and the county fixture in the gate checks that county runs are unchanged.

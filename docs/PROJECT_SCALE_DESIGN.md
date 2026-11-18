@@ -279,13 +279,15 @@ one came from the adapters. This is `moves_anywhere/inputs_project/`.
 
 | Link | What | Miles | CO2 (g) | CO2 g/mile | NOx g/mile | Starts |
 |---|---|---|---|---|---|---|
-| 1 | urban road, 25 mph, flat | 400 | 194,936 | 487 | 0.784 | 0 |
-| 2 | same, 4% uphill | 400 | 282,026 | 705 | 1.31 | 0 |
-| 3 | queue at 8 mph | 80 | 71,163 | 890 | 1.25 | 0 |
-| 4 | freeway, 55 mph | 3,000 | 1,218,645 | 406 | 0.781 | 0 |
-| 5 | urban road, speed left blank (default 25.59 mph) | 400 | 192,820 | 482 | 0.777 | 0 |
-| 6 | urban road, stop-and-go speed trace | 400 | 210,017 | 525 | 0.865 | 0 |
-| 7 | parking lot, 385 vehicles | 0 | 86,078 | | | 76.3 |
+| 1 | urban road, 25 mph, flat | 400 | 186,660 | 467 | 0.418 | 0 |
+| 2 | same, 4% uphill | 400 | 269,937 | 675 | 0.685 | 0 |
+| 3 | queue at 8 mph | 80 | 68,446 | 856 | 0.713 | 0 |
+| 4 | freeway, 55 mph | 3,000 | 1,172,156 | 391 | 0.365 | 0 |
+| 5 | urban road, speed left blank (default 25.59 mph) | 400 | 184,629 | 462 | 0.414 | 0 |
+| 6 | urban road, stop-and-go speed trace | 400 | 201,166 | 503 | 0.452 | 0 |
+| 7 | parking lot, 385 vehicles | 0 | 79,646 | | | 76.3 |
+
+The reference results were regenerated with travel-weighted ages. <!-- source: release/gold_change.csv -->
 
 - Miles equal volume x length, and hours equal miles / speed, exactly as the MOVES engine source says.
 - The pattern is physically sensible: uphill costs 45% more CO2; a slow queue emits almost twice as
@@ -413,11 +415,11 @@ select, and that may be the whole reason, but we have not confirmed it.
 | EPA example, Washtenaw County, third attempt | Ran. CO 27% above EPA's printed MOVES3 figure on free-flow links, three times above it at idle; unexplained (section 7.3) |
 | County run against project run built from defaults | CO2 within 5%; NOx, CO, hydrocarbons and exhaust PM2.5 1.5 to 2.9 times higher at project scale (section 7.4) |
 | The same project links with travel-weighted vehicle ages (16 links, urban roads) | Agrees with the county run: CO2 +0.1%, CO -0.1%, hydrocarbons 0.0%, NOx +1.5%, exhaust PM2.5 +1.8%, tyre wear +1.4%, brake wear +3.4%. Vehicle age weighting accounts for the whole gap. 1,487 s of MOVES |
-| Full test gate on the image built from the branch (13 steps now, including the county reference run, the summary replay and the project fixture; a step for EPA's exercise (section 7.6) is still to be added) | Not run on the final commit. The build step alone passed on the first commit. `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
+| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Not run on the final commit. The build step alone passed on the first commit. `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
 | Fixture run twice: identical results | Not run (part of the gate) |
 | The fourth refusal (a road type with no link) | Offline test passes; the container test waits for the gate |
-| The county-against-project comparison again, with the new age default | <!-- A8: AUD county_vs_project_default.csv --> |
-| Reference years 2019 and 2040, county-run settings | <!-- A13: years_2019_2040.csv --> |
+| The county-against-project comparison again, with the new age default | with the travel-weighted default, the project run differs from the county run per mile by 0.04% (THC), -0.06% (CO), 1.53% (NOx), 0.08% (CO2), 1.83% (exhaust PM2.5), 3.37% (brake PM2.5) and 1.35% (tyre PM2.5) on urban unrestricted roads; with registration ages the same differences were 85.42%, 47.52%, 93.54%, 4.28%, 164.72%, -3.54% and 1.65%. <!-- source: release/county_vs_project_default.csv --> |
+| Reference years 2019 and 2040, county-run settings | Both years ran with the same pollutant-process set a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040; CO2 per mile in 2040 is about 45% of 2019. MOVES took 876 s and 963 s on a busy machine. One range check (CO2 per mile between 250 and 700 g) failed on five links, so it is not a limit we rely on. <!-- source: release/years_2019_2040.csv, release/years_2019_2040_checks.csv --> |
 
 ### 7.6 EPA's MOVES5 course exercise
 
@@ -434,14 +436,14 @@ in EPA's input and output databases and in our run), so a difference cannot be p
 compared them with the tables our adapters build from the same inputs. EPA's input database holds 18
 tables in this comparison: 16 that our adapters also write, which we compared, and EPA's audit log and a
 drive-schedule table, which have no counterpart in this run.
-<!-- A4b: AUD epa_moves5_exercise/tables_compare_full.csv -->
+<!-- source: epa_moves5_exercise/tables_compare_full.csv -->
 
 - Fourteen of the 16 are equal on every row EPA's table holds (the county table's barometric pressure
   differs by 2 parts in a hundred million). The other two, `zone` and `zoneroadtype`, differ in their
   allocation factors: EPA sets them to 1; our adapters set them to the county's share of the state
   (about 0.001). They did not change activity: population, starts and distance (miles) are equal to EPA's
   on every link and for both vehicle types in MOVES's activity output.
-  <!-- A5b: AUD epa_moves5_exercise/DIAGNOSIS_run1.md, section 2 -->
+  <!-- source: epa_moves5_exercise/DIAGNOSIS_run1.md -->
 - Our tables sometimes hold more rows than EPA's (our age table has all 13 vehicle types, EPA's has the
   two in the run; our state table lists all states). Those extra rows are not read by this run. A few
   tables carry extra columns that MOVES fills in itself.
@@ -450,7 +452,7 @@ drive-schedule table, which have no counterpart in this run.
   does not read.
 
 **What the run showed.**
-<!-- A5c: comparison_run1b.csv -->
+On the corrected run, all 21 of 21 CO rows are within 1% of EPA's, and the largest relative difference is 5.0e-8. The run took 188 s in all. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
 
 **A first comparison was wrong, and why.** Our first run used the MOVES default fuel-technology table
 (`avft`) and the default hotelling table, because an earlier decode of EPA's input database had read only 7
@@ -460,7 +462,7 @@ importer filled both (its audit log records it), and that EPA's `avft` equals th
 1% of EPA's, and the rest differed in ways the two tables explain (a 1.1% share of natural-gas trucks in the
 default technology mix raised truck running CO by 4.5 to 7.2%; the default hotelling table runs 32.5 hours
 of an auxiliary power unit where EPA's has none, giving 313.7 g against EPA's 0).
-<!-- A5: AUD epa_moves5_exercise/comparison_run1.csv, DIAGNOSIS_run1.md sections 2 to 4 -->
+<!-- source: epa_moves5_exercise/DIAGNOSIS_run1.md -->
 The two workbook tables were then put back into the run folder, and the corrected run is the one reported
 here. We say so because a comparison like this is easy to bend: putting EPA's inputs back is matching the
 experiment, not tuning our code, but a reader should know that the first result was different and why.
@@ -470,7 +472,7 @@ adapters and run-file handling reproduce EPA's example on one county, one month 
 does not show that county averages are right for a real site, which this exercise supplies by hand and
 does not test. The tolerance and the rows outside it, if any, are in the marker above.
 
-**Other runs.** The 2019 and 2040 reference-year runs: <!-- A13: years_2019_2040.csv -->.
+**Other runs.** The 2019 and 2040 reference-year runs: see section 7.5; NOx and exhaust PM2.5 per mile fall on every link, CO2 per mile in 2040 is about 45% of 2019. <!-- source: release/years_2019_2040.csv -->
 The link builder's live build, in a run of MOVES: <!-- B7 -->.
 
 ## 8. Design decisions that a reader should know about
@@ -542,7 +544,7 @@ renormalised, which is what MOVES itself does at county scale. A project run doe
 reads the table. The switch back is `PROJECT_AGES=registration` in the environment, or
 `"project_ages": "registration"` in `parameters.json`; the environment wins. A `sourcetypeagedistribution.csv`
 that the user supplies is used as given, with no weighting. The measured effect of the default on the
-county-against-project comparison: <!-- A8: AUD county_vs_project_default.csv -->. The earlier test of the
+county-against-project comparison: NOx 1.53% and exhaust PM2.5 1.83% above the county run per mile, CO2 0.08%, on urban unrestricted roads. <!-- source: release/county_vs_project_default.csv --> The earlier test of the
 same idea (section 7.5) closed the gap to under 2% for NOx and exhaust particulates.
 
 The same decision started a second option: **county ages**. By default the age table is still national.
