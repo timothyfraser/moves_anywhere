@@ -4,6 +4,8 @@
 # What:      Ticket mode: download this run's inputs into /cat/inputs (docs/RUN_TICKET.md section 3).
 # Does:      Gets the run ticket from $TICKET_URL, checks it, then downloads each input it lists,
 #            checking size and sha256. In sync mode, copies $MOVES_SYNC_REMOTE/in with rclone.
+#            The ticket must list parameters.json; it may leave out rs_custom.xml only when the fetched
+#            parameters.json says "level": "project" (launch.sh then makes the run file).
 #            Never prints a URL's query string.
 # Called by: launch.sh, step 1 of launch.sh (only when MOVES_IO is not "mounted")
 # Reads:     $TICKET_URL (the run ticket) and each input URL in it; $MOVES_SYNC_REMOTE/in in sync mode
@@ -58,7 +60,7 @@ assert re.match(r"^d[0-9]{2,5}-u[0-9]+-o[0-9]+$", t.get("run_id", "")), "run_id"
 assert not rid or rid == t["run_id"], "run_id mismatch"
 names = [i["name"] for i in t["inputs"]]
 assert all(pat.match(n) for n in names), "input name"
-assert "rs_custom.xml" in names and "parameters.json" in names, "required inputs missing"
+assert "parameters.json" in names, "required inputs missing"
 assert isinstance(t.get("outputs"), list) and t["outputs"], "outputs"
 ' "$T" 2>"$RUNDIR/ticket.err" || { echo "---ticket unusable: $(tail -1 "$RUNDIR/ticket.err")"; exit 3; }
 
@@ -105,5 +107,15 @@ while IFS=$'\t' read -r name url sha bytes; do
   mv -f "$IN/$name.part" "$IN/$name"
   echo "---fetched $name"
 done < <(list_inputs)
+
+# No rs_custom.xml in the ticket: only a project run may leave it out (launch.sh makes it from parameters.json)
+if [ ! -f "$IN/rs_custom.xml" ] && ! python3 -I -c '
+import json, sys
+p = json.load(open(sys.argv[1]))
+sys.exit(not (isinstance(p, dict) and str(p.get("level", "")).strip().lower() == "project"))' "$IN/parameters.json" 2>/dev/null; then
+  reason "ticket unusable: required inputs missing (rs_custom.xml)"
+  echo "---ticket unusable: required inputs missing (rs_custom.xml; only a project parameters.json may leave it out)"
+  exit 3
+fi
 
 exit 0
