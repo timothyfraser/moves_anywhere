@@ -551,11 +551,15 @@ that the user supplies is used as given, with no weighting. The measured effect 
 county-against-project comparison: NOx 1.53% and exhaust PM2.5 1.83% above the county run per mile, CO2 0.08%, on urban unrestricted roads. <!-- source: release/county_vs_project_default.csv --> The earlier test of the
 same idea (section 7.5) closed the gap to under 2% for NOx and exhaust particulates.
 
-The same decision started a second option: **county ages**. By default the age table is still national.
-With `AGE_SOURCE=county` (or `"age_source": "county"`), both scales use the county's own ages from EPA's
-National Emissions Inventory county databases (county rows in 2020 and 2023; other years scaled from the
-nearest of those; long-haul truck types stay national). The reference file is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023). It is **off by default**, and it stays off until
-the measured change in county results has been reviewed, because turning it on changes every published
+The same decision started a second option: **county ages**. The age table has three settings, chosen by
+`AGE_SOURCE` in the environment (it wins) or `"age_source"` in `parameters.json`, the same at both scales
+(`moves_anywhere/scripts/adapt_ages_county.R`). `national`, the default, is the national table for the run
+year, as before. `county` is the county's own table from EPA's National Emissions Inventory county
+databases, from the nearest inventory year (2020 or 2023), used as is. `county_adjusted` is the county's
+own table in 2020 and 2023; in other years it is the national table times the county-to-national ratio of
+the nearest inventory year, interpolated between 2020 and 2023, each ratio kept between 0.25 and 4.
+Long-haul truck types (53 and 62) always keep the national table. The reference file is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023). The default is **national**, and it stays national until
+the measured change in county results has been reviewed, because a county default changes every published
 county result. What this still leaves open: the tool's default is a choice we made, not a measurement of a
 real road. Anyone quoting project-scale criteria pollutants from defaults should say which age table was
 used; `diagnostics.txt` and `_project_inputs.csv` record it, and `_age_source.txt` records the county
@@ -572,7 +576,9 @@ option.
 3. **The fuel is New York's.** Unless the user supplies fuel tables, every county gets a New York
    metropolitan fuel supply and formulation. This is how county runs already work, so project runs
    inherit it. We did not measure how much it changes CO, NOx or particulates in, say, Michigan in
-   January. The external comparison in section 7.3 is affected by it.
+   January. The external comparison in section 7.3 is affected by it. Keeping this default is now a
+   decision (D92, 2026-11-18): MOVES's own fuel formulation tables are unreliable, and there are no good
+   public tables to compare against. The effect is still not measured.
 4. **We replaced MOVES's validation with our own, narrower checks.** With validation off, MOVES will
    run inputs it would otherwise reject. We check the cases we have met (hours, road types, mix sums,
    row counts, empty results). We have surely not met them all. A table that loads but is wrong in a way
@@ -620,11 +626,14 @@ option.
     speeds, road type shares, hourly shares, starts and ages. "County average" in this document often
     means "national pattern applied to the county's mileage". Only vehicle counts and annual mileage are
     county-specific (from NEI), and those are interpolated or projected for years NEI does not cover.
-15. **County ages change the answer a lot, and the default has not moved.** With `AGE_SOURCE=county` on a
+15. **County ages change the answer a lot, and the default has not moved.** With the earlier single
+    `AGE_SOURCE=county` setting on a
     Tompkins County (NY, 2022) county run, against national ages: CO2 0.962, NOx 0.676, exhaust PM2.5 0.716,
     CO 0.722 and hydrocarbons 0.687 of the national-age result. Cars are 1.9 years younger and light trucks
     2.3 to 3.4 years younger. This came from a partial reference file (2020 for New York only; the full file is now in the image), so treat it
-    as one measurement, not a calibration. The default stays national until the effect has been reviewed.
+    as one measurement, not a calibration. It was made before the setting was split into `national`,
+    `county` and `county_adjusted`, and has not been repeated for `county` or `county_adjusted`. The
+    default stays `national` until the effect has been reviewed.
     <!-- source: release/county_ages_effect.csv -->
 
 ## 10. Reference data, and whether MOVES-Matrix is needed
@@ -654,7 +663,7 @@ dependency.
 |---|---|---|
 | Finish the pending checks in 7.5 | In progress | |
 | Vehicle ages at project scale: registration or travel-weighted (section 7.4) | Decided: travel-weighted by default; `PROJECT_AGES=registration` switches back (section 9) | The reference results changed with it |
-| County ages (`AGE_SOURCE=county`) as the default at county scale | Open: off until the measured change is reviewed (section 9) | Changes every published county result |
+| County ages (`AGE_SOURCE=county` or `county_adjusted`) as the default at county scale | Open: `national` stays the default until the measured change is reviewed (section 9) | Changes every published county result; the one measurement predates the split into three settings |
 | Hourly county runs crash in the summary step (section 7.4) | Fixed in this release, with a replay test | Why that run had no population rows is not settled |
 | Warn or refuse when a link is too long to cross in the hour | Backlog | |
 | Independent review of the code | Done once (section 9, item 13) | A person should still read it before any merge |

@@ -20,6 +20,7 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   [Welcome!](#welcome)
 -   [Quick start](#quick-start)
 -   [What you get back](#what-you-get-back)
+-   [Project-scale runs](#project-scale-runs)
 -   [Cheatsheet](#cheatsheet)
 -   [What's in this repository](#whats-in-this-repository)
 -   [Documentation](#documentation)
@@ -75,6 +76,33 @@ Results land in the same folder as your inputs. The run manifest and replication
 | `run_manifest.json` | A record of the run: status, file hashes, MOVES version, timings. See [the run manifest](docs/RUN_MANIFEST.md) |
 | `replication.tar.xz` | Everything needed to rerun this result on a stock MOVES install. See [the replication kit](docs/REPLICATION_KIT.md) |
 
+## Project-scale runs
+
+A county run estimates emissions for a whole county over a year. A project run estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
+
+You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from county data. To try it, copy `moves_anywhere/inputs_project/` (seven links and a parking lot) to a new folder `my_project`, delete its `rs_custom.xml`, and put this in its `parameters.json`:
+
+```json
+{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+```
+
+Then run it. The results by link are in `my_project/linkdata.csv`.
+
+```bash
+bash moves_anywhere/run.sh my_project
+```
+
+With no `link.csv`, add `"place": "west,south,east,north"` (a box in degrees) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System, and grade from USGS 3DEP elevation. Check its output before you run MOVES on it.
+
+What was measured:
+
+- EPA's MOVES5 training-course project exercise, run in this image, matches all 21 rows of EPA's answer to within 5e-8 (relative difference). <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
+- With the default vehicle ages, a project run built to copy a county's speeds agrees with the county run to within 2% per mile for NOx, exhaust PM2.5 and CO2. <!-- source: release/county_vs_project_default.csv -->
+
+Project runs are for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data, and the defaults here do not replace that.
+
+Guides: [project-scale runs](docs/README_project_scale.md) and [building links from federal road data (beta)](docs/README_link_sources.md).
+
 ## Cheatsheet
 
 📂 To get started, check out [our cheatsheet](docs/img/moves-anywhere-cheatsheet.png):
@@ -92,8 +120,6 @@ Results land in the same folder as your inputs. The run manifest and replication
 | [`docker_moves/`](docker_moves/) | The older base image, kept for reference |
 
 ## Documentation
-
-Besides county runs, MOVES Anywhere can run **project scale**: individual road links and parking lots for one hour. You give a `link.csv`, and the image fills in the rest from county data. Read the [project-scale guide](docs/README_project_scale.md) first, because project runs are meant for screening and research, not as a substitute for project traffic data.
 
 | Guide | Read it when you want to... |
 |----|----|
