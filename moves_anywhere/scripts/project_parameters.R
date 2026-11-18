@@ -21,8 +21,10 @@
 # Keys a project parameters.json may carry; any other key is ignored (county files carry many)
 PROJECT_KEYS = c("level", "geoid", "year", "month", "day", "hour", "pollutant", "roadtypes", "place",
                  "max_links", "age_source", "project_ages")
-# The pollutants task_runspec.R uses when the file names none
-PROJECT_POLLUTANTS = c(98L, 3L, 2L, 31L, 33L, 110L, 100L, 106L, 107L, 116L, 117L)
+# The pollutants when the file names none: the county-run set (inputs_ny/parameters.json), so a project
+# run reports what a county run reports (Tim, 2026-11-18); also the set of inputs_project/rs_custom.xml
+PROJECT_POLLUTANTS = c(90L, 98L, 2L, 118L, 112L, 119L, 5L, 33L, 32L, 6L, 3L, 100L, 110L, 106L, 107L, 116L,
+                       117L, 115L, 31L, 91L, 1L)
 
 # State FIPS code (first two digits of a county FIPS) to postal code: 50 states, DC and PR
 PROJECT_STATES = c(
