@@ -82,40 +82,121 @@ links_fill_basis = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_
 
 #' Parse one outStatistics response (JSON text) into a tibble f_system, urban_id and the statistics
 #' @param txt response text
-links_fill_parse_stats = function(txt){
+#' @param map named character, canonical field -> the layer's field (links_hpms_field_map); NULL = same names
+links_fill_parse_stats = function(txt, map = NULL){
   j = jsonlite::fromJSON(txt, simplifyVector = FALSE)
   if(!is.null(j$error)){ stop(paste0("statistics request failed: ", j$error$message)) }
   ft = j$features
   num = function(v){ if(is.null(v)){ NA_real_ } else { as.numeric(v) } }
-  col = function(name){ vapply(ft, function(f){ num(f$attributes[[name]]) }, 0) }
-  out = dplyr::tibble(f_system = col("f_system"), urban_id = col("urban_id"),
+  # attribute names compared in lower case; the group-by fields come back under the layer's own names
+  at = lapply(ft, function(f){ a = f$attributes; names(a) = tolower(names(a)); a })
+  nm = function(f){ tolower(if(!is.null(map) && f %in% names(map)){ map[[f]] } else { f }) }
+  col = function(name){ vapply(at, function(a){ num(a[[name]]) }, 0) }
+  out = dplyr::tibble(f_system = col(nm("f_system")), urban_id = col(nm("urban_id")),
                       vehmi = col("vehmi"), miles = col("miles"))
   out$roadTypeID = links_road_type(out$f_system, out$urban_id)
   out
 }
 
-#' Two requests: counted sections (aadt x length, length) and uncounted sections (length) of a county,
-#' facility_type 1 and 2 only (type 6 is the non-inventory direction, already in the other direction's aadt)
+#' Sum paged section rows (f_system, urban_id, vehmi, miles) into the statistics tibble
+#' @param rows tibble from the local path of links_fill_stats()
+links_fill_local_sum = function(rows){
+  if(nrow(rows) == 0){
+    return(dplyr::tibble(f_system = numeric(0), urban_id = numeric(0), vehmi = numeric(0), miles = numeric(0), roadTypeID = integer(0)))
+  }
+  out = rows %>% dplyr::group_by(f_system, urban_id) %>%
+    dplyr::summarise(vehmi = sum(vehmi, na.rm = TRUE), miles = sum(miles, na.rm = TRUE), .groups = "drop")
+  out$roadTypeID = links_road_type(out$f_system, out$urban_id)
+  out
+}
+
+#' Statistics of a county's sections, counted and uncounted, facility_type 1 and 2 only (type 6 is the
+#' non-inventory direction, already in the other direction's aadt)
+#' One metadata request (saved, like every request) maps the fields to the layer's own names
+#' (links_hpms_field_map). A layer without a section length field uses the milepost difference
+#' (end - begin, in the layer's names) as the statistic field when the server accepts expressions there
+#' (path "expression"); if it does not, the sections' mileposts are fetched in pages and summed here
+#' (path "local").
 #' @param service result of links_resolve_hpms()
 #' @param county county code without the state (109 for Tompkins)
 #' @param save_dir folder for the saved responses
 #' @param fetch fetch function for tests, NULL = curl
-#' @return list(counted, uncounted), each a tibble from links_fill_parse_stats()
-links_fill_stats = function(service, county, save_dir, fetch = NULL){
-  stat = function(where, stats){
-    txt = links_get(paste0(service$url, "/query"),
-                    query = list(where = where, outStatistics = as.character(jsonlite::toJSON(stats, auto_unbox = TRUE)),
-                                 groupByFieldsForStatistics = "f_system,urban_id", f = "json"),
-                    save_dir = save_dir, fetch = fetch)
-    links_fill_parse_stats(txt)
+#' @param page_size sections per request on the local path (the service limit is 2000)
+#' @return list(counted, uncounted), each a tibble from links_fill_parse_stats(); attributes path
+#'   ("layer field", "expression" or "local") and field_note (the line for the summary)
+links_fill_stats = function(service, county, save_dir, fetch = NULL, page_size = 2000L){
+  lay = links_hpms_layer(service, c("aadt", "f_system", "urban_id", "facility_type", "county_id"), save_dir, fetch)
+  if(length(lay$missing) > 0){
+    stop(paste0("HPMS layer ", service$service, " has no field ", paste(lay$missing, collapse = ", "),
+                "; the county statistics cannot be requested"))
   }
-  cc = paste0("county_id=", as.integer(county))
-  list(
-    counted = stat(paste0(cc, " AND aadt>0 AND facility_type IN (1,2)"), list(
-      list(statisticType = "sum", onStatisticField = "aadt*section_length", outStatisticFieldName = "vehmi"),
-      list(statisticType = "sum", onStatisticField = "section_length", outStatisticFieldName = "miles"))),
-    uncounted = stat(paste0(cc, " AND (aadt IS NULL OR aadt=0) AND facility_type IN (1,2)"), list(
-      list(statisticType = "sum", onStatisticField = "section_length", outStatisticFieldName = "miles"))))
+  map = lay$map
+  nm = function(f){ unname(map[[f]]) }
+  has_len = "section_length" %in% names(map)
+  if(!has_len && !all(c("begin_point", "end_point") %in% names(map))){
+    stop(paste0("HPMS layer ", service$service, " has neither a section length nor mileposts"))
+  }
+  len = if(has_len){ nm("section_length") } else { paste0("(", nm("end_point"), "-", nm("begin_point"), ")") }
+  aadt = nm("aadt")
+  grp = paste(nm("f_system"), nm("urban_id"), sep = ",")
+  cc = paste0(nm("county_id"), "=", as.integer(county))
+  ft = paste0(nm("facility_type"), " IN (1,2)")
+  w_counted = paste0(cc, " AND ", aadt, ">0 AND ", ft)
+  w_uncounted = paste0(cc, " AND (", aadt, " IS NULL OR ", aadt, "=0) AND ", ft)
+  url = paste0(service$url, "/query")
+  stat = function(where, stats){
+    txt = links_get(url, query = list(where = where, outStatistics = as.character(jsonlite::toJSON(stats, auto_unbox = TRUE)),
+                                      groupByFieldsForStatistics = grp, f = "json"),
+                    save_dir = save_dir, fetch = fetch)
+    links_fill_parse_stats(txt, map)
+  }
+  sv = function(expr, out){ list(statisticType = "sum", onStatisticField = expr, outStatisticFieldName = out) }
+  by_expr = function(){
+    list(counted = stat(w_counted, list(sv(paste0(aadt, "*", len), "vehmi"), sv(len, "miles"))),
+         uncounted = stat(w_uncounted, list(sv(len, "miles"))))
+  }
+  by_local = function(){
+    page = function(where){
+      pages = list(); offset = 0L
+      repeat{
+        txt = links_get(url, query = list(where = where, outFields = paste(c(grp, aadt, nm("begin_point"), nm("end_point")), collapse = ","),
+                                          returnGeometry = "false", orderByFields = lay$oid, resultOffset = offset,
+                                          resultRecordCount = page_size, f = "json"),
+                        save_dir = save_dir, fetch = fetch)
+        j = jsonlite::fromJSON(txt, simplifyVector = FALSE)
+        if(!is.null(j$error)){ stop(paste0("section request failed: ", j$error$message)) }
+        at = lapply(j$features, function(f){ a = f$attributes; names(a) = tolower(names(a)); a })
+        num = function(a, f){ v = a[[tolower(nm(f))]]; if(is.null(v)){ NA_real_ } else { as.numeric(v) } }
+        pages[[length(pages) + 1]] = dplyr::tibble(
+          f_system = vapply(at, num, 0, "f_system"), urban_id = vapply(at, num, 0, "urban_id"),
+          aadt = vapply(at, num, 0, "aadt"),
+          miles = vapply(at, function(a){ num(a, "end_point") - num(a, "begin_point") }, 0))
+        if(length(at) < page_size){ break }
+        offset = offset + as.integer(page_size)
+      }
+      dplyr::bind_rows(pages)
+    }
+    c1 = page(w_counted); c1$vehmi = c1$aadt * c1$miles
+    u1 = page(w_uncounted); u1$vehmi = 0
+    list(counted = links_fill_local_sum(c1), uncounted = links_fill_local_sum(u1))
+  }
+  if(has_len){
+    out = by_expr(); path = "layer field"
+    note = paste0("HPMS statistics: the layer's own section length field (", len, ")")
+  } else {
+    out = tryCatch(by_expr(), error = function(e){ NULL })
+    if(is.null(out)){
+      out = by_local(); path = "local"
+      note = paste0("HPMS statistics: layer has no section length; the server refused a milepost expression, so mileposts (",
+                    nm("begin_point"), ", ", nm("end_point"), ") were fetched and summed locally")
+    } else {
+      path = "expression"
+      note = paste0("HPMS statistics: layer has no section length; the server computed it as ", len, " (milepost difference)")
+    }
+  }
+  attr(out, "path") = path
+  attr(out, "field_note") = note
+  out
 }
 
 # 4. The rule, per road type ####
@@ -164,7 +245,8 @@ links_fill_core = function(roadtypes, V, C, U, Ub, v, fill = TRUE){
 #' @param tab result of links_fill_core()
 #' @param fill whether the fill was on
 #' @param box_counted optional tibble roadTypeID, miles, vehmi: counted links of the box
-links_fill_summary = function(tab, fill, box_counted = NULL){
+#' @param stats_note optional line saying how the county statistics were requested (links_fill_stats)
+links_fill_summary = function(tab, fill, box_counted = NULL, stats_note = NULL){
   f = function(x, d = 1){ ifelse(is.na(x), "-", format(round(x, d), nsmall = d, trim = TRUE, big.mark = "")) }
   out = paste0("Local-road remainder fill: ", ifelse(fill, "on", "off (no remainder links written)"))
   for(i in seq_len(nrow(tab))){
@@ -190,7 +272,7 @@ links_fill_summary = function(tab, fill, box_counted = NULL){
       out = c(out, paste0("  remainder share of the place's traffic: ", f(100 * rb / (rb + cv)), "%"))
     }
   }
-  out
+  c(out, stats_note)
 }
 
 # 6. Fill the links ####
@@ -295,6 +377,6 @@ links_fill = function(links, place, state, .runspec = "EPA_MOVES_Model/rs_custom
     out = links
   }
   attr(out, "fill") = tab
-  attr(out, "summary") = links_fill_summary(tab, fill, box_counted)
+  attr(out, "summary") = links_fill_summary(tab, fill, box_counted, attr(st, "field_note"))
   out
 }

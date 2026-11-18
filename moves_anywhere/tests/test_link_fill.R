@@ -105,11 +105,15 @@ new_bucket = function(vmt, rtf, rts){
   B
 }
 
-#' A fake fetch: serves the counted or the uncounted statistics response by what the request asks for
+meta25 = paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2025_layer_meta.json", warn = FALSE), collapse = "
+")
+#' A fake fetch: serves the layer metadata, the counted or the uncounted statistics response by what the request asks for
 make_fetch = function(counted, uncounted, seen = NULL){
   function(url){
     if(!is.null(seen)){ seen$urls = c(seen$urls, utils::URLdecode(url)) }
-    body = if(grepl("IS NULL", utils::URLdecode(url), fixed = TRUE)) uncounted else counted
+    u = utils::URLdecode(url)
+    body = if(!grepl("/query", u, fixed = TRUE)) meta25   # the layer metadata request
+           else if(grepl("IS NULL", u, fixed = TRUE)) uncounted else counted
     list(status = 200L, body = charToRaw(body))
   }
 }
@@ -201,6 +205,44 @@ for(r in c(3, 5)){
               r, a$V, a$C, a$R, 100 * a$R / a$V, a$U, a$link_length, a$link_volume))
 }
 cat(paste0("  ", attr(outt, "summary")), sep = "\n")
+
+# 3b. A 2022 layer (routeid, beginpoint, endpoint, no section_length): saved NY 2022 metadata ####
+meta22 = paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2022_layer_meta.json", warn = FALSE), collapse = "\n")
+svc22 = links_resolve_hpms("NY", listing = listing, year = 2022)
+# a server that accepts expressions, or one that answers an expression with an error and pages sections
+make_fetch22 = function(expr_ok, seen){
+  function(url){
+    u = utils::URLdecode(url); seen$urls = c(seen$urls, u)
+    body = if(!grepl("/query", u, fixed = TRUE)){ meta22
+    } else if(grepl("outStatistics", u, fixed = TRUE)){
+      if(!expr_ok){ '{"error":{"code":400,"message":"Invalid statistic field"}}'
+      } else if(grepl("IS NULL", u, fixed = TRUE)){ stats_json(list(list(f_system = 5, urban_id = 99999, miles = 10)))
+      } else { stats_json(list(list(f_system = 5, urban_id = 99999, vehmi = 2000, miles = 4))) }
+    } else if(grepl("aadt>0", u, fixed = TRUE)){
+      paste0('{"features":[{"attributes":{"f_system":5,"urban_id":99999,"aadt":100,"beginpoint":0,"endpoint":1}},',
+             '{"attributes":{"f_system":5,"urban_id":99999,"aadt":300,"beginpoint":1,"endpoint":4}}]}')
+    } else {
+      '{"features":[{"attributes":{"f_system":5,"urban_id":99999,"beginpoint":2,"endpoint":12.5}}]}'
+    }
+    list(status = 200L, body = charToRaw(body))
+  }
+}
+s22 = new.env(); s22$urls = character(0)
+st22 = links_fill_stats(svc22, 109, file.path(root, "s22"), fetch = make_fetch22(TRUE, s22))
+sr22 = s22$urls[grepl("outStatistics", s22$urls, fixed = TRUE)]
+check(identical(attr(st22, "path"), "expression"), "2022: the expression path is taken when the server accepts it")
+check(length(sr22) == 2 && all(grepl("county_id=109", sr22, fixed = TRUE)), "2022: statistics requests use county_id")
+check(all(grepl("(endpoint-beginpoint)", sr22, fixed = TRUE)) && !any(grepl("section_length", sr22, fixed = TRUE)),
+      "2022: the length is (endpoint-beginpoint), not section_length")
+check(all(grepl("groupByFieldsForStatistics=f_system,urban_id", sr22, fixed = TRUE)), "2022: group-by fields are the layer's names")
+check(near(st22$counted$vehmi, 2000) && near(st22$uncounted$miles, 10), "2022: expression-path values parsed")
+check(any(grepl("milepost difference", attr(st22, "field_note"))), "2022: the note names the path")
+s22b = new.env(); s22b$urls = character(0)
+st22b = links_fill_stats(svc22, 109, file.path(root, "s22b"), fetch = make_fetch22(FALSE, s22b))
+check(identical(attr(st22b, "path"), "local"), "2022: the local path is taken when the server refuses the expression")
+check(near(st22b$counted$miles, 4) && near(st22b$counted$vehmi, 100 * 1 + 300 * 3) && near(st22b$uncounted$miles, 10.5),
+      "2022: local sums (miles 4, veh-mi 1000, uncounted 10.5)")
+check(any(grepl("locally", attr(st22b, "field_note"))), "2022: the local path is named in the note")
 
 # 4. Result ####
 unlink(root, recursive = TRUE)
