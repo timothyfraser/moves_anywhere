@@ -2,19 +2,22 @@
 # run_gate.sh #################################################################
 #
 # What:      The gate: builds the image from a commit and runs every check, one after another.
-# Does:      Runs 12 steps (static, compare-unit, build, fixture, compare, manifest, pack, ticket,
-#            bad-table, sha, project-unit, project), never two containers at once, keeps going after a failure, and prints one
-#            summary line per step. The image is built from a clean `git archive HEAD` export, so it gets
-#            the committed LF scripts and the working tree is never touched.
+# Does:      Runs 13 steps (static, compare-unit, build, fixture, compare, manifest, pack, ticket,
+#            bad-table, sha, project-unit, project, replay), never two containers at once, keeps going after a
+#            failure, and prints one summary line per step. The image is built from a clean `git archive HEAD`
+#            export, so it gets the committed LF scripts and the working tree is never touched.
+#            --fast runs only static, compare-unit, build, project-unit, replay and the refusals of the project
+#            step (about 6 minutes, no MOVES run). It is for working, NOT a release gate: its summary says so.
 # Called by: Developer tool: the release gate. Not run by launch.sh.
 # Reads:     moves_anywhere/ (committed), moves_anywhere/inputs_ny (inputs and gold outputs),
 #            moves_anywhere/inputs_project (project-scale fixture), Docker
 # Writes:    moves_anywhere/tests/.work/gate/ (one log per step); temp folders, removed on exit unless --keep
 # Exits:     the number of failed steps (0 = gate passed); 2 on a usage error or if not run from the repo root
 # Usage: bash moves_anywhere/tests/run_gate.sh [--image <name:tag>] [--skip-build] [--only <step>]
-#                                              [--allow-dirty] [--keep]
+#                                              [--allow-dirty] [--keep] [--fast]
 # Run from the repository root. Default image: moves-anywhere:gate-<short git sha>.
-# --only runs one step: static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project
+# --only runs one step: static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project replay
+# --fast is the short gate; it cannot be combined with --only.
 ###############################################################################
 
 set -uo pipefail
@@ -23,10 +26,12 @@ set -uo pipefail
 export PYTHONDONTWRITEBYTECODE=1
 
 MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
-STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project"
-IMAGE=""; SKIP_BUILD=0; ONLY=""; ALLOW_DIRTY=0; KEEP=0
+STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project replay"
+FAST_STEPS="static compare-unit build project-unit replay project"
+FAST_LEFT="fixture compare manifest pack ticket bad-table sha project(full run)"
+IMAGE=""; SKIP_BUILD=0; ONLY=""; ALLOW_DIRTY=0; KEEP=0; FAST=0
 
-usage() { sed -n "14,17p" "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n "16,20p" "$0" | sed 's/^# \{0,1\}//'; }
 while [ $# -gt 0 ]; do
   case "$1" in
     --image) [ $# -ge 2 ] || { usage >&2; exit 2; }; IMAGE="$2"; shift 2 ;;
@@ -34,10 +39,14 @@ while [ $# -gt 0 ]; do
     --only) [ $# -ge 2 ] || { usage >&2; exit 2; }; ONLY="$2"; shift 2 ;;
     --allow-dirty) ALLOW_DIRTY=1; shift ;;
     --keep) KEEP=1; shift ;;
+    --fast) FAST=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "run_gate.sh: unknown option $1" >&2; usage >&2; exit 2 ;;
   esac
 done
+if [ "$FAST" = 1 ] && [ -n "$ONLY" ]; then
+  echo "run_gate.sh: --fast cannot be combined with --only" >&2; usage >&2; exit 2
+fi
 if [ -n "$ONLY" ]; then
   case " $STEPS " in *" $ONLY "*) ;; *) echo "run_gate.sh: unknown step $ONLY (steps: $STEPS)" >&2; exit 2 ;; esac
 fi
@@ -77,8 +86,11 @@ run_step() {
   if [ -n "$ONLY" ] && [ "$ONLY" != "$name" ]; then record SKIP "$name" 0; echo "(skipped)"; return; fi
   # A step that needs the image, or the finished fixture run, is skipped when that earlier step did not pass
   # (the earlier FAIL already fails the gate; running on would only bury the real cause).
+  if [ "$FAST" = 1 ]; then
+    case " $FAST_STEPS " in *" $name "*) ;; *) record SKIP "$name" 0; echo "(skipped: left for the full gate)"; return ;; esac
+  fi
   case "$name" in
-    fixture|ticket|bad-table|project)
+    fixture|ticket|bad-table|project|replay)
       if [ -z "$ONLY" ] && [ "$BUILD_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: no image, see step build)"; return; fi ;;
     compare|manifest|pack|sha)
       if [ -z "$ONLY" ] && [ "$FIXTURE_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: the fixture run did not finish)"; return; fi ;;
@@ -190,7 +202,7 @@ step_project_unit() {
     echo "FAIL: Rscript is not on PATH, so the project R unit tests could not run"; return 1
   fi
   local t bad=0
-  for t in test_project_functions test_adapt_link test_adapt_offnetwork test_importer_project test_linkdata test_runspec_project; do
+  for t in test_project_functions test_adapt_link test_adapt_offnetwork test_adapt_projectage test_importer_project test_linkdata test_runspec_project test_link_sources; do
     if [ ! -f "moves_anywhere/tests/$t.R" ]; then
       [ "$t" = test_runspec_project ] && { echo "(no $t.R, skipped)"; continue; }
       echo "missing moves_anywhere/tests/$t.R"; bad=1; continue
@@ -203,7 +215,14 @@ step_project_unit() {
   return "$bad"
 }
 
-step_project() { bash moves_anywhere/tests/test_project.sh --image "$IMAGE"; }
+step_project() {
+  if [ "$FAST" = 1 ]; then bash moves_anywhere/tests/test_project.sh --image "$IMAGE" --only-refusals
+  else bash moves_anywhere/tests/test_project.sh --image "$IMAGE"; fi
+}
+
+# replay: the summary step replayed from saved outputs inside the image (no MOVES run). No --prove: that
+# needs an image whose own script is unpatched, and the image built here is not.
+step_replay() { bash moves_anywhere/tests/test_summarize_replay.sh --image "$IMAGE"; }
 
 # 4. Run them, strictly in order ####
 T_ALL=$SECONDS
@@ -219,13 +238,20 @@ run_step 9  bad-table    step_bad_table
 run_step 10 sha          step_sha
 run_step 11 project-unit step_project_unit
 run_step 12 project      step_project
+run_step 13 replay       step_replay
 
 # 5. Summary ####
 echo
 echo "=== summary"
+if [ "$FAST" = 1 ]; then
+  echo "FAST: not a release gate"
+  echo "left for the full gate: $FAST_LEFT"
+fi
 for r in "${RESULTS[@]}"; do echo "$r"; done
 ID=$(docker image inspect --format '{{.Id}}' "$IMAGE" 2>/dev/null || echo unknown)
 echo "IMAGE $IMAGE $ID"
 echo "total ${SECONDS}s (steps: $((SECONDS - T_ALL))s)"
-if [ "$FAILED" = 0 ]; then echo "GATE: PASS"; else echo "GATE: FAIL ($FAILED steps)"; fi
+if [ "$FAST" = 1 ]; then
+  if [ "$FAILED" = 0 ]; then echo "FAST: PASS (not a release gate)"; else echo "FAST: FAIL ($FAILED steps; not a release gate)"; fi
+elif [ "$FAILED" = 0 ]; then echo "GATE: PASS"; else echo "GATE: FAIL ($FAILED steps)"; fi
 exit "$FAILED"

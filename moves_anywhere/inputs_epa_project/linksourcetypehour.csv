@@ -1,0 +1,8 @@
+linkID,sourceTypeID,sourceTypeHourFraction
+1,21,0.6
+1,62,0.4
+2,21,0.75
+2,62,0.25
+3,62,1
+4,62,1
+5,62,1

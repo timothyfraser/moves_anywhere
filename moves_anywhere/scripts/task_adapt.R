@@ -227,6 +227,11 @@ if(is_project(.runspec)){
                                 "offnetworklink", "opmodedistribution", "project_inputs"), ".csv"))
   # A county with no I/M programme cannot pass MOVES's own validation: say so now
   run_adapter("project runspec", project_check_im(.runspec = .runspec, BUCKET = BUCKET))
+  # Ages first: the off-network soak default reads the same table as MOVES
+  run_adapter("vehicle ages", {
+    source("scripts/adapt_projectage.R")
+    adapt_projectage(.runspec = .runspec, BUCKET = BUCKET)
+  })
   run_adapter("link", {
     source("scripts/adapt_link.R")
     adapt_link(.runspec = .runspec, BUCKET = BUCKET)
