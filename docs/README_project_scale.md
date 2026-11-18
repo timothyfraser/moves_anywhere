@@ -211,13 +211,20 @@ MOVES itself accepts a bad project command and then produces nothing, so the ima
 | `offnetworklink.csv sourceTypeID not in the run's vehicle types` | Use vehicle types the run file selects. |
 | `MOVES produced no results: ...` | MOVES refused the run. The reason ends with MOVES's own first error line; `moveslog.txt` in the folder has the rest. |
 
+## Hosted runs (Cloud MOVES)
+
+A hosted service can run a project folder through the ticket path described in [RUN_TICKET.md](RUN_TICKET.md).
+The outputs are the same files as a local run, compressed: `linkdata.csv.gz`, `moveslog.txt.gz`,
+`replication.tar.xz` and `run_manifest.json`.
+
+As of 2026-11-18 this is being tested on the CAT development tier only. It is not open to users.
+
 ## Limits
 
 - One hour per run. For several hours, make several runs, one folder each.
 - Built for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data and says there are no default values for off-network inputs. The defaults here do not replace that.
 - The image uses MOVES5. MOVES6 exists; this image has not moved to it yet.
 - Not tested: evaporative emissions, rate mode at project scale, runs with more than 7 links.
-- Ticket mode (the CAT website's order path) does not carry project runs yet. Use `run.sh` or sync mode.
 
 ---
 
