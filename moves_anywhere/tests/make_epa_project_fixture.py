@@ -107,13 +107,13 @@ def main(zip_path, outdir):
         ("Answer Key/link_source_type.xlsx", "linkSourceTypeHour", "linksourcetypehour.csv", [], False),
         ("Answer Key/off-network.xlsx", "offNetworkLink", "offnetworklink.csv", ["zoneID"], False),
         ("Answer Key/opmode_distribution.xlsx", "opModeDistribution", "opmodedistribution.csv", [], False),
-        ("Answer Key/hotelling.xlsx", "hotellingActivityDistribution", "hotellingactivitydistribution.csv", [], True),
+        ("Answer Key/hotelling.xlsx", "hotellingActivityDistribution", "workbook_only/hotellingactivitydistribution.csv", [], True),
         ("Answer Key/link_drive_schedule.xlsx", "driveScheduleSecondLink", "driveschedulesecondlink_run2.csv", [], False),
         ("age_distribution.xlsx", "SourceTypeAgeDistribution", "sourcetypeagedistribution.csv", [], True),
         ("fuels.xlsx", "FuelSupply", "fuelsupply.csv", [], True),
         ("fuels.xlsx", "FuelFormulation", "fuelformulation.csv", [], True),
         ("fuels.xlsx", "FuelUsageFraction", "fuelusagefraction.csv", [], True),
-        ("fuels.xlsx", "avft", "avft.csv", [], True),
+        ("fuels.xlsx", "avft", "workbook_only/avft.csv", [], True),
         ("met.xlsx", "zoneMonthHour", "zonemonthhour.csv", [], True),
     ]
     for wbname, sname, outname, drop, fips in plan:
@@ -126,6 +126,7 @@ def main(zip_path, outdir):
             row = [num(r[i]) for i in keep]
             if any(c != "" for c in row):
                 body.append(row + (["26161"] if fips else []))
+        os.makedirs(os.path.dirname(os.path.join(outdir, outname)), exist_ok=True)
         n = write_csv(os.path.join(outdir, outname), [header[i] for i in keep] + (["FIPS"] if fips else []), body)
         summary.append("%s [%s] -> %s: %d rows" % (wbname, sname, outname, n))
     print("\n".join(summary))

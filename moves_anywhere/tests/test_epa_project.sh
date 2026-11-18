@@ -51,6 +51,7 @@ fresh_copy() {
   local d=$1 f b
   rm -rf "$d"; mkdir -p "$d"
   for f in "$FIXTURE"/*; do
+    [ -f "$f" ] || continue   # workbook_only/ holds tables EPA's run did not read
     b=$(basename "$f")
     case "$b" in epa_*.csv|README.md|driveschedulesecondlink_run2.csv) continue ;; esac
     cp "$f" "$d/" || { echo "cannot copy $b"; return 1; }
