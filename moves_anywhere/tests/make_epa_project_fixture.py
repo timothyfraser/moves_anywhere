@@ -107,7 +107,7 @@ def main(zip_path, outdir):
         ("Answer Key/link_source_type.xlsx", "linkSourceTypeHour", "linksourcetypehour.csv", [], False),
         ("Answer Key/off-network.xlsx", "offNetworkLink", "offnetworklink.csv", ["zoneID"], False),
         ("Answer Key/opmode_distribution.xlsx", "opModeDistribution", "opmodedistribution.csv", [], False),
-        ("Answer Key/hotelling.xlsx", "hotellingActivityDistribution", "hotelling_epa.csv", [], False),
+        ("Answer Key/hotelling.xlsx", "hotellingActivityDistribution", "hotellingactivitydistribution.csv", [], True),
         ("Answer Key/link_drive_schedule.xlsx", "driveScheduleSecondLink", "driveschedulesecondlink_run2.csv", [], False),
         ("age_distribution.xlsx", "SourceTypeAgeDistribution", "sourcetypeagedistribution.csv", [], True),
         ("fuels.xlsx", "FuelSupply", "fuelsupply.csv", [], True),
