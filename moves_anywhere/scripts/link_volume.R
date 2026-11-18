@@ -7,7 +7,11 @@
 #            linkVolume = sum over vehicle types s of aadt_scaled x 365 x a[s] x monthVMTFraction[s]
 #              x (7 / noOfDays) x dayVMTFraction[s, r] / noOfRealDays x hourVMTFraction[s, r],
 #            with aadt_scaled = aadt x dir_share x year_factor, r the link's road type and a[s] the
-#            default vehicle mix of link_default_mix(). Where k_factor is present it records the
+#            default vehicle mix of link_default_mix(). With the optional argument mix (the rows
+#            links_mix() returns: linkID, sourceTypeID, sourceTypeHourFraction) a link that has rows
+#            there uses its own shares as a[s] (the run's vehicle types only, renormalised to 1 with a
+#            default source row when they do not sum to 1); links without rows keep the default mix,
+#            and without mix every result is as before. Where k_factor is present it records the
 #            design-hour volume as a cross-check (not used). Links with direction "remainder" are
 #            left untouched.
 # Limits:    noOfDays is MOVES' monthofanyyear value, which has 28 days for February in every year
@@ -49,9 +53,13 @@ links_vmt_year = function(geoid,
 #' @param spec result of project_spec()
 #' @param BUCKET inputs folder
 #' @param .runspec path to the run's runspec (XML)
-#' @return tibble roadTypeID, hour_share (linkVolume = aadt_scaled x 365 x hour_share)
-links_hour_share = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_MOVES_Model/rs_custom.xml"){
-  mix = link_default_mix(roadtypes, spec, BUCKET, .runspec)
+#' @param own_mix NULL, or a tibble linkID, roadTypeID, sourceTypeID, share (a link's own mix); the
+#'   hour share is then given per linkID instead of per road type
+#' @return tibble roadTypeID, hour_share (linkVolume = aadt_scaled x 365 x hour_share); with own_mix,
+#'   tibble linkID, hour_share
+links_hour_share = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_MOVES_Model/rs_custom.xml",
+                            own_mix = NULL){
+  mix = if(is.null(own_mix)) link_default_mix(roadtypes, spec, BUCKET, .runspec) else own_mix
   month = project_read("monthvmtfraction", .runspec, BUCKET, spec = spec)
   day = project_read("dayvmtfraction", .runspec, BUCKET, spec = spec)
   hour = project_read("hourvmtfraction", .runspec, BUCKET, spec = spec)
@@ -60,7 +68,7 @@ links_hour_share = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_
   if(is.null(days) || is.na(days) || days <= 0){ stop(paste0("no noOfDays for month ", spec$month[1])) }
   if(is.null(real) || is.na(real) || real <= 0){ stop(paste0("no noOfRealDays for day ", spec$day[1])) }
 
-  mix %>%
+  out = mix %>%
     dplyr::left_join(by = "sourceTypeID", y = month %>%
       dplyr::select(sourceTypeID = sourcetypeid, monthvmtfraction) %>% dplyr::distinct()) %>%
     dplyr::left_join(by = c("sourceTypeID", "roadTypeID"), y = day %>%
@@ -70,8 +78,9 @@ links_hour_share = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_
     dplyr::mutate(
       term = share * monthvmtfraction * (7 / days) * dayvmtfraction / real * hourvmtfraction,
       term = ifelse(is.na(term), 0, term)) %>%
-    dplyr::group_by(roadTypeID) %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(if(is.null(own_mix)) "roadTypeID" else "linkID"))) %>%
     dplyr::summarise(hour_share = sum(term), .groups = "drop")
+  out
 }
 
 # 3. The links ####
@@ -83,10 +92,12 @@ links_hour_share = function(roadtypes, spec, BUCKET = "inputs", .runspec = "EPA_
 #' @param BUCKET inputs folder holding the county tables
 #' @param spec result of project_spec(); read from .runspec when NULL
 #' @param vmt_year function (year) -> the county's miles, all vehicle types; links_vmt_year() when NULL
+#' @param mix NULL (default mix for every link) or the rows links_mix() returns (linkID, sourceTypeID,
+#'   sourceTypeHourFraction); a link with rows there uses them as its vehicle mix
 #' @return links with linkVolume, year_factor, aadt_scaled; attribute sources
 #'   (linkID, field, value, source, detail, data_year)
 links_volume = function(links, .runspec = "EPA_MOVES_Model/rs_custom.xml", BUCKET = "inputs",
-                        spec = NULL, vmt_year = NULL){
+                        spec = NULL, vmt_year = NULL, mix = NULL){
   if(is.null(spec)){ spec = project_spec(.runspec) }
   if(is.null(vmt_year)){ vmt_year = links_vmt_year(spec$geoid[1]) }
   run_year = spec$year[1]
@@ -149,12 +160,39 @@ links_volume = function(links, .runspec = "EPA_MOVES_Model/rs_custom.xml", BUCKE
   links$aadt_scaled[todo] = aadt_dir * links$year_factor[todo]
   share = links_hour_share(links$roadTypeID[todo], spec, BUCKET, .runspec)
   h = share$hour_share[match(links$roadTypeID[todo], share$roadTypeID)]
+  mixed = rep(FALSE, length(todo))
+  mix_note = rep(NA_character_, length(todo))
+  if(!is.null(mix) && nrow(mix) > 0){
+    types = spec$sourcetypes
+    own = mix %>% dplyr::filter(linkID %in% links$linkID[todo], sourceTypeID %in% types) %>%
+      dplyr::transmute(linkID, sourceTypeID, share = sourceTypeHourFraction)
+    ids = unique(own$linkID)
+    if(length(ids) > 0){
+      tot = tapply(own$share, own$linkID, sum)
+      own = own %>% dplyr::mutate(share = share / tot[as.character(linkID)],
+                                  roadTypeID = links$roadTypeID[match(linkID, links$linkID)])
+      lh = links_hour_share(NULL, spec, BUCKET, .runspec, own_mix = own)
+      pos = match(ids, links$linkID[todo])
+      h[pos] = lh$hour_share[match(ids, lh$linkID)]
+      mixed[pos] = TRUE
+      for(j in seq_along(ids)){
+        if(abs(tot[[as.character(ids[j])]] - 1) > 1e-6){
+          sources = dplyr::bind_rows(sources, dplyr::tibble(
+            linkID = ids[j], field = "linkVolume_mix", value = tot[[as.character(ids[j])]], source = "default",
+            detail = paste0("the link's mix summed to ", signif(tot[[as.character(ids[j])]], 6),
+                            " over the run's vehicle types; renormalised to 1"),
+            data_year = links$count_year[links$linkID == ids[j]][1]))
+        }
+      }
+    }
+  }
   links$linkVolume[todo] = round(links$aadt_scaled[todo] * 365 * h, 3)
   sources = dplyr::bind_rows(sources, dplyr::tibble(
     linkID = links$linkID[todo], field = "linkVolume", value = links$linkVolume[todo], source = "derived",
     detail = paste0("AADT ", links$aadt[todo], " x direction share ", links$dir_share[todo],
                     " x year factor ", signif(links$year_factor[todo], 6), " (", links$count_year[todo],
-                    " to ", run_year, "), spread by the county's month, day and hour shares"),
+                    " to ", run_year, "), spread by the county's month, day and hour shares, ",
+                    ifelse(mixed, "link's truck-count mix", "county default mix")),
     data_year = links$count_year[todo]))
 
   # Design-hour cross-check from the federal K factor (not used)

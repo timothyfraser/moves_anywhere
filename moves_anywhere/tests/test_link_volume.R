@@ -146,7 +146,42 @@ out = links_volume(rem, rs, B, spec = spec, vmt_year = same_miles)
 check(out$linkVolume[2] == 77 && near(out$linkVolume[1], flat), "remainder links are untouched")
 check(!2 %in% attr(out, "sources")$linkID, "remainder links get no source rows")
 
-# 8. Result ####
+# 8. The link's own mix ####
+# Without mix: identical to today's (mix = NULL against an empty mix)
+a0 = links_volume(make_links(n = 2, dir_share = c(0.6, 0.4), direction = c("primary", "opposite")),
+                  rs, B2, spec = spec, vmt_year = same_miles)
+a1 = links_volume(make_links(n = 2, dir_share = c(0.6, 0.4), direction = c("primary", "opposite")),
+                  rs, B2, spec = spec, vmt_year = same_miles, mix = NULL)
+check(identical(a0, a1), "mix = NULL gives the same result as no mix argument")
+check(all(grepl("county default mix", attr(a0, "sources")$detail[attr(a0, "sources")$field == "linkVolume"])),
+      "no mix: detail says county default mix")
+
+# A link whose mix is all type 61 trucks takes type 61's hour share (hour 8 doubled for every type here,
+# so give 61 its own hour share: 3 / 24)
+if(61 %in% st){
+  B4 = new_bucket()
+  hv = read_csv(paste0(B4, "/_hourvmtfraction.csv"), show_col_types = FALSE) %>%
+    mutate(hourVMTFraction = ifelse(hourID == 8 & sourceTypeID == 61, 3 / 24, hourVMTFraction))
+  write_csv(hv, paste0(B4, "/_hourvmtfraction.csv"))
+  mx = tibble(linkID = 1, sourceTypeID = 61, sourceTypeHourFraction = 1)
+  base = links_volume(make_links(n = 2), rs, B4, spec = spec, vmt_year = same_miles)
+  own = links_volume(make_links(n = 2), rs, B4, spec = spec, vmt_year = same_miles, mix = mx)
+  check(near(own$linkVolume[1], 3 * 1000), paste0("all-61 mix takes type 61's hour share (got ", own$linkVolume[1], ")"))
+  check(own$linkVolume[2] == base$linkVolume[2], "link without mix rows keeps the default mix")
+  so = attr(own, "sources"); so = so[so$field == "linkVolume", ]
+  check(grepl("link's truck-count mix", so$detail[1], fixed = TRUE) && grepl("county default mix", so$detail[2], fixed = TRUE),
+        "source detail names the mix used")
+  # Shares not summing to 1 are renormalised, with a default row
+  mx2 = tibble(linkID = 1, sourceTypeID = 61, sourceTypeHourFraction = 0.5)
+  own2 = links_volume(make_links(n = 2), rs, B4, spec = spec, vmt_year = same_miles, mix = mx2)
+  check(near(own2$linkVolume[1], 3000), "mix summing to 0.5 is renormalised")
+  s2 = attr(own2, "sources")
+  check(any(s2$linkID == 1 & s2$source == "default" & grepl("renormalised", s2$detail)), "renormalisation has a default row")
+}else{
+  failures = c(failures, "test run lacks source type 61")
+}
+
+# 9. Result ####
 unlink(root, recursive = TRUE)
 if(length(failures) > 0){
   cat("FAIL\n", paste0("- ", failures, collapse = "\n"), "\n")
