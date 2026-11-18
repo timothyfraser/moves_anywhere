@@ -116,7 +116,7 @@ project result inherits every one of these assumptions.
 | Input | In the default database? | What MOVES Anywhere does by default | Assumption you are accepting |
 |---|---|---|---|
 | Vehicle ages | Yes, a national distribution for each year | Takes the national rows for the run's year | Your county's fleet has the national age profile |
-| Fuel supply and formulation | Yes, by fuel region | **Uses a fixed New York metropolitan fuel supply and formulation** shipped with the image (`scripts/fuelsupply.csv`, `scripts/fuelformulation.csv`), relabelled with the county's fuel region and the run's year | Fuel everywhere is like New York metro fuel. This matters little for CO2 and more for CO, NOx, particulates and evaporation. The default database does hold regional fuel; the code path that would use it is commented out, and we did not find the reason recorded |
+| Fuel supply and formulation | Yes, by fuel region | **Uses a fixed New York metropolitan fuel supply and formulation** shipped with the image (`scripts/fuelsupply.csv`, `scripts/fuelformulation.csv`), relabelled with the county's fuel region and the run's year | Fuel everywhere is like New York metro fuel. This matters little for CO2 and more for CO, NOx, particulates and evaporation. The default database does hold regional fuel, and the code path that would use it is commented out on purpose: the New York fuel stays the default for every county because MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against (decision D92, 2026-11-18) |
 | Fuel usage, engine technology shares (`AVFT`) | Yes | Default tables, estimated where needed | National technology and fuel-use shares |
 | Weather | Yes, by county, month and hour | Takes the county's default rows | A typical month, not the day you care about |
 | Inspection programme | Yes, for counties that have one | Takes the county's rows; writes nothing if there are none | EPA's description of the programme is current |
@@ -664,7 +664,7 @@ dependency.
 | Check every link and pollutant appears in the output (red team 5) | Backlog | |
 | Warn on 0 mph links in `diagnostics.txt` (red team 7) | Backlog | |
 | A flag on each `linkdata.csv` row for "used a default" (red team 1) | Backlog | |
-| Regional fuel instead of New York's (red team 3) | Backlog, affects county runs too | Needs the reason the regional path was disabled |
+| Regional fuel instead of New York's (red team 3) | Decided: New York fuel stays the default for every county (D92, 2026-11-18) | MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against. A user can still supply `fuelsupply.csv` and `fuelformulation.csv` |
 | Many hours in one command | Backlog | Each hour is a separate MOVES run |
 | Run time for 20, 50, 200 links | Backlog | |
 | EPA's MOVES5 training exercise as a reference | Done (section 7.6) | The corrected run is the one reported |

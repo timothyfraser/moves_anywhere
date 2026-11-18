@@ -30,6 +30,8 @@ bash moves_anywhere/links.sh my_run --place 36109 --state NY
 bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite
 ```
 
+**Inside an ordinary run.** The same builder also runs from `parameters.json`, with no separate command. Give a project `parameters.json` (`"level": "project"`) with a `place`, and optionally `max_links`, in a folder with no `link.csv`, then run `run.sh <folder>`. The image builds the links first, takes the state from the first two digits of `geoid`, and then runs MOVES on them in the same run. The folder does not need an `rs_custom.xml`: the image writes a provisional one for the builder, then writes the real one from the road types in the new `link.csv`. `parameters.json` has no key for `--no-fill`, so the remainder link stays on, and a refusal stops the run with the same `links:` line. Use `links.sh` when you want to check the links before MOVES runs. The keys are listed in [Project-scale runs](README_project_scale.md).
+
 The command needs Docker running. Exit codes: 0 links written; 2 a usage error or a missing input; 3 Docker is missing or not running. If the builder refuses (for example, too many links), it prints one line starting `links:` and writes the same line to `link_summary.txt`.
 
 ## What it writes

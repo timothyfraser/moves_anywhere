@@ -8,14 +8,59 @@ A county run estimates a whole county for a year. A project run estimates indivi
 
 Project runs use the same `run.sh` as county runs. The image reads your `link.csv`, fills in everything else from county data, runs MOVES, and writes the results by link.
 
+## Quick start: one settings file
+
+A project run can start from one settings file. Make a new folder and put in it:
+
+- `parameters.json`, with `"level": "project"` and the county, year, month, day type and hour;
+- `link.csv`, or a `place` in `parameters.json` so that the image builds the links from federal road data first (see [Building links](README_link_sources.md)).
+
+Then run `run.sh <folder>`. The image writes the run file, `rs_custom.xml`, itself. For example, copy `moves_anywhere/inputs_project/` to a new folder, delete its `rs_custom.xml`, and put this in its `parameters.json`:
+
+```json
+{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+```
+
+That names the same county, year, month, day type and hour as the fixture's own run file. The road types (1, 4 and 5) come from the folder's `link.csv`, and the pollutants are the default list below, the same 21 the fixture's run file selects. The next section lists every key.
+
+## `parameters.json` for a project run
+
+Only a `parameters.json` with `"level": "project"` is read this way. Without that key, or with any other value, the file is a county run's settings and this step is skipped. Capitals do not matter in `level`, `day`, `age_source` and `project_ages`. Keys not in the table are ignored, and the log lists them (`parameters.json: ignored keys: ...`). A file that is not valid JSON stops the run with `parameters.json: not valid JSON (...)`.
+
+A refused key stops the run before MOVES starts, with exit code 1 and one line that names the key. For a missing required key the line is `parameters.json: <key> must be given for a project run: <allowed values>`; for a wrong value it is `parameters.json: <key> must be <allowed values>`. The table quotes the part after `must be`.
+
+| Key | Needed | Allowed values | Default | If it is wrong |
+|----|----|----|----|----|
+| `level` | Required | `"project"` | none | Any other value, or none: a county run (see above). |
+| `geoid` | Required | A 5-digit county FIPS code, as a string (`"36109"`) or a number (a lost leading zero is put back: `1001` is `01001`). The state must be one of the 50 states, DC or Puerto Rico. | none | `geoid must be a 5-digit county FIPS code, e.g. "36109"`; outside those states, `geoid must be a county FIPS code in one of the 50 states, DC or PR` |
+| `year` | Required | 1990 to 2060 | none | `year must be a year from 1990 to 2060` |
+| `month` | Required | 1 to 12 | none | `month must be a month from 1 to 12` |
+| `day` | Required | `"weekday"` or `"weekend"`, or MOVES's codes 5 (weekday) and 2 (weekend) | none | `day must be "weekday", "weekend", 5 or 2` |
+| `hour` | Required | 1 to 24, in MOVES's numbering: hour 8 is 7:00 to 7:59 | none | `hour must be an hour from 1 to 24 (8 is 7:00 to 7:59)` |
+| `pollutant` | Optional | A list of MOVES pollutant IDs, for example `[90, 3]` | The 21 a county run file gets: 90, 98, 2, 118, 112, 119, 5, 33, 32, 6, 3, 100, 110, 106, 107, 116, 117, 115, 31, 91, 1 <!-- source: moves_anywhere/scripts/project_parameters.R, PROJECT_POLLUTANTS; moves_anywhere/inputs_ny/parameters.json --> | `pollutant must be a list of MOVES pollutant IDs (positive whole numbers)` |
+| `roadtypes` | Optional | A list of road types from 1 to 5, for example `[1, 4, 5]` | The road types in `link.csv` | `roadtypes must be a list of road types from 1 to 5`. With no `roadtypes`, no `link.csv` and no `place`, the run stops with `task_runspec.R failed: could not make rs_custom.xml from parameters.json`. |
+| `place` | Optional | A box `"west,south,east,north"` in degrees, or a 5-digit county FIPS code as a string | none: you give `link.csv` | `place must be a box "west,south,east,north" (degrees, west < east, south < north) or a 5-digit county FIPS code`. Used only when the folder has no `link.csv`. If the link builder refuses, the run stops with `links: ` and the builder's reason. |
+| `max_links` | Optional | A whole number of 1 or more | 40 | `max_links must be a positive whole number` |
+| `age_source` | Optional | `national`, `county` or `county_adjusted` (see "County ages" below) | `national` | The run stops at the adapt step with `age_source must be national, county or county_adjusted (found ...)`. |
+| `project_ages` | Optional | `travel` or `registration` (see "Vehicle ages" below) | `travel` | The run stops at the adapt step with `project_ages must be travel or registration (found ...)`. |
+
+What the image does with the file, in order:
+
+1. If the folder has no `link.csv` and `parameters.json` gives a `place`, it builds the links first, as [`links.sh`](README_link_sources.md) does. The state comes from the first two digits of `geoid`, and `max_links` sets the link limit.
+2. If the folder has no `rs_custom.xml`, it writes one from `parameters.json`.
+3. If you supplied `rs_custom.xml`, your file is used, and the `pollutant` and `roadtypes` keys are not. It must name the same county, year, month, day type and hour as `parameters.json`, or the run stops with a line such as `parameters.json: rs_custom.xml disagrees on hour: run file 9, parameters.json 8`.
+
+The run file is then checked against the rules in "How to get a project `rs_custom.xml`", as any project run file is. County runs never go through this step.
+
 ## What you put in the folder
 
 Put these files in the run folder, next to the others a county run uses. Column names are exact; capitals do not matter.
 
 | File | Needed | Columns | What a blank means |
 |----|----|----|----|
-| `rs_custom.xml` | Required | The run file; see the next section. | n/a |
-| `link.csv` | Required | `linkID`, `roadTypeID`, `linkLength` (miles), `linkVolume` (vehicles in the hour) are required. Optional: `linkAvgSpeed` (mph), `linkAvgGrade` (percent), `linkDescription`, `countyID`, `zoneID`. | Blank `linkAvgSpeed` on a road link: taken from the link's drive schedule if it has one (its mean speed), else from the county's speed distribution. Blank grade is 0. Blank `countyID` and `zoneID` are filled (county, and county times 10). A given `countyID` or `zoneID` must match the run's county. Description is cut at 50 characters. An `aadt` column is ignored in this release. |
+| `parameters.json` | Required for the one-file start above; otherwise optional | The run's settings; see the section above. | n/a |
+| `rs_custom.xml` | Required unless `parameters.json` says `"level": "project"` (then the image writes it) | The run file; see the next section. | n/a |
+| `link.csv` | Required unless `parameters.json` gives a `place` (then the image builds it) | `linkID`, `roadTypeID`, `linkLength` (miles), `linkVolume` (vehicles in the hour) are required. Optional: `linkAvgSpeed` (mph), `linkAvgGrade` (percent), `linkDescription`, `countyID`, `zoneID`. | Blank `linkAvgSpeed` on a road link: taken from the link's drive schedule if it has one (its mean speed), else from the county's speed distribution. Blank grade is 0. Blank `countyID` and `zoneID` are filled (county, and county times 10). A given `countyID` or `zoneID` must match the run's county. Description is cut at 50 characters. An `aadt` column is ignored in this release. |
 | `offnetworklink.csv` | Required if any link has `roadTypeID` 1 | `sourceTypeID` and `vehiclePopulation` (vehicles in the lot) are required. Optional: `startFraction` (share of them that start in the hour), `extendedIdleFraction`, `parkedVehicleFraction`; each 0 to 1. | A vehicle type you leave out gets population 0. Blank `startFraction` is filled (see below). Blank `extendedIdleFraction` is 0. Blank `parkedVehicleFraction` is 1. |
 | `linksourcetypehour.csv` | Optional | `linkID`, `sourceTypeID`, `sourceTypeHourFraction`. Shares of each road link's traffic by vehicle type; they must add up to 1 for each link. | A road link with no rows gets the default vehicle mix. No rows for the off-network link. |
 | `driveschedulesecondlink.csv` | Optional | `linkID`, `secondID` (1, 2, 3, ...), `speed`; optional `grade`. A second-by-second speed trace of one link. | Blank grade is 0. Road links only. |
@@ -41,7 +86,7 @@ A project run file is a county run file with different settings. The image refus
 12. In a county with no vehicle inspection (I/M) programme, MOVES's own input validation is off: `<skipdomaindatabasevalidation selected="true"/>`. With it on, MOVES treats the empty inspection table as missing and stops without a reason. The helper below writes it off, as `catr` does for county run files; the rules here do the checking instead.
 13. The folder holds no county result (`data.csv` or `data.csv.gz`) from an earlier run. Use a new folder for a project run.
 
-The domain is `<modeldomain value="PROJECT"/>`, which is what tells the image this is a project run. You can write the file by hand, or let the helper `task_runspec.R` make it. Set `LEVEL=project` and give `GEOID`, `YEAR`, `MONTH`, `DAY` (2 for weekend, 5 for weekday) and `HOUR` (1 to 24; hour 8 is 7:00 to 7:59) as environment variables. `ROADTYPES` (for example `1,4,5`) is optional; without it the helper reads the road types in `inputs/link.csv`. The helper keeps only the processes tested at project scale (running exhaust, brake wear, tire wear, crankcase running exhaust, and with road type 1 also starts, crankcase start, extended idle and auxiliary power) and checks the result against the rules above.
+The domain is `<modeldomain value="PROJECT"/>`, which is what tells the image this is a project run. With a project `parameters.json` (see the quick start) you do not need to write this file: the image writes it with `task_runspec.R` and the values in `parameters.json`. You can still write the file by hand, or run the helper `task_runspec.R` yourself. Set `LEVEL=project` and give `GEOID`, `YEAR`, `MONTH`, `DAY` (2 for weekend, 5 for weekday) and `HOUR` (1 to 24; hour 8 is 7:00 to 7:59) as environment variables. `ROADTYPES` (for example `1,4,5`) is optional; without it the helper reads the road types in `inputs/link.csv`. The helper keeps only the processes tested at project scale (running exhaust, brake wear, tire wear, crankcase running exhaust, and with road type 1 also starts, crankcase start, extended idle and auxiliary power) and checks the result against the rules above.
 
 The worked example is `moves_anywhere/inputs_project/rs_custom.xml`: Tompkins County, NY (36109), 2022, month 7, day 5 (weekday), hour 8, road types 1, 4 and 5.
 
@@ -85,7 +130,13 @@ With the default, NOx and exhaust PM2.5 are within 10 percent of the county run 
 
 To keep the registration ages instead, set `PROJECT_AGES=registration` in the environment, or put `"project_ages": "registration"` in `parameters.json` in the run folder. The environment variable wins. Any other value stops the run. A `sourcetypeagedistribution.csv` that you supply is used as given, with no weighting. `diagnostics.txt` and `_project_inputs.csv` record which ages were used.
 
-**County ages (off by default).** The default age table is national. With `AGE_SOURCE=county` (or `"age_source": "county"` in `parameters.json`), the run uses EPA's National Emissions Inventory age tables for the run's county: the county's own rows in 2020 and 2023, and in other years the national table adjusted age by age by the county-to-national ratio of the nearest inventory year (each ratio kept between 0.25 and 4). Long-haul truck types (53 and 62) always keep the national table. This needs the reference file `scripts/reference/nei_sourcetypeagedistribution.rds`, which is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023; built by `dev/make_nei_ages_reference.R`); the switch is off by default. If the file is missing or the county is not in it, the run uses the national table and says so in `_age_source.txt`; it does not fail. A table you supply still wins. For a project run the travel weighting is applied on top of whichever table is chosen. The effect on one county (Tompkins, NY, 2022, county run, from a partial reference file): county ages gave CO2 0.962, NOx 0.676, exhaust PM2.5 0.716, CO 0.722 and hydrocarbons 0.687 of the national-age result; cars are 1.9 years younger and light trucks 2.3 to 3.4 years younger. <!-- source: release/county_ages_effect.csv --> The default stays national until this has been reviewed.
+**County ages (`age_source`, national by default).** The age table has three settings: `"age_source"` in `parameters.json`, or `AGE_SOURCE` in the environment (the environment wins). They work the same in county and project runs.
+
+- `national` (the default): the national table for the run year, as in earlier releases.
+- `county`: the county's own table from EPA's National Emissions Inventory (NEI), from the nearest inventory year, used as is. Run years up to 2021 take 2020; 2022 and later take 2023.
+- `county_adjusted`: the national table adjusted to the county. In 2020 and 2023 it is the county's own table. In other years it is the national table for the run year, multiplied age by age by the county-to-national ratio of the nearest inventory year; between 2020 and 2023 the two years' ratios are interpolated in a straight line. Each ratio is kept between 0.25 and 4.
+
+Both county settings rescale the shares to add up to 1 for each vehicle type, and long-haul truck types (53, long-haul single-unit trucks, and 62, long-haul combination trucks) always keep the national table. They need the reference file `scripts/reference/nei_sourcetypeagedistribution.rds`, which is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023; built by `dev/make_nei_ages_reference.R`). If the file is missing or the county is not in it, the run uses the national table and says so in `_age_source.txt`; it does not fail. Any other value stops the run. A table you supply still wins. For a project run the travel weighting is applied on top of whichever table is chosen. One measurement exists (Tompkins, NY, 2022, county run): county ages gave CO2 0.962, NOx 0.676, exhaust PM2.5 0.716, CO 0.722 and hydrocarbons 0.687 of the national-age result; cars were 1.9 years younger and light trucks 2.3 to 3.4 years younger. <!-- source: release/county_ages_effect.csv --> It was made before the setting was split in three, with the earlier `county` setting and a partial reference file (2020 for New York only); it has not been repeated for `county` or `county_adjusted`. The default stays national until this has been reviewed.
 
 ## What you get back
 
@@ -178,11 +229,12 @@ Files that implement a project run (all in `moves_anywhere/scripts/`):
 - `adapt_link.R`: `link.csv`, vehicle mix, drive schedules. `adapt_offnetwork.R`: `offnetworklink.csv`, soak times.
 - `task_adapt.R`: calls the adapters for a project run only. `importer.R`, `task_check_import.R`: load and check the link tables.
 - `task_postprocess.R`, `task_get_linkdata.R`: write `linkdata.csv`. `task_summarize.R`: `diagnostics.txt`. `task_pack.sh`: manifest result check.
-- `task_runspec.R`: the `LEVEL=project` helper.
+- `project_parameters.R`: reads and checks a project `parameters.json` (`project_params`), checks that a supplied run file agrees with it (`project_params_agree`), and gives the state for the link builder (`project_state`). As a script it prints shell lines for step 1b of `launch.sh` (`env`) or runs the agreement check (`agree`). Test: `tests/test_project_parameters.R`.
+- `task_runspec.R`: the `LEVEL=project` helper. When `parameters.json` says `"level": "project"`, every value comes from that file. Step 1b of `launch.sh` runs it when the folder has no `rs_custom.xml`.
 
 Tests, from the repository root: `Rscript moves_anywhere/tests/<name>.R` for `test_project_functions`, `test_adapt_link`, `test_adapt_offnetwork`, `test_importer_project`, `test_linkdata`, `test_runspec_project` (no Docker); `bash moves_anywhere/tests/test_pack_project.sh`; `bash moves_anywhere/tests/test_project.sh --image <image>` (Docker; full fixture run and refusals). The gate steps are `project-unit` and `project` in `moves_anywhere/tests/run_gate.sh`.
 
-Age files: `adapt_projectage.R` (travel weighting and the `PROJECT_AGES` switch; called by `task_adapt.R` after the county adapters and before `adapt_link.R`), `adapt_ages_county.R` (the `AGE_SOURCE` setting and the county table; sourced by `adapt_sourcetypeagedistribution.R`). Tests: `tests/test_adapt_projectage.R`, `tests/test_adapt_ages_county.R`, `tests/test_nei_ages_reference.R`. The reference file is included in the image and was built by `dev/make_nei_ages.py` and `dev/make_nei_ages_reference.R`.
+Age files: `adapt_projectage.R` (travel weighting and the `PROJECT_AGES` switch; called by `task_adapt.R` after the county adapters and before `adapt_link.R`), `adapt_ages_county.R` (the `AGE_SOURCE` setting, `national`, `county` or `county_adjusted`, and the county table; sourced by `adapt_sourcetypeagedistribution.R`). Tests: `tests/test_adapt_projectage.R`, `tests/test_adapt_ages_county.R`, `tests/test_nei_ages_reference.R`. The reference file is included in the image and was built by `dev/make_nei_ages.py` and `dev/make_nei_ages_reference.R`.
 
 Gate and tests (all from the repository root; Docker for the ones that name an image):
 
