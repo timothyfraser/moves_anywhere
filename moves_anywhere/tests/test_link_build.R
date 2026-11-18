@@ -47,6 +47,35 @@ check(identical(rt(1, 41914), 4L), "f_system 1 urban is road type 4")
 check(identical(rt(2, 41914), 4L), "f_system 2 urban is road type 4")
 check(identical(rt(7, 41914), 5L), "f_system 7 urban is road type 5")
 
+# access_control counts only on class 2: 1 or missing restricted, 2 and 3 unrestricted
+rta = function(f, u, a){ links_build(with_year(dplyr::mutate(sec(f_system = f, urban_id = u), access_control = a))) }
+rts = function(L){ s = attr(L, "sources"); s[s$field == "roadTypeID", ] }
+check(identical(rta(2, 41914, 1)$roadTypeID, 4L), "f_system 2 urban, full control is road type 4")
+check(identical(rta(2, 41914, 2)$roadTypeID, 5L), "f_system 2 urban, partial control is road type 5")
+check(identical(rta(2, 41914, 3)$roadTypeID, 5L), "f_system 2 urban, no control is road type 5 (NY-13 case)")
+check(identical(rta(2, 99999, 2)$roadTypeID, 3L), "f_system 2 rural, partial control is road type 3")
+m2 = rta(2, 41914, NA_real_)
+check(identical(m2$roadTypeID, 4L), "f_system 2 urban, access control missing is road type 4")
+check(identical(rts(m2)$source, "default") && grepl("access control not coded; class 2 treated as restricted", rts(m2)$detail, fixed = TRUE),
+      "class 2 without access control is a default")
+check(identical(rts(rta(2, 41914, 3))$source, "derived") && grepl("access_control 3", rts(rta(2, 41914, 3))$detail), "class 2 coded is derived")
+m1 = rta(1, 41914, NA_real_)
+check(identical(m1$roadTypeID, 4L) && identical(rts(m1)$source, "derived"), "f_system 1, access control missing: restricted, no default row")
+check(identical(rta(1, 99999, 3)$roadTypeID, 2L), "f_system 1 is restricted whatever access_control says")
+m3 = rta(3, 99999, 1)
+check(identical(m3$roadTypeID, 3L), "f_system 3 rural, full control stays unrestricted (road type 3)")
+check(identical(rts(m3)$source, "derived") &&
+        grepl("access control coded full on functional class 3; treated as unrestricted", rts(m3)$detail, fixed = TRUE), "class 3 full-control note")
+check(identical(rta(4, 41914, 1)$roadTypeID, 5L), "f_system 4 urban, full control stays road type 5")
+check(identical(rta(7, 41914, NA_real_)$roadTypeID, 5L), "f_system 7 urban, access control missing is road type 5")
+check(identical(links_road_type(c(2, 2, 2, 3, 1), rep(1, 5), c(1, 3, NA, 1, NA)), c(4L, 5L, 4L, 5L, 4L)), "links_road_type vector form")
+check(identical(links_road_type(2, 1), 4L), "links_road_type without access_control keeps the old rule")
+# class 2: a coded section and an uncoded one do not merge; class 3 sections do
+mix2 = function(f){ with_year(dplyr::bind_rows(dplyr::mutate(sec(begin_point = 0, end_point = 0.1, f_system = f), access_control = 1),
+                                               dplyr::mutate(sec(begin_point = 0.1, end_point = 0.2, f_system = f), access_control = NA_real_))) }
+check(nrow(links_build(mix2(2))) == 2, "class 2 coded and default road types are separate links")
+check(nrow(links_build(mix2(3))) == 1, "class 3 sections merge whatever access_control says")
+
 # 3. Merging ####
 
 three = with_year(dplyr::bind_rows(sec(begin_point = 0, end_point = 0.1), sec(begin_point = 0.1, end_point = 0.25),
@@ -152,6 +181,23 @@ check(nrow(Lf) == 15, "fixture gives 15 links")
 check(sum(uf$sections) == 3, "fixture has 3 uncounted sections")
 check(near(sum(Lf$linkLength[Lf$direction != "opposite"]),
            sum(fx$section_length[!is.na(fx$aadt) & fx$aadt > 0]), 1e-6), "fixture keeps every counted mile")
+
+# the same 40 sections re-fetched with access_control (hpms_ny2025_ithaca_box_40_access.geojson)
+txa = paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2025_ithaca_box_40_access.geojson", warn = FALSE), collapse = "\n")
+fa = links_parse_sections(txa)
+attr(fa, "year") = 2025L
+check(nrow(fa) == 40 && !anyNA(fa$access_control) && all(fa$access_control %in% 1:3), "access fixture has access_control on all 40")
+La = links_build(fa)
+both = merge(as.data.frame(Lf[, c("route_id", "begin_point", "end_point", "direction", "f_system", "roadTypeID")]),
+             as.data.frame(La[, c("route_id", "begin_point", "direction", "roadTypeID")]),
+             by = c("route_id", "begin_point", "direction"), suffixes = c("_old", "_new"), all = TRUE)
+chg = both[!is.na(both$roadTypeID_old) & !is.na(both$roadTypeID_new) & both$roadTypeID_old != both$roadTypeID_new, ]
+cat("access fixture: ", nrow(La), " links; ", nrow(chg), " of ", nrow(Lf), " links change road type\n", sep = "")
+print(chg, row.names = FALSE)
+src_rt = attr(La, "sources")[attr(La, "sources")$field == "roadTypeID", ]
+check(all(src_rt$source == "derived"), "no fallback on the access fixture")
+check(nrow(La) == nrow(Lf) && nrow(both) == nrow(Lf), "access fixture gives the same links")
+check(nrow(chg) > 0 && all(chg$roadTypeID_old == 4 & chg$roadTypeID_new == 5), "changes are restricted to unrestricted (4 to 5)")
 
 # 9. Result ####
 

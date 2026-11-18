@@ -1,7 +1,9 @@
 # link_build.R ################################################################
 #
 # What:      turn HPMS road sections into project-scale links (project scale)
-# Does:      links_build gives each section a MOVES road type, keeps the sections with a positive
+# Does:      links_build gives each section a MOVES road type (restricted: functional class 1, and
+#            class 2 unless HPMS access_control is 2 or 3; class 2 without access_control is marked
+#            default; classes 3-7 are unrestricted whatever access_control says), keeps the sections with a positive
 #            count (aadt), joins consecutive equal sections of one route into links of at most 2 miles,
 #            and splits a two-way link into a primary and an opposite link with their share of the
 #            count. Sections without a count are tallied in attribute "uncounted"; sections in the
@@ -23,17 +25,25 @@ LINKS_BUILD_COLS = c("linkID", "route_id", "begin_point", "end_point", "roadType
 LINKS_JOIN_TOL = 0.001   # miles between one section's end and the next one's begin
 LINKS_MAX_MILES = 2      # a merged link stops growing at this length
 LINKS_RURAL_ID = 99999   # urban_id of rural sections
-LINKS_MATCH = c("roadTypeID", "aadt", "through_lanes", "speed_limit", "facility_type",
+LINKS_MATCH = c("roadTypeID", "rt_fallback", "aadt", "through_lanes", "speed_limit", "facility_type",
                 "aadt_single_unit", "aadt_combination")
 
 # 2. Small helpers ####
 
-#' MOVES road type from HPMS functional class and urban code
-#' f_system 1-2 restricted access, else unrestricted; urban_id 99999 or NA is rural
+#' MOVES road type from HPMS functional class, access control and urban code
+#' f_system 1 (Interstate) is always restricted access (road type 2 rural, 4 urban). f_system 2 (other
+#' freeways and expressways) is restricted when access_control is 1 or missing (links_build marks the
+#' missing case "default") and unrestricted when it is 2 or 3 (FHWA HPMS field manual: 1 full, 2 partial,
+#' 3 none). f_system 3-7 or missing is always unrestricted, whatever access_control says (states code
+#' full control on thousands of class 3-7 sections; tests/fixtures/links/hpms_fields_notes.md).
+#' urban_id 99999 or NA is rural.
 #' @param f_system HPMS functional system (1-7)
 #' @param urban_id HPMS urban code
-links_road_type = function(f_system, urban_id){
-  restricted = !is.na(f_system) & f_system %in% c(1, 2)
+#' @param access_control HPMS access control (1, 2, 3 or NA); NULL = missing on every section
+links_road_type = function(f_system, urban_id, access_control = NULL){
+  if(is.null(access_control)){ access_control = rep(NA_real_, length(f_system)) }
+  restricted = !is.na(f_system) &
+    (f_system == 1 | (f_system == 2 & (is.na(access_control) | access_control == 1)))
   rural = is.na(urban_id) | urban_id == LINKS_RURAL_ID
   as.integer(dplyr::case_when(rural & restricted ~ 2, rural ~ 3, restricted ~ 4, TRUE ~ 5))
 }
@@ -89,9 +99,11 @@ links_build = function(sections){
   layer_year = attr(sections, "year")
   if(is.null(layer_year)){ layer_year = NA_real_ }
   if(!"data_year" %in% names(sections)){ sections$data_year = NA_real_ }
+  if(!"access_control" %in% names(sections)){ sections$access_control = NA_real_ }
 
   s = sections |>
-    dplyr::mutate(roadTypeID = links_road_type(f_system, urban_id),
+    dplyr::mutate(roadTypeID = links_road_type(f_system, urban_id, access_control),
+                  rt_fallback = !is.na(f_system) & f_system == 2 & is.na(access_control),
                   miles = dplyr::if_else(is.na(section_length), end_point - begin_point, section_length),
                   counted = !is.na(aadt) & aadt > 0)
 
@@ -136,7 +148,8 @@ links_build = function(sections){
   merged = lapply(split(inv, inv$grp), function(d){
     yr = dplyr::if_else(is.na(d$data_year), as.numeric(layer_year), d$data_year)
     tibble::tibble(route_id = d$route_id[1], begin_point = d$begin_point[1], end_point = d$end_point[nrow(d)],
-                   roadTypeID = d$roadTypeID[1], linkLength = sum(d$miles), aadt = d$aadt[1],
+                   roadTypeID = d$roadTypeID[1], rt_fallback = d$rt_fallback[1],
+                   access_control = d$access_control[1], linkLength = sum(d$miles), aadt = d$aadt[1],
                    facility_type = d$facility_type[1], dir_factor = d$dir_factor[1],
                    through_lanes = d$through_lanes[1], speed_limit = d$speed_limit[1],
                    aadt_single_unit = d$aadt_single_unit[1], aadt_combination = d$aadt_combination[1],
@@ -175,9 +188,14 @@ links_build = function(sections){
       linkID = l$linkID,
       field = c("linkLength", "roadTypeID", "aadt", "dir_share"),
       value = as.character(c(l$linkLength, l$roadTypeID, l$aadt, l$dir_share)),
-      source = c("measured", "derived", "measured", dplyr::if_else(l$one_way | l$dir_measured, "measured", "default")),
+      source = c("measured", if(l$rt_fallback){ "default" } else { "derived" }, "measured",
+                 dplyr::if_else(l$one_way | l$dir_measured, "measured", "default")),
       detail = c(paste0("sum of ", l$n_sections, " HPMS sections"),
-                 paste0("f_system ", l$f_system, ", ", area),
+                 if(l$rt_fallback){ paste0("access control not coded; class 2 treated as restricted, ", area) }
+                 else if(isTRUE(l$f_system == 2)){ paste0("f_system 2, access_control ", l$access_control, ", ", area) }
+                 else if(isTRUE(l$access_control == 1) && !isTRUE(l$f_system == 1)){
+                   paste0("access control coded full on functional class ", l$f_system, "; treated as unrestricted, ", area) }
+                 else { paste0("f_system ", l$f_system, ", ", area) },
                  "HPMS aadt, both directions",
                  if(l$one_way){ paste0("one-way road (facility_type ", l$facility_type, ")") }
                  else if(l$dir_measured){ paste0("dir_factor ", l$dir_factor, ", ", l$direction) }

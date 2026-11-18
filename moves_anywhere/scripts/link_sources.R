@@ -126,7 +126,7 @@ links_get = function(url, query = NULL, save_dir, fetch = NULL, wait = 5){
 # fields asked for; numeric unless listed in LINKS_HPMS_TEXT
 LINKS_HPMS_FIELDS = c("route_id", "begin_point", "end_point", "f_system", "urban_id", "facility_type",
                       "through_lanes", "aadt", "aadt_single_unit", "aadt_combination", "k_factor",
-                      "dir_factor", "speed_limit", "section_length", "data_year")
+                      "dir_factor", "speed_limit", "section_length", "data_year", "access_control")
 LINKS_HPMS_TEXT = "route_id"
 
 #' The where clause for a county

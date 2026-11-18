@@ -7,8 +7,8 @@
 #            requests.csv).
 # Called by: Developer tool and tests/run_gate.sh. Not part of a run.
 #            Run from the repository root: Rscript moves_anywhere/tests/test_link_sources.R
-# Reads:     moves_anywhere/tests/fixtures/links/hosted_listing.json, hpms_ny2025_ithaca_box_40.geojson
-#            (one live request only when LINKS_LIVE=1)
+# Reads:     moves_anywhere/tests/fixtures/links/hosted_listing.json, hpms_ny2025_ithaca_box_40.geojson,
+#            hpms_ny2025_ithaca_box_40_access.geojson (one live request only when LINKS_LIVE=1)
 # Writes:    temporary folders only
 # Exits:     0 and prints PASS; 1 and prints what failed
 ###############################################################################
@@ -115,6 +115,10 @@ lg5 = read.csv(file.path(d5, "requests.csv"), stringsAsFactors = FALSE)
 check(nrow(lg5) == 1 && grepl("geometryType=esriGeometryEnvelope", lg5$url, fixed = TRUE) &&
         grepl("geometry=-76.55%2C42.4%2C-76.44%2C42.48", lg5$url, fixed = TRUE) &&
         grepl("resultOffset=0", lg5$url, fixed = TRUE) && grepl("orderByFields=objectid", lg5$url, fixed = TRUE), "box request")
+check(grepl("%2Caccess_control", lg5$url, fixed = TRUE), "outFields asks for access_control")
+check(is.numeric(sec$access_control) && all(is.na(sec$access_control)), "old fixture without access_control parses to NA")
+fa = links_parse_sections(paste(readLines("moves_anywhere/tests/fixtures/links/hpms_ny2025_ithaca_box_40_access.geojson", warn = FALSE), collapse = "\n"))
+check(nrow(fa) == 40 && all(fa$access_control %in% 1:3), "access fixture: access_control 1-3 on all 40 sections")
 
 # county where clause: county_id is a number holding the 3-digit code
 check(identical(links_county_where("36109"), "county_id=109"), "county where Tompkins")
@@ -165,6 +169,15 @@ if(identical(Sys.getenv("LINKS_LIVE"), "1")){
   cat("live Ithaca box:", nrow(live), "sections in", secs, "s,", attr(live, "service"), "
 ")
   check(nrow(live) >= 1500 && nrow(live) <= 2500, "live Ithaca box returns 1500 to 2500 sections (measured 1961; the brief said 900 to 1200)")
+  cat("live access_control:", paste(names(table(live$access_control, useNA = "ifany")), table(live$access_control, useNA = "ifany"), sep = "=", collapse = " "), "\n")
+  check(any(live$access_control %in% 1) && any(live$access_control %in% 3), "live box has access_control 1 and 3")
+  source("moves_anywhere/scripts/link_build.R")
+  rt_new = links_road_type(live$f_system, live$urban_id, live$access_control)
+  rt_old = links_road_type(live$f_system, live$urban_id)
+  cat("live sections by road type, new rule:", paste(names(table(rt_new)), table(rt_new), sep = "=", collapse = " "),
+      "| class-only rule:", paste(names(table(rt_old)), table(rt_old), sep = "=", collapse = " "), "\n")
+  Ll = links_build(live)
+  cat("live links by road type:", paste(names(table(Ll$roadTypeID)), table(Ll$roadTypeID), sep = "=", collapse = " "), "\n")
 } else {
   cat("SKIP live smoke test (set LINKS_LIVE=1 to run it)
 ")
