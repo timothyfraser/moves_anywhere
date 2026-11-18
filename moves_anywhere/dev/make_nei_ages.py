@@ -6,6 +6,10 @@
 #            sourcetypeagedistribution.MYD from each county database inside (fixed 15-byte MyISAM rows, read in memory, never extracted to disk),
 #            writes one part file per state, checks every county, deletes the zip, and finally combines the parts into one gzip CSV.
 #            Restartable: a state whose part file exists is skipped. The zips are untrusted data: nothing from them is executed.
+#            Sums: a county's vehicle type is a problem only when its age fractions sum outside 1 +/- 1e-4 (EPA's stored doubles give e.g.
+#            0.999994: rounding). Within that, each type is rescaled to sum to 1 when a part is written and again when the parts are
+#            combined (so parts from older versions are corrected too). The largest |sum - 1| removed is logged per state
+#            (log.csv column max_correction) and printed in the summary. Fractions are written with 15 significant digits.
 # Usage:     python -I make_nei_ages.py --year 2020 --work <dir> --out <dir> [--states 11,78] [--keep-zips]
 #            --year is 2020 or 2023. --states takes state FIPS codes (default: every zip listed).
 # Called by: Developer tool: run by hand. Not used by v3 or launch.sh. Design note: docs/audit/project_scale_2026-11/sources/nei_county_ages.md
@@ -37,6 +41,8 @@ FOLDER = re.compile(r"^c(\d{5})y(\d{4})")
 ZIPNAME = re.compile(r"^\d{4}_CDBs_state(\d{2})\.zip$", re.IGNORECASE)
 HREF = re.compile(r'href="([^"/?][^"]*\.zip)"', re.IGNORECASE)
 PART_HEADER = ["countyID", "yearID", "sourceTypeID", "ageID", "ageFraction"]
+LOG_HEADER = ["state", "zip", "bytes", "download_seconds", "read_seconds", "counties", "rows", "problems", "max_correction"]
+SUM_TOL = 1e-4  # EPA stores doubles that sum to e.g. 0.999994: rounding, not a problem; beyond 1e-4 is a problem
 
 
 class ReadError(Exception):
@@ -135,7 +141,7 @@ def check_rows(rows, year):
                 probs.append("ages_st%d" % st)
             s = sum(f for _, f in lst)
             maxerr = max(maxerr, abs(s - 1.0))
-            if abs(s - 1.0) > 1e-6:
+            if abs(s - 1.0) > SUM_TOL:
                 probs.append("sum_st%d=%.6f" % (st, s))
             if any(f < 0 for _, f in lst):
                 neg += 1
@@ -147,22 +153,50 @@ def check_rows(rows, year):
     return res
 
 
+def normalise(rows):
+    """Rescale each county's vehicle type so its age fractions sum to exactly 1.
+    rows: (county, year, sourceType, age, fraction). Returns (new rows, largest |sum - 1| corrected).
+    A type whose sum is outside SUM_TOL (or not positive) is left unchanged, so the check still flags it."""
+    sums = collections.defaultdict(float)
+    for c, yr, st, age, f in rows:
+        sums[(c, st)] += f
+    maxcorr = 0.0
+    out = []
+    for c, yr, st, age, f in rows:
+        s = sums[(c, st)]
+        if s > 0 and abs(s - 1.0) <= SUM_TOL:
+            f = f / s
+        out.append((c, yr, st, age, f))
+    for s in sums.values():
+        if s > 0 and abs(s - 1.0) <= SUM_TOL:
+            maxcorr = max(maxcorr, abs(s - 1.0))
+    return out, maxcorr
+
+
 def write_part(path, rows):
     tmp = path + ".tmp"
     with open(tmp, "w", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
         w.writerow(PART_HEADER)
         for c, yr, st, age, f in rows:
-            w.writerow([c, yr, st, age, "%.8g" % f])
+            w.writerow([c, yr, st, age, "%.15g" % f])
     os.replace(tmp, path)
 
 
 def append_log(path, line):
     new = not os.path.exists(path)
+    if not new:
+        # A log written by the older version has no max_correction column: add it to the header.
+        with open(path, newline="") as fh:
+            lines = fh.read().split("\n")
+        if lines and "max_correction" not in lines[0]:
+            lines[0] += ",max_correction"
+            with open(path, "w", newline="") as fh:
+                fh.write("\n".join(lines))
     with open(path, "a", newline="") as fh:
         w = csv.writer(fh, lineterminator="\n")
         if new:
-            w.writerow(["state", "zip", "bytes", "download_seconds", "read_seconds", "counties", "rows", "problems"])
+            w.writerow(LOG_HEADER)
         w.writerow(line)
 
 
@@ -212,11 +246,12 @@ def main():
             checks = check_rows(rows, year)
             bad = ["%s:%s" % (c, v["problems"]) for c, v in checks.items() if v["problems"]]
             rows.sort(key=lambda r: (r[0], r[2], r[3]))
+            rows, corr = normalise(rows)
             write_part(part, rows)
             rsec = time.time() - t2
-            append_log(log, [st, name, size, "%.1f" % dsec, "%.1f" % rsec, len(counties), len(rows), " | ".join(bad)])
-            print("state %s: %s, %.1f MB in %.0f s (%.2f MB/s), %d counties, %d rows, %d with problems"
-                  % (st, name, size / 1048576, dsec, size / 1048576 / max(dsec, 1e-9), len(counties), len(rows), len(bad)))
+            append_log(log, [st, name, size, "%.1f" % dsec, "%.1f" % rsec, len(counties), len(rows), " | ".join(bad), "%.3g" % corr])
+            print("state %s: %s, %.1f MB in %.0f s (%.2f MB/s), %d counties, %d rows, %d with problems, largest correction %.3g"
+                  % (st, name, size / 1048576, dsec, size / 1048576 / max(dsec, 1e-9), len(counties), len(rows), len(bad), corr))
         except (ReadError, zipfile.BadZipFile, OSError) as e:
             print("state %s FAILED: %s" % (st, e), file=sys.stderr)
             append_log(log, [st, name, "", "", "", "", "", "FAILED: %s" % e])
@@ -230,24 +265,30 @@ def main():
     # Combine the parts of the wanted states.
     allrows = []
     done = []
+    corrections = {}
     for st in want:
         part = os.path.join(parts, "%d_%s.csv" % (year, st))
         if not os.path.exists(part):
             continue
         done.append(st)
+        strows = []
         with open(part, newline="") as fh:
             rd = csv.reader(fh)
             next(rd)
             for c, yr, s, age, f in rd:
-                allrows.append((c, int(yr), int(s), int(age), f))
+                strows.append((c, int(yr), int(s), int(age), float(f)))
+        # Renormalise here too, so parts written by the older version are corrected as well.
+        strows, corr = normalise(strows)
+        corrections[st] = corr
+        allrows.extend(strows)
     allrows.sort(key=lambda r: (r[0], r[2], r[3]))
     outgz = os.path.join(a.out, "nei_sourcetypeagedistribution_%d.csv.gz" % year)
     with open(outgz, "wb") as raw:
         with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as gz:
             gz.write((",".join(PART_HEADER) + "\n").encode())
             for c, yr, s, age, f in allrows:
-                gz.write(("%s,%d,%d,%d,%s\n" % (c, yr, s, age, f)).encode())
-    chk = check_rows([(c, yr, s, age, float(f)) for c, yr, s, age, f in allrows], year)
+                gz.write(("%s,%d,%d,%d,%.15g\n" % (c, yr, s, age, f)).encode())
+    chk = check_rows(allrows, year)
     chkp = os.path.join(a.out, "nei_ages_%d_checks.csv" % year)
     cols = ["countyID", "yearID", "sourceTypes", "rows", "minAge", "maxAge", "maxSumError", "negativeTypes", "problems"]
     with open(chkp, "w", newline="") as fh:
@@ -258,6 +299,9 @@ def main():
     nprob = sum(1 for v in chk.values() if v["problems"])
     print("SUMMARY year %d: states %d, counties %d, rows %d, counties with problems %d, output %s (%d bytes), %.0f s"
           % (year, len(done), len(chk), len(allrows), nprob, outgz, os.path.getsize(outgz), time.time() - t0))
+    worst = max(corrections.values()) if corrections else 0.0
+    print("Largest correction per state (|sum - 1| removed by renormalising): %s; overall %.3g"
+          % (", ".join("%s=%.3g" % (s, corrections[s]) for s in sorted(corrections)), worst))
     lost = sorted(set(want) - set(done)) + missing
     if lost:
         print("MISSING states: %s" % ",".join(sorted(set(lost))), file=sys.stderr)
