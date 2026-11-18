@@ -67,6 +67,8 @@ Tables below borrowed from Cloud MOVES paper.
 
 A project run (one hour, individual road links) uses five more tables: `link`, `linksourcetypehour`, `driveschedulesecondlink`, `offnetworklink` and `opmodedistribution`. You supply `link.csv` (and `offnetworklink.csv` if there is a parking lot); the others are optional and the image fills in defaults. The adapters write the checked versions as `_link.csv` and so on. The files, columns, defaults and limits are in the [project-scale guide](README_project_scale.md).
 
+**Vehicle ages by county (`AGE_SOURCE`).** Off by default. `AGE_SOURCE=county` (or `"age_source": "county"` in `parameters.json`) replaces the national `sourceTypeAgeDistribution` with EPA's National Emissions Inventory age tables for the run's county; if the reference file or the county is missing, the run uses the national table and says so in `_age_source.txt`. The reference file is not shipped in 3.2.0. It is built by `dev/make_nei_ages_reference.R` from EPA's inventory county databases, which is about 2.8 GB to download per inventory year. On Tompkins County, NY (2022), county ages gave NOx 0.676 and CO2 0.962 of the national-age result, with cars 1.9 years younger and light trucks 2.3 to 3.4 years younger; this used a partial reference file holding 2020 for New York. <!-- source: release/county_ages_effect.csv -->
+
 ## MariaDB Tables Used by Adapt Functions
 
 This section lists all MariaDB database tables that are accessed by the adapt functions in `moves_anywhere/moves_anywhere/scripts/adapt_*.R` when performing MOVES input table adaptation. These tables are read from the default MOVES database to generate adapted input tables.

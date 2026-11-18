@@ -12,11 +12,12 @@ Adds project-scale runs: individual road links and parking lots for one hour. Gu
 - **`LEVEL=project` helper.** `task_runspec.R` makes a project run file from `GEOID`, `YEAR`, `MONTH`, `DAY`, `HOUR` and optional `ROADTYPES`.
 
 - **Travel-weighted vehicle ages at project scale.** MOVES reads the age table as the ages of the traffic on a link at project scale, but weights by mileage only at county scale. A project run now multiplies each age share by MOVES's relative mileage and rescales it to 1 for each vehicle type and year. `PROJECT_AGES=registration` (or `"project_ages": "registration"` in `parameters.json`) keeps the registration ages. A user's own `sourcetypeagedistribution.csv` is used as given. County runs are unchanged.
-- **County ages (off by default).** `AGE_SOURCE=county` (or `"age_source": "county"` in `parameters.json`) uses EPA's National Emissions Inventory county age tables, with a national fallback and a note if the reference file or the county is missing. The reference file is built by `dev/make_nei_ages_reference.R`; it is not in the repository.
+- **County ages (off by default).** `AGE_SOURCE=county` (or `"age_source": "county"` in `parameters.json`) uses EPA's National Emissions Inventory county age tables, with a national fallback and a note if the reference file or the county is missing. The reference file is built by `dev/make_nei_ages_reference.R`; it is not in the repository. On Tompkins County, NY (2022), it lowers NOx by about a third (county over national 0.676) and CO2 by about 4%, from a partial reference file; the default stays national until the effect is reviewed. <!-- source: release/county_ages_effect.csv -->
+- **Link builder (beta).** `links.sh` builds a project run folder from live federal data (FHWA HPMS, USGS 3DEP): road type, length, hourly volume (with a year factor), vehicle mix from truck counts, grade, and a remainder link for uncounted roads. Every value is labelled measured, derived or default, and every response is saved. Guide: [docs/README_link_sources.md](docs/README_link_sources.md). A live build for a box in Ithaca, NY made 17 links in 87 s (10.2% of values default) and ran in MOVES in 371 s; 13 of 16 road links were within 10% of the flat fixture's CO2 per mile, and the three outliers are the steepest links. <!-- source: release/live_link_build/RESULT.md -->
 - **Summary-step fix.** A run with no vehicle-population or CO2-equivalent rows no longer fails at the summary step; the fault was in 3.1.0 since 2025-03-25.
 - **Partial-table fix.** A user table that covers only some vehicle types no longer stops the fuel-technology and age adapters; the types it leaves out take the national defaults.
 - **Gate.** New step `replay` (the summary step on saved MOVES outputs, no MOVES run, `tests/test_summarize_replay.sh`); `run_gate.sh --fast` for the short gate (not a release gate); step 14, `epa` (full gate only; `tests/test_epa_project.sh`, about 3 minutes of MOVES). The four link-builder unit tests are part of `project-unit`.
-- **EPA's training exercise as a fixture.** `inputs_epa_project/` is a project run from EPA's MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key), with EPA's results and a comparison script (`tests/compare_epa_project.py`, `tests/test_epa_project.sh`). Source: US EPA; its folder README gives the attribution and every change.
+- **EPA's training exercise as a fixture.** `inputs_epa_project/` is a project run from EPA's MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key), with EPA's results and a comparison script (`tests/compare_epa_project.py`, `tests/test_epa_project.sh`). Source: US EPA; its folder README gives the attribution and every change. EPA's second run (drive schedules) is also reproduced: 21 of 21 rows, largest relative difference about 5e-8. <!-- source: epa_moves5_exercise/comparison_run2.csv -->
 - **Tests no longer default to a path on one machine.** `test_ticket_mode.sh` defaulted its fixture to a path on one machine (since 3.1.0); it now defaults to the repository's `inputs_ny`. `testme.sh` and `testme_cloud.sh` use placeholders.
 
 ### What did not change
@@ -28,9 +29,8 @@ Adds project-scale runs: individual road links and parking lots for one hour. Gu
 ### What is not included
 
 - Ticket mode (the CAT website's order path) does not carry project runs yet.
-<!-- link builder -->
 - MOVES6: the image stays on MOVES5.
-- Not tested: evaporative emissions, rate mode at project scale, runs with more than 7 links.
+- Not tested: evaporative emissions and rate mode at project scale. Runs with 16 and 17 links have run (the live link build).
 
 Checks: (filled in after the gate)
 

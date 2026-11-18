@@ -124,7 +124,20 @@ The switch is `--no-fill`. With it no remainder link is added; the summary still
 
 ## The link limit
 
-The command refuses to write more than 40 links unless you set `--max-links`. The reason is MOVES time. Measured: 7 links took 621 seconds of MOVES; 32 links took 1,882 seconds. Plan on about one minute per link. The limit counts remainder links. If a place gives too many links, make the box smaller or raise the limit knowing the time cost.
+The command refuses to write more than 40 links unless you set `--max-links`. The reason is MOVES time. Measured on one workstation: 7 links took 621 seconds of MOVES (100 pollutant-process pairs), 32 links took 1,882 seconds (31 pairs), and the 17-link live build took 371 seconds (84 pairs, the set a county run file gets). Time grows with links and with pollutant-process pairs, not in proportion to either; the refusal message quotes the first two figures as a rough guide. <!-- source: release/live_link_build/RESULT.md; build/county_vs_project/ --> The limit counts remainder links. If a place gives too many links, make the box smaller or raise the limit knowing the time cost.
+
+## Tested
+
+One live build, then one run of MOVES on its output (Tompkins County, NY, 2022, a July weekday, 8:00 to 8:59). The box was `-76.499,42.438,-76.495,42.441` in Ithaca, NY.
+
+- The build used the 2022 HPMS layer, fetched 18 sections and wrote 17 links (16 counted road links and one remainder link) in 87 s. <!-- source: release/live_link_build/BUILD.md -->
+- 10.2% of the 167 values in `link_sources.csv` were defaults. <!-- source: release/live_link_build/link_summary.txt -->
+- MOVES took 371 s for the 17 links, finished with status ok, and every link appears in `linkdata.csv`. <!-- source: release/live_link_build/RESULT.md -->
+- 13 of the 16 road links were within 10% of the flat fixture's CO2 per mile. The three that were not are the steep links: +65% at +7.1% grade, and -51% and -57% at -8.3% and -10.9%. The fixture is flat, so uphill raising and steep downhill lowering CO2 per mile is expected. <!-- source: release/live_link_build/RESULT.md -->
+- The remainder link (0.001 mi, 90.9 vehicles an hour) ran as an ordinary link and is 0.014% of the run's vehicle-miles. <!-- source: release/live_link_build/RESULT.md -->
+- A first attempt failed with HTTP 500 because the field names of the 2022 layer differ from the 2024 and 2025 layers; the builder now reads each layer's field list (see "Field names differ by layer year"). <!-- source: release/live_link_build/BUILD.md -->
+
+This is one place and one hour. It shows that the builder's output runs in MOVES; it does not show the traffic numbers are right for any road.
 
 ## Limits and misuse
 

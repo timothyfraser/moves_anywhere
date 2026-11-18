@@ -190,7 +190,9 @@ labels every value on every link `measured`, `derived` or `default`. The guide i
   against `routeid`, `county_id` against `county_code`, and no section length in the 2020, 2022 and 2023
   layers). The first live build failed on this. The builder now reads each layer's own field list from
   its metadata and maps it to one set of names, for the section fetch and for the county statistics.
-  <!-- B9: AUD release/live_link_build/BUILD.md -->
+  The 2020 layer uses `route_id`, `begin_point` and `end_point`; the 2022 and 2023 layers use `routeid`,
+  `beginpoint` and `endpoint`. The 2022 layer for New York, queried for a box in Ithaca, first failed with
+  HTTP 500 because the builder asked it for the newer names; it works now. <!-- source: release/live_link_build/BUILD.md -->
 - **Roads with no count.** HPMS counts almost no local streets. For each unrestricted road type the builder
   adds one remainder link carrying the county's leftover traffic for the run's hour: the county's
   vehicle-miles minus the miles already counted. Its length is the uncounted miles in the place, capped at
@@ -473,7 +475,9 @@ does not show that county averages are right for a real site, which this exercis
 does not test. The tolerance and the rows outside it, if any, are in the marker above.
 
 **Other runs.** The 2019 and 2040 reference-year runs: see section 7.5; NOx and exhaust PM2.5 per mile fall on every link, CO2 per mile in 2040 is about 45% of 2019. <!-- source: release/years_2019_2040.csv -->
-The link builder's live build, in a run of MOVES: <!-- B7 -->.
+**EPA's second run (drive schedules).** EPA's exercise has a second run that gives links drive schedules. It reproduces too: 21 of 21 rows, largest relative difference about 5e-8. <!-- source: epa_moves5_exercise/comparison_run2.csv -->
+
+**The link builder's live build, in a run of MOVES.** A box in Ithaca, NY (`-76.499,42.438,-76.495,42.441`), the 2022 HPMS layer, Tompkins County 2022, July weekday, 8:00 to 8:59. The builder made 17 links (16 counted, one remainder) in 87 s, with 10.2% of values from defaults. <!-- source: release/live_link_build/BUILD.md --> MOVES took 371 s, the run finished with status ok, and every link is in `linkdata.csv`. 13 of the 16 road links are within 10% of the flat fixture's CO2 per mile; the three outliers are the steep links (+65% at +7.1% grade, -51% and -57% at -8.3% and -10.9%), as expected against a flat reference. <!-- source: release/live_link_build/RESULT.md --> The remainder link (0.001 mi) ran as an ordinary link. The builder ships as beta.
 
 ## 8. Design decisions that a reader should know about
 
@@ -616,6 +620,12 @@ option.
     speeds, road type shares, hourly shares, starts and ages. "County average" in this document often
     means "national pattern applied to the county's mileage". Only vehicle counts and annual mileage are
     county-specific (from NEI), and those are interpolated or projected for years NEI does not cover.
+15. **County ages change the answer a lot, and the default has not moved.** With `AGE_SOURCE=county` on a
+    Tompkins County (NY, 2022) county run, against national ages: CO2 0.962, NOx 0.676, exhaust PM2.5 0.716,
+    CO 0.722 and hydrocarbons 0.687 of the national-age result. Cars are 1.9 years younger and light trucks
+    2.3 to 3.4 years younger. This came from a partial reference file (2020 for New York only), so treat it
+    as one measurement, not a calibration. The default stays national until the effect has been reviewed.
+    <!-- source: release/county_ages_effect.csv -->
 
 ## 10. Reference data, and whether MOVES-Matrix is needed
 
