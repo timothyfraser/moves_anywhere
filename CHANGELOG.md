@@ -32,7 +32,7 @@ Adds project-scale runs: individual road links and parking lots for one hour. Gu
 - MOVES6: the image stays on MOVES5.
 - Not tested: evaporative emissions and rate mode at project scale. Runs with 16 and 17 links have run (the live link build).
 
-Checks: full gate PASS on commit aac249f, 14 steps in 2,367 s (static, compare-unit, build, county fixture, compare, manifest, pack, ticket, bad-table, sha, project-unit, project, replay, epa); EPA's MOVES5 course project exercise reproduced on both runs, 21 of 21 rows each, largest relative difference 5e-8; project against county scale with the age default, 16 urban links: NOx +1.5%, exhaust PM2.5 +1.8%, CO2 +0.1% per mile; 2019 and 2040 project runs complete; a 17-link live build of downtown Ithaca from federal data ran in MOVES in 371 s. <!-- source: release/gate_full.txt, epa_moves5_exercise/comparison_run1b.csv and comparison_run2.csv, release/county_vs_project_default.csv, release/years_2019_2040.csv, release/live_link_build/RESULT.md -->
+Checks: full gate PASS on commit 2758e4f, 14 steps in 1,584 s (static, compare-unit, build, county fixture, compare, manifest, pack, ticket, bad-table, sha, project-unit, project, replay, epa); EPA's MOVES5 course project exercise reproduced on both runs, 21 of 21 rows each, largest relative difference 5e-8; project against county scale with the age default, 16 urban links: NOx +1.5%, exhaust PM2.5 +1.8%, CO2 +0.1% per mile; 2019 and 2040 project runs complete; a 17-link live build of downtown Ithaca from federal data ran in MOVES in 371 s. <!-- source: release/gate_full.txt, epa_moves5_exercise/comparison_run1b.csv and comparison_run2.csv, release/county_vs_project_default.csv, release/years_2019_2040.csv, release/live_link_build/RESULT.md -->
 
 ## 3.1.0
 
