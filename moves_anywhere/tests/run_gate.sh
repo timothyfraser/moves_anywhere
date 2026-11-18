@@ -2,8 +2,8 @@
 # run_gate.sh #################################################################
 #
 # What:      The gate: builds the image from a commit and runs every check, one after another.
-# Does:      Runs 13 steps (static, compare-unit, build, fixture, compare, manifest, pack, ticket,
-#            bad-table, sha, project-unit, project, replay), never two containers at once, keeps going after a
+# Does:      Runs 14 steps (static, compare-unit, build, fixture, compare, manifest, pack, ticket,
+#            bad-table, sha, project-unit, project, replay, epa), never two containers at once, keeps going after a
 #            failure, and prints one summary line per step. The image is built from a clean `git archive HEAD`
 #            export, so it gets the committed LF scripts and the working tree is never touched.
 #            --fast runs only static, compare-unit, build, project-unit, replay and the refusals of the project
@@ -16,7 +16,7 @@
 # Usage: bash moves_anywhere/tests/run_gate.sh [--image <name:tag>] [--skip-build] [--only <step>]
 #                                              [--allow-dirty] [--keep] [--fast]
 # Run from the repository root. Default image: moves-anywhere:gate-<short git sha>.
-# --only runs one step: static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project replay
+# --only runs one step: static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project replay epa
 # --fast is the short gate; it cannot be combined with --only.
 ###############################################################################
 
@@ -26,9 +26,9 @@ set -uo pipefail
 export PYTHONDONTWRITEBYTECODE=1
 
 MOVES_COMMIT=2c4cd1ab31b53bc9731492544fcbd0a6e47b970a
-STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project replay"
+STEPS="static compare-unit build fixture compare manifest pack ticket bad-table sha project-unit project replay epa"
 FAST_STEPS="static compare-unit build project-unit replay project"
-FAST_LEFT="fixture compare manifest pack ticket bad-table sha project(full run)"
+FAST_LEFT="fixture compare manifest pack ticket bad-table sha project(full run) epa"
 IMAGE=""; SKIP_BUILD=0; ONLY=""; ALLOW_DIRTY=0; KEEP=0; FAST=0
 
 usage() { sed -n "16,20p" "$0" | sed 's/^# \{0,1\}//'; }
@@ -90,7 +90,7 @@ run_step() {
     case " $FAST_STEPS " in *" $name "*) ;; *) record SKIP "$name" 0; echo "(skipped: left for the full gate)"; return ;; esac
   fi
   case "$name" in
-    fixture|ticket|bad-table|project|replay)
+    fixture|ticket|bad-table|project|replay|epa)
       if [ -z "$ONLY" ] && [ "$BUILD_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: no image, see step build)"; return; fi ;;
     compare|manifest|pack|sha)
       if [ -z "$ONLY" ] && [ "$FIXTURE_OK" != 1 ]; then record SKIP "$name" 0; echo "(skipped: the fixture run did not finish)"; return; fi ;;
@@ -224,6 +224,10 @@ step_project() {
 # needs an image whose own script is unpatched, and the image built here is not.
 step_replay() { bash moves_anywhere/tests/test_summarize_replay.sh --image "$IMAGE"; }
 
+# epa: EPA's MOVES5 course project exercise (inputs_epa_project) run in the image and compared row by row
+# with EPA's own results (about 10 minutes of MOVES). Not in --fast.
+step_epa() { bash moves_anywhere/tests/test_epa_project.sh --image "$IMAGE"; }
+
 # 4. Run them, strictly in order ####
 T_ALL=$SECONDS
 run_step 1  static       step_static
@@ -239,6 +243,7 @@ run_step 10 sha          step_sha
 run_step 11 project-unit step_project_unit
 run_step 12 project      step_project
 run_step 13 replay       step_replay
+run_step 14 epa          step_epa
 
 # 5. Summary ####
 echo
