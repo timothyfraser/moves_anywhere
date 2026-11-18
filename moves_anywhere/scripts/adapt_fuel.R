@@ -432,10 +432,12 @@ adapt_avft = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
       62,            444
     )
     
-    # Are these matrices entirely the same?
-    is_same = all(tallynormal == tally)
-    
-    # If they are not, we will fill in the fuelEngFraction for missing strata with 0. 
+    # Are these tallies entirely the same? Same number of rows and, joined by sourceTypeID, every
+    # count equal. (Comparing the data frames with == errors when a table omits vehicle types.)
+    tallyjoin = inner_join(by = "sourceTypeID", x = tallynormal, y = ungroup(tally), suffix = c("_normal", "_data"))
+    is_same = nrow(tally) == nrow(tallynormal) && nrow(tallyjoin) == nrow(tallynormal) && all(tallyjoin$n_normal == tallyjoin$n_data)
+
+    # If they are not, we will fill in the fuelEngFraction for missing strata with 0.
     if(!is_same){
       # if not, need to grab default data and add 0s for missing values in custom data.
       # Connect to database
@@ -460,7 +462,15 @@ adapt_avft = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
           by = c("sourceTypeID", "modelYearID", "fuelTypeID", "engTechID"),
           y = data) %>%
         mutate(fuelEngFraction = 0)
-      
+
+      # A vehicle type with no user rows at all takes the national default fractions for that type
+      missingtypes = setdiff(unique(fakedata$sourceTypeID), unique(data$sourceTypeID))
+      extrarows = extrarows %>%
+        filter(!sourceTypeID %in% missingtypes) %>%
+        bind_rows(fakedata %>%
+                    filter(sourceTypeID %in% missingtypes) %>%
+                    select(sourceTypeID, modelYearID, fuelTypeID, engTechID, fuelEngFraction))
+
       # Bind in the extra rows
       data = bind_rows(data, extrarows) %>% 
         # Keep just distinct rows

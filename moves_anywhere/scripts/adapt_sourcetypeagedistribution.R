@@ -71,8 +71,10 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
       62, 41
     )
     
-    # Are these matrices entirely the same?
-    is_same = all(tallynormal == tally)
+    # Are these tallies entirely the same? Same number of rows and, joined by sourceTypeID, every
+    # count equal. (Comparing the data frames with == errors when a table omits vehicle types.)
+    tallyjoin = inner_join(by = "sourceTypeID", x = tallynormal, y = ungroup(tally), suffix = c("_normal", "_data"))
+    is_same = nrow(tally) == nrow(tallynormal) && nrow(tallyjoin) == nrow(tallynormal) && all(tallyjoin$n_normal == tallyjoin$n_data)
     
     # If they are not, we will fill in the ageFraction for missing strata with DEFAULTS. 
     if(!is_same){
@@ -135,7 +137,8 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
         # Weight the ageFraction
         # so that we downweight any custom input data cases 
         # to make room for the proportional share of data represented by the defaults
-        mutate(ageFraction = ageFraction * (1 - weight))  %>%
+        # A sourcetype-year with no custom rows at all (weight 1) keeps the national default as is
+        mutate(ageFraction = ifelse(weight == 1, ageFraction, ageFraction * (1 - weight)))  %>%
         # Drop the weight at the end
         select(-weight, -group)
       
