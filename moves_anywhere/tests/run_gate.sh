@@ -202,7 +202,7 @@ step_project_unit() {
     echo "FAIL: Rscript is not on PATH, so the project R unit tests could not run"; return 1
   fi
   local t bad=0
-  for t in test_project_functions test_adapt_link test_adapt_offnetwork test_adapt_projectage test_adapt_partial_tables test_importer_project test_linkdata test_runspec_project test_link_sources test_link_build test_link_volume test_link_mix test_link_grade; do
+  for t in test_project_functions test_adapt_link test_adapt_offnetwork test_adapt_projectage test_adapt_partial_tables test_importer_project test_linkdata test_runspec_project test_link_sources test_link_build test_link_volume test_link_mix test_link_grade test_link_fill test_task_links; do
     if [ ! -f "moves_anywhere/tests/$t.R" ]; then
       [ "$t" = test_runspec_project ] && { echo "(no $t.R, skipped)"; continue; }
       echo "missing moves_anywhere/tests/$t.R"; bad=1; continue
