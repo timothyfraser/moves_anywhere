@@ -11,15 +11,24 @@ Adds project-scale runs: individual road links and parking lots for one hour. Gu
 - **Refusals with reasons.** A project run file that breaks rules R1 to R10 (one county, year, month, day type and hour; hourly link output; grams, miles, hours; inventory mode; custom database) or bad link inputs stop the run with a one-line reason, because MOVES itself accepts such a command and produces nothing.
 - **`LEVEL=project` helper.** `task_runspec.R` makes a project run file from `GEOID`, `YEAR`, `MONTH`, `DAY`, `HOUR` and optional `ROADTYPES`.
 
+- **Travel-weighted vehicle ages at project scale.** MOVES reads the age table as the ages of the traffic on a link at project scale, but weights by mileage only at county scale. A project run now multiplies each age share by MOVES's relative mileage and rescales it to 1 for each vehicle type and year. `PROJECT_AGES=registration` (or `"project_ages": "registration"` in `parameters.json`) keeps the registration ages. A user's own `sourcetypeagedistribution.csv` is used as given. County runs are unchanged.
+- **County ages (off by default).** `AGE_SOURCE=county` (or `"age_source": "county"` in `parameters.json`) uses EPA's National Emissions Inventory county age tables, with a national fallback and a note if the reference file or the county is missing. The reference file is built by `dev/make_nei_ages_reference.R`; it is not in the repository.
+- **Summary-step fix.** A run with no vehicle-population or CO2-equivalent rows no longer fails at the summary step; the fault was in 3.1.0 since 2025-03-25.
+- **Partial-table fix.** A user table that covers only some vehicle types no longer stops the fuel-technology and age adapters; the types it leaves out take the national defaults.
+- **Gate.** New step `replay` (the summary step on saved MOVES outputs, no MOVES run, `tests/test_summarize_replay.sh`); `run_gate.sh --fast` for the short gate (not a release gate); an EPA step: <!-- epa step -->. The four link-builder unit tests are part of `project-unit`.
+- **EPA's training exercise as a fixture.** `inputs_epa_project/` is a project run from EPA's MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key), with EPA's results and a comparison script (`tests/compare_epa_project.py`, `tests/test_epa_project.sh`). Source: US EPA; its folder README gives the attribution and every change.
+- **Tests no longer default to a path on one machine.** `test_ticket_mode.sh` defaulted its fixture to a path on one machine (since 3.1.0); it now defaults to the repository's `inputs_ny`. `testme.sh` and `testme_cloud.sh` use placeholders.
+
 ### What did not change
 
+- In 3.1.0, a fuel-technology table that misses some strata inside a vehicle type it does cover gives those strata zero. This is unchanged.
 - County runs: the same scripts path, with every change to an existing script behind a project-only branch. The gate's county fixture checks this.
 - The run manifest schema: `manifest_version` stays 1.
 
 ### What is not included
 
 - Ticket mode (the CAT website's order path) does not carry project runs yet.
-- Volume from a daily traffic count (an `aadt` column is ignored).
+<!-- link builder -->
 - MOVES6: the image stays on MOVES5.
 - Not tested: evaporative emissions, rate mode at project scale, runs with more than 7 links.
 

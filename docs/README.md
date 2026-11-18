@@ -7,6 +7,7 @@ This is the index of the guides in this folder. Start with the [main README](../
 | [MOVES inputs](README_MOVES_inputs.md) | Which input tables MOVES needs, and how MOVES Anywhere adapts them. |
 | [Project-scale runs](README_project_scale.md) | How to run individual road links and parking lots for one hour. |
 | [Project scale: design, assumptions and limits](PROJECT_SCALE_DESIGN.md) | What MOVES needs at each scale, what is filled in and from where, what was measured, and how it can be wrong. |
+| [Link sources (beta)](README_link_sources.md) | How `links.sh` builds project-scale links from federal road and elevation data, and its limits. |
 | [The pipeline scripts](README_scripts.md) | What happens inside the container, step by step. Generated from the script headers. |
 | [The run manifest](RUN_MANIFEST.md) | How to read `run_manifest.json`, the file that says a run finished. |
 | [Run tickets](RUN_TICKET.md) | How to run MOVES Anywhere from your own cloud service. |

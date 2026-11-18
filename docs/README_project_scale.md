@@ -49,6 +49,10 @@ The worked example is `moves_anywhere/inputs_project/rs_custom.xml`: Tompkins Co
 
 Run it as you run a county run: `run.sh <folder>`. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
 
+**A second example: EPA's training exercise.** The folder `moves_anywhere/inputs_epa_project/` is a project run taken from EPA's own MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key): a truck terminal and its roads in Washtenaw County, MI (26161), January 2025, a weekday, hour 9, carbon monoxide, five road links and one off-network link. EPA is the source of every number in it; the folder's `README.md` gives the attribution and every change made. Its purpose is a check against someone else's answer: `epa_movesoutput.csv` holds EPA's results, and `tests/compare_epa_project.py` compares a run of the folder with them. The result of that comparison for run 1: <!-- A5: AUD/epa_moves5_exercise/comparison_run1.csv -->
+
+**Two years.** The two-year check (2019 and 2040): <!-- A13: AUD/release/years_2019_2040.csv -->
+
 ## What is filled in for you, and how far to trust it
 
 Defaults are county averages. A link's traffic volume and length always come from you, and so does the number of vehicles in a parking lot.
@@ -61,7 +65,18 @@ Defaults are county averages. A link's traffic volume and length always come fro
 | Engine starts on a parking lot | Starts per vehicle per day in the county, times that hour's share of the day's starts | Almost always. This is the average vehicle in the county, not your lot. |
 | Extended idle and parked share | 0 and 1 | When trucks idle or park at the site. |
 | Soak times | MOVES's national start operating-mode table for that day type and hour, weighted by the county's vehicle ages | When you know how long vehicles sit. |
-| Fuel, vehicle ages, weather, inspection programme | The county adapters of a county run | As for a county run. |
+| Vehicle ages | The national age table, **travel-weighted** (next section) | When you know the ages of the vehicles on the link. Give your own `sourcetypeagedistribution.csv`. |
+| Fuel, weather, inspection programme | The county adapters of a county run | As for a county run. |
+
+### Vehicle ages: travel-weighted
+
+An age table says what share of the *registered* vehicles of a type is each age. Older vehicles are driven fewer miles. At county scale MOVES weights each age by its mileage before it shares out the miles; at project scale it does not, and reads the table as the ages of the traffic on the link. So the image multiplies each age share by MOVES's relative mileage for that age and rescales the shares to add up to 1, for each vehicle type and year. **Travel-weighted** means the ages are those of the vehicles actually driving on the link, not those of the vehicles registered.
+
+The effect of this default on the results (a county run against a project run, with and without it): <!-- A8: county vs project with the default, AUD/release/county_vs_project_default.csv -->
+
+To keep the registration ages instead, set `PROJECT_AGES=registration` in the environment, or put `"project_ages": "registration"` in `parameters.json` in the run folder. The environment variable wins. Any other value stops the run. A `sourcetypeagedistribution.csv` that you supply is used as given, with no weighting. `diagnostics.txt` and `_project_inputs.csv` record which ages were used.
+
+**County ages (off by default).** The default age table is national. With `AGE_SOURCE=county` (or `"age_source": "county"` in `parameters.json`), the run uses EPA's National Emissions Inventory age tables for the run's county: the county's own rows in 2020 and 2023, and in other years the national table adjusted age by age by the county-to-national ratio of the nearest inventory year (each ratio kept between 0.25 and 4). Long-haul truck types (53 and 62) always keep the national table. This needs the reference file `scripts/reference/nei_sourcetypeagedistribution.rds`, which is not in the repository; build it with `dev/make_nei_ages_reference.R`. If the file is missing or the county is not in it, the run uses the national table and says so in `_age_source.txt`; it does not fail. A table you supply still wins. For a project run the travel weighting is applied on top of whichever table is chosen.
 
 ## What you get back
 
@@ -155,5 +170,13 @@ Files that implement a project run (all in `moves_anywhere/scripts/`):
 - `task_runspec.R`: the `LEVEL=project` helper.
 
 Tests, from the repository root: `Rscript moves_anywhere/tests/<name>.R` for `test_project_functions`, `test_adapt_link`, `test_adapt_offnetwork`, `test_importer_project`, `test_linkdata`, `test_runspec_project` (no Docker); `bash moves_anywhere/tests/test_pack_project.sh`; `bash moves_anywhere/tests/test_project.sh --image <image>` (Docker; full fixture run and refusals). The gate steps are `project-unit` and `project` in `moves_anywhere/tests/run_gate.sh`.
+
+Age files: `adapt_projectage.R` (travel weighting and the `PROJECT_AGES` switch; called by `task_adapt.R` after the county adapters and before `adapt_link.R`), `adapt_ages_county.R` (the `AGE_SOURCE` setting and the county table; sourced by `adapt_sourcetypeagedistribution.R`). Tests: `tests/test_adapt_projectage.R`, `tests/test_adapt_ages_county.R`, `tests/test_nei_ages_reference.R`. The reference file is built by `dev/make_nei_ages.py` and `dev/make_nei_ages_reference.R`.
+
+Gate and tests (all from the repository root; Docker for the ones that name an image):
+
+- **Fast gate:** `bash moves_anywhere/tests/run_gate.sh --fast`. It runs `static`, `compare-unit`, `build`, `project-unit`, `replay` and only the refusals of `project`; it runs no MOVES. It takes several minutes (the script header says about 6, a measured run about 9). It is for working and is not a release gate: its last lines say so and list the steps left for the full gate. It cannot be combined with `--only`.
+- **Replay test:** `bash moves_anywhere/tests/test_summarize_replay.sh --image <image>` runs only the summary step (`task_summarize.R`) on saved MOVES outputs, with no MOVES run: a county hour with no vehicle-population rows, the county fixture `inputs_ny`, and the project fixture. `--prove` also runs the first case against the image's own script and expects it to fail. The gate runs it as step `replay`.
+- **EPA test:** `bash moves_anywhere/tests/test_epa_project.sh --image <image> [--run2]` runs `inputs_epa_project/` through `run.sh` and checks the exit code, the manifest, that `linkdata.csv` exists and `data.csv` does not, and EPA's run 1 against `movesoutput.csv` through `tests/compare_epa_project.py` (within 1 percent). `--run2` adds EPA's second run. It takes under 10 minutes of MOVES per run. <!-- epa step: the gate step that calls it is not in run_gate.sh yet -->
 
 Rule: every change to an existing script sits behind a project-only branch, and the county fixture in the gate checks that county runs are unchanged.
