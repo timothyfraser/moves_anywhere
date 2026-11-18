@@ -6,8 +6,8 @@
 #            project_check stops on a runspec that MOVES would refuse or that this image does not
 #            support. project_read loads one county table, filtered to the run's time.
 #            project_note records which link inputs were filled in by default.
-# Called by: task_adapt.R, step 6 of launch.sh (sourced); also sourced by importer.R,
-#            task_check_import.R, task_postprocess.R and task_summarize.R (is_project only)
+# Called by: task_adapt.R, step 6 of launch.sh (sourced); also sourced by task_postprocess.R
+#            and task_summarize.R (is_project only). importer.R and task_check_import.R do not source it.
 # Reads:     the runspec (XML); <BUCKET>/_<table>.csv, <BUCKET>/<table>.csv; the default input
 #            database (project_read only, as the last resort)
 # Writes:    <BUCKET>/_project_inputs.csv (project_note)

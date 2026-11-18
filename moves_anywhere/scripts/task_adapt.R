@@ -5,6 +5,10 @@
 #            functions in order on the runspec, from identifiers to climate. Each group runs
 #            inside run_adapter(): on an error it writes /cat/run/stop_reason ("adapt failed on
 #            <name>: <first error line>"), prints the full error, and exits with status 1.
+#            Project-scale runs (MOVES domain PROJECT) also run project_check and project_check_im,
+#            adapt the age distribution from env PROJECT_AGES (adapt_projectage.R), and delete the
+#            county-only tables _link, _linksourcetypehour, _driveschedulesecondlink, _offnetworklink,
+#            _opmodedistribution and _project_inputs (.csv).
 # Called by: launch.sh, step 6 of launch.sh
 # Reads:     EPA_MOVES_Model/rs_custom.xml; inputs/; the MOVES default database named in the runspec
 # Writes:    adapted tables as files in inputs/ (through the adapt_* scripts);

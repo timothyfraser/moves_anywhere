@@ -32,7 +32,7 @@ mkdir -p "$RUNDIR"
 clean() { echo "${1%%\?*}"; }
 
 # The manifest. A successful run keeps the one task_pack.sh wrote, byte for byte, unless the
-# required data.csv.gz was not stored (inventory mode), which turns it failed. A failed run (or a
+# required result file was not stored (data.csv.gz; linkdata.csv.gz for a project run), which turns it failed. A failed run (or a
 # run with no pack manifest) gets the minimal record below, merged over any pack fields.
 write_manifest() {
   STATUS="$STATUS" REASON="$REASON" STARTED_AT="${STARTED_AT:-}" python3 -I -c '

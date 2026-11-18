@@ -7,9 +7,10 @@
 #            Rate runs: write the rate tables.
 # Called by: launch.sh, step 11 of launch.sh
 # Reads:     inputs/rs_custom.xml, inputs/parameters.json, MOVES output database (moves);
+#            project runs also: EPA_MOVES_Model/moveslog.txt (copied when MOVES made no results);
 #            project runs: inputs/_link.csv
 # Writes:    inputs/movesoutput.csv, inputs/movesactivityoutput.csv, data.rds, inputs/data.csv;
-#            project runs: inputs/linkdata.csv, /cat/run/stop_reason (when MOVES made no results);
+#            project runs: inputs/linkdata.csv, inputs/moveslog.txt and /cat/run/stop_reason (when MOVES made no results);
 #            rates: inputs/rateper*.csv, inputs/startspervehicle.csv, inputs/movesrun.csv
 # Needs:     scripts/task_get_data.R, scripts/project_functions.R, scripts/task_get_linkdata.R; dplyr, readr, DBI, dbplyr, RMariaDB, catr, purrr, tidyr, stringr, jsonlite, RMySQL
 ###############################################################################
