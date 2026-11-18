@@ -11,3 +11,4 @@ A folder containing a series of `.csv` or `.rds` files containing MOVES Input da
 - ./urban.rds
 - ./VMT.rds
 - ./VPOP.rds
+- ./nei_sourcetypeagedistribution.rds (not yet in the repository: built by `dev/make_nei_ages_reference.R` from EPA's NEI 2020 and 2023 county databases; columns `geoid, year, sourceTypeID, ageID (0 to 40), ageFraction`)
