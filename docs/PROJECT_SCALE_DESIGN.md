@@ -554,7 +554,7 @@ same idea (section 7.5) closed the gap to under 2% for NOx and exhaust particula
 The same decision started a second option: **county ages**. By default the age table is still national.
 With `AGE_SOURCE=county` (or `"age_source": "county"`), both scales use the county's own ages from EPA's
 National Emissions Inventory county databases (county rows in 2020 and 2023; other years scaled from the
-nearest of those; long-haul truck types stay national). It is **off by default**, and it stays off until
+nearest of those; long-haul truck types stay national). The reference file is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023). It is **off by default**, and it stays off until
 the measured change in county results has been reviewed, because turning it on changes every published
 county result. What this still leaves open: the tool's default is a choice we made, not a measurement of a
 real road. Anyone quoting project-scale criteria pollutants from defaults should say which age table was
@@ -623,7 +623,7 @@ option.
 15. **County ages change the answer a lot, and the default has not moved.** With `AGE_SOURCE=county` on a
     Tompkins County (NY, 2022) county run, against national ages: CO2 0.962, NOx 0.676, exhaust PM2.5 0.716,
     CO 0.722 and hydrocarbons 0.687 of the national-age result. Cars are 1.9 years younger and light trucks
-    2.3 to 3.4 years younger. This came from a partial reference file (2020 for New York only), so treat it
+    2.3 to 3.4 years younger. This came from a partial reference file (2020 for New York only; the full file is now in the image), so treat it
     as one measurement, not a calibration. The default stays national until the effect has been reviewed.
     <!-- source: release/county_ages_effect.csv -->
 

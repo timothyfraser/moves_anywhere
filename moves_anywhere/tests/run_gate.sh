@@ -122,7 +122,8 @@ step_build() {
   mkdir -p "$EXPORT_DIR" && git archive HEAD moves_anywhere | tar -x -C "$EXPORT_DIR" || { echo "git archive failed"; return 1; }
   local ctx="$EXPORT_DIR/moves_anywhere"
   command -v cygpath >/dev/null 2>&1 && ctx=$(cygpath -m "$ctx")
-  docker build --build-arg "MOVES_COMMIT=$MOVES_COMMIT" -t "$IMAGE" "$ctx" || return 1
+  # GIT_REVISION labels the image with the commit it was built from (org.opencontainers.image.revision).
+  docker build --build-arg "MOVES_COMMIT=$MOVES_COMMIT" --build-arg "GIT_REVISION=$(git rev-parse HEAD)" -t "$IMAGE" "$ctx" || return 1
   echo "image id: $(docker image inspect --format '{{.Id}}' "$IMAGE")"
 }
 
