@@ -95,7 +95,7 @@ To keep the registration ages instead, set `PROJECT_AGES=registration` in the en
 
 The first rows of the fixture run:
 
-```
+```text
 year,month,day,hour,geoid,link,roadtype,pollutant,process,sourcetype,fueltype,emissions,vmt,sourcehours,starts,vehicles
 2022,7,5,8,36109,1,5,1,1,11,1,7.139810085296631,5.614389896392822,0.22457599639892575,0,11.228799819946287
 ```
@@ -104,7 +104,7 @@ The activity columns repeat on every pollutant row of a link, vehicle type and f
 
 `diagnostics.txt` holds one line per link and the list of defaults used. This is the real file from the fixture run:
 
-```
+```text
 link,roadtype,description,miles,co2_g,nox_g,co2_g_per_mile,nox_g_per_mile,starts
 1,5,arterial 25 mph flat,400,194936.1,313.6,487.3,0.784,0
 7,1,parking lot and truck stop (off-network),0,86078.5,727.1,,,76.3

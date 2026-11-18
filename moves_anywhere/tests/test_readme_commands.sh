@@ -7,9 +7,11 @@
 #            installed into a temporary library); the other R commands then run in an empty folder, as a
 #            new user would run them. run.sh and run.ps1 get a syntax check and dry runs that stop before
 #            Docker (docker is replaced by a stand-in that refuses). Docker, MOVES and downloads never run
-#            here: each prints SKIP and why. A command this test has no rule for fails.
+#            here: each prints SKIP and why. links.sh has no dry run: its --help, its refusal of a folder
+#            with no rs_custom.xml and its refusal of a bad --state are tried instead (all exit 2 before
+#            Docker). A command this test has no rule for fails.
 # Called by: Developer tool: release checklist item 25; step readme of tests/run_gate.sh. Not run by launch.sh.
-# Reads:     README.md (or --readme FILE), moves_anywhere/run.sh, moves_anywhere/run.ps1, catr/
+# Reads:     README.md (or --readme FILE), moves_anywhere/run.sh, moves_anywhere/links.sh, moves_anywhere/run.ps1, catr/
 # Writes:    a temporary folder, removed on exit unless --keep; nothing in the working tree
 # Needs:     bash, git, R (Rscript) with catr's dependencies installed; PowerShell for the PowerShell command
 # Exits:     0 if every check passed or was skipped with a reason; 1 if any check failed; 2 on a usage error
@@ -413,6 +415,52 @@ run_sh_checks() {
   report SKIP "the run itself starts Docker and MOVES: tests/run_gate.sh runs it (step fixture)"
 }
 
+# run_links_sh_checks <README arguments>: moves_anywhere/links.sh
+# links.sh has no dry-run option, so its refusals stand in for one: a folder with no rs_custom.xml, and a
+# bad --state, both exit 2 before Docker is reached.
+run_links_sh_checks() {
+  local sh="$TOP/moves_anywhere/links.sh" rc args=() a seen=0 empty="$TMP/links_empty" full="$TMP/links_full"
+  dry "$TMP" bash "$sh" --help; rc=$?
+  if [ "$rc" = 0 ] && grep -q -- '--place' "$TMP/dry.log" && [ -z "$(calls)" ]; then
+    report PASS "--help exits 0 and prints the usage"
+  else
+    report FAIL "--help: exit $rc (wanted 0), $(first_line)"
+  fi
+  mkdir -p "$empty" "$full"; : > "$full/rs_custom.xml"
+  # The README's own arguments, with its folder placeholder replaced by an empty scratch folder
+  # (a usage line has <placeholders> and [optional] parts: placeholders get sample values, optional parts go)
+  local prev=""
+  for a in "$@"; do
+    case "$a" in
+      \[*|*\]) prev="$a"; continue ;;
+    esac
+    # the tail of a placeholder that holds a space ("<two letters>"): the head already stood for it
+    if [[ "$a" == *">" && "$a" != *"<"* ]]; then continue; fi
+    if [ "$seen" = 0 ] && [ "${a#-}" = "$a" ]; then args+=("$empty"); seen=1
+    elif [ "$prev" = "--place" ] && [[ "$a" == *"<"* ]]; then args+=("36109")
+    elif [ "$prev" = "--state" ] && [[ "$a" == *"<"* ]]; then args+=("NY")
+    else args+=("$a"); fi
+    prev="$a"
+  done
+  if [ "$seen" = 0 ]; then
+    report FAIL "no folder in the README arguments, so they cannot be tried"
+  else
+    dry "$TMP" bash "$sh" "${args[@]}"; rc=$?
+    if [ "$rc" = 2 ] && grep -q 'no rs_custom.xml' "$TMP/dry.log" && [ -z "$(calls)" ]; then
+      report PASS "the README arguments parse; a folder with no rs_custom.xml is refused with exit 2 before Docker"
+    else
+      report FAIL "README arguments on an empty folder: exit $rc (wanted 2 and 'no rs_custom.xml'), docker calls [$(calls)], $(first_line)"
+    fi
+  fi
+  dry "$TMP" bash "$sh" "$full" --place 36109 --state N1; rc=$?
+  if [ "$rc" = 2 ] && grep -q -- '--state must be two letters' "$TMP/dry.log" && [ -z "$(calls)" ]; then
+    report PASS "an invalid --state exits 2 before Docker"
+  else
+    report FAIL "invalid --state: exit $rc (wanted 2), docker calls [$(calls)], $(first_line)"
+  fi
+  report SKIP "the build itself starts Docker and queries federal services: run by hand (see docs/README_link_sources.md)"
+}
+
 # shell_command <README line> <command>
 shell_command() {
   local w=() s
@@ -427,6 +475,7 @@ shell_command() {
       else report FAIL "bash -n: $(head -n 1 "$TMP/syntax.log")"; fi
       case "$s" in
         moves_anywhere/run.sh) run_sh_checks ${w[2]+"${w[@]:2}"} ;;
+        moves_anywhere/links.sh) run_links_sh_checks ${w[2]+"${w[@]:2}"} ;;
         *) report FAIL "no rule to run $s offline, so it was not run: add one to tests/test_readme_commands.sh" ;;
       esac ;;
     docker) report SKIP "Docker: this test never runs Docker (tests/run_gate.sh builds and runs the image)" ;;
