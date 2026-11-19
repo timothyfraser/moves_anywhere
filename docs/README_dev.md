@@ -101,6 +101,16 @@ Required R packages:
 - `purrr` - Functional programming
 - `readxl` - Excel file reading
 
+### make_nei_ages_reference.R
+
+Builds `moves_anywhere/scripts/reference/nei_sourcetypeagedistribution.rds`, the county vehicle ages (ages 0 to 40) from EPA's NEI 2020 and 2023 county databases. Inputs are the extracted age tables (`countyID, yearID, sourceTypeID, ageID, ageFraction`) as `.csv` or `.csv.gz`, plus the national default age table. To rebuild, from the repository root:
+
+```
+Rscript moves_anywhere/dev/make_nei_ages_reference.R --in <files or folders> --national <national.csv> --out moves_anywhere/scripts/reference/nei_sourcetypeagedistribution.rds
+```
+
+The header of the script shows how to export `national.csv` from the image's default database. 2020 tables (ages 0 to 30) are converted with EPA's own rule from `Convert_MOVES3_input_to_MOVES5.sql`; types 53 and 62 are replaced by the national default. Check with `Rscript moves_anywhere/tests/test_nei_ages_reference.R`.
+
 ### SCC.xlsx
 
 The [SCC.xlsx](../moves_anywhere/dev/SCC.xlsx) file is a reference spreadsheet containing Source Classification Code mappings.

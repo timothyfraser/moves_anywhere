@@ -127,7 +127,7 @@ Field rules:
 - `ticket_version`: the container accepts exactly the versions it knows (today `1`); any
   other value is exit 3. A breaking change bumps it.
 - `inputs[].name`: a bare file name (the pattern forbids `/` and a leading `.`). The file
-  lands at `/cat/inputs/<name>`. The list MUST contain `rs_custom.xml` and `parameters.json`;
+  lands at `/cat/inputs/<name>`. The list MUST contain `parameters.json`, and `rs_custom.xml` too unless `parameters.json` says `"level": "project"`;
   it MAY contain `importer.xml` and the user's CSV tables. Names starting with `_` are
   reserved for the adapted tables `task_adapt.R` writes and MUST NOT appear.
 - `inputs[].sha256`, `inputs[].bytes`: optional. When present the container verifies them.
@@ -140,12 +140,15 @@ Field rules:
 - `callbacks`: always an empty array. There is no webhook. **The manifest is the callback**:
   the platform learns the run finished when `run_manifest.json` lands.
 
+**Project scale.** A project run goes through a ticket like any other. The ticket for a project order lists `parameters.json` and any link tables as inputs. It need not list `rs_custom.xml`: the container accepts a ticket without it only when the fetched `parameters.json` says `"level": "project"`, and then writes the run file itself. The ticket lists `linkdata.csv.gz` (required), `moveslog.txt.gz`, `replication.tar.xz` and `run_manifest.json` as outputs, and does not list `data.csv.gz`. The container pushes `run_manifest.json` last. If `linkdata.csv.gz` is listed as required and was not produced, the run is `failed` with `required output missing: linkdata.csv.gz`.
+
 **Output names.** The platform lists, and the container pushes, exactly these objects:
 
 | Mode (`parameters.json` `mode`) | Output names | `required` |
 |---|---|---|
 | inventory (`inv`) | `data.csv.gz` | true |
 | rate (`rates`) | `rateperhour.csv.gz`, `ratepervehicle.csv.gz`, `rateperdistance.csv.gz`, `rateperstart.csv.gz`, `startspervehicle.csv.gz`, `rateperprofile.csv.gz`, `movesrun.csv.gz` | true (they replace `data.csv.gz`) |
+| project (`"level": "project"`) | `linkdata.csv.gz` | true (replaces `data.csv.gz`) |
 | both | `moveslog.txt.gz` | true |
 | both | `replication.tar.xz` | true |
 | both | `run_manifest.json` | true, and always PUT last |

@@ -1,0 +1,7 @@
+linkID,countyID,zoneID,roadTypeID,linkLength,linkVolume,linkAvgSpeed,linkDescription,linkAvgGrade
+1,26161,261610,5,0.5,1000,25,Arterial - West link,0
+2,26161,261610,5,0.5,800,35,Arterial - East link,0
+3,26161,261610,5,0.25,400,15,Terminal Drive SB,0
+4,26161,261610,5,0.25,200,15,Terminal Drive NB,0
+5,26161,261610,5,0,400,0,Running link for ONI,0
+6,26161,261610,1,0,800,0,Off-network link,0

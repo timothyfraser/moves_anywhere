@@ -5,6 +5,10 @@
 #            functions in order on the runspec, from identifiers to climate. Each group runs
 #            inside run_adapter(): on an error it writes /cat/run/stop_reason ("adapt failed on
 #            <name>: <first error line>"), prints the full error, and exits with status 1.
+#            Project-scale runs (MOVES domain PROJECT) also run project_check and project_check_im,
+#            adapt the age distribution from env PROJECT_AGES (adapt_projectage.R), and delete the
+#            county-only tables _link, _linksourcetypehour, _driveschedulesecondlink, _offnetworklink,
+#            _opmodedistribution and _project_inputs (.csv).
 # Called by: launch.sh, step 6 of launch.sh
 # Reads:     EPA_MOVES_Model/rs_custom.xml; inputs/; the MOVES default database named in the runspec
 # Writes:    adapted tables as files in inputs/ (through the adapt_* scripts);
@@ -40,6 +44,8 @@ library(dplyr, warn.conflicts = FALSE, quietly = TRUE)
 library(readr, warn.conflicts = FALSE, quietly = TRUE)
 # Load functions
 source("scripts/adapt_functions.R")
+# Project-scale helpers (MOVES domain PROJECT: road links, one hour); used only when the runspec asks for it
+source("scripts/project_functions.R")
 
 # First useful line of an error message: no cli bullets, ANSI colour codes or backticks; "" if none
 adapt_first_line = function(msg){
@@ -52,26 +58,50 @@ adapt_first_line = function(msg){
   if(length(lines) == 0) "" else lines[1]
 }
 
+# conditionMessage() that cannot itself fail. A malformed condition (seen once on Cloud MOVES, 2026-11-19: the handler
+# died with "VECTOR_ELT() can only be applied to a 'list', not a 'NULL'" and the real cause was lost) falls back to
+# the printed condition, so the log always says what went wrong.
+adapt_safe_message = function(e){
+  out = tryCatch(conditionMessage(e), error = function(e2) NULL)
+  if(is.null(out) || !length(out)){
+    out = tryCatch(paste(utils::capture.output(print(e)), collapse = "
+"), error = function(e2) "unreadable error")
+  }
+  paste(as.character(out), collapse = "
+")
+}
+
 # Short reason for a failed adapter: the innermost cause of the error, else the outer message
 adapt_reason = function(e){
   inner = e
   while(!is.null(inner$parent) && inherits(inner$parent, "condition")){ inner = inner$parent }
-  out = adapt_first_line(conditionMessage(inner))
-  if(!nzchar(out)){ out = adapt_first_line(conditionMessage(e)) }
-  if(!nzchar(out)){ out = "see moveslog.txt.gz" }
+  out = adapt_first_line(adapt_safe_message(inner))
+  if(!nzchar(out)){ out = adapt_first_line(adapt_safe_message(e)) }
+  if(!nzchar(out)){ out = "failed before MOVES started; there is no MOVES log" }
   out
 }
 
 # Run one adapter group; on error, record why and stop the run with status 1 (read by launch.sh)
 run_adapter = function(name, expr){
   tryCatch(force(expr), error = function(e){
-    full = conditionMessage(e)
+    full = adapt_safe_message(e)
     msg = paste0("adapt failed on ", name, ": ", adapt_reason(e))
     msg = substr(msg, 1, 110)
     if(dir.exists("/cat/run")){ writeLines(msg, "/cat/run/stop_reason", sep = "") }
     message(paste0("ERROR: adapt failed on ", name, ": ", gsub("[[:space:]]*\n[[:space:]]*", " | ", full)))
     quit(save = "no", status = 1)
   })
+}
+
+# PROJECT RUNSPEC (project-scale runs only) ######
+# MOVES refuses a project runspec with more than one hour, day or month but still exits 0,
+# so the rules are checked here, before anything else runs.
+if(is_project(.runspec)){
+  cat("
+
+---PROJECT RUNSPEC-----------------------
+")
+  run_adapter("project runspec", project_check(.runspec = .runspec, BUCKET = BUCKET))
 }
 
 # IDENTIFIERS ####################################
@@ -201,6 +231,36 @@ run_adapter("zonemonthhour", {
   adapt_zonemonthhour(.runspec = .runspec)
 })
 
+
+## PROJECT LINKS (project-scale runs only) ###############
+# Runs last: the link defaults are built from the county tables written above.
+if(is_project(.runspec)){
+  cat("
+
+---PROJECT LINK TABLES----------------------
+")
+  # Start clean, so a table left by an earlier run in this folder is never loaded
+  unlink(paste0(BUCKET, "/_", c("link", "linksourcetypehour", "driveschedulesecondlink",
+                                "offnetworklink", "opmodedistribution", "project_inputs"), ".csv"))
+  # A county with no I/M programme cannot pass MOVES's own validation: say so now
+  run_adapter("project runspec", project_check_im(.runspec = .runspec, BUCKET = BUCKET))
+  # Ages first: the off-network soak default reads the same table as MOVES
+  run_adapter("vehicle ages", {
+    source("scripts/adapt_projectage.R")
+    adapt_projectage(.runspec = .runspec, BUCKET = BUCKET)
+  })
+  run_adapter("link", {
+    source("scripts/adapt_link.R")
+    adapt_link(.runspec = .runspec, BUCKET = BUCKET)
+    adapt_linksourcetypehour(.runspec = .runspec, BUCKET = BUCKET)
+    adapt_driveschedulesecondlink(.runspec = .runspec, BUCKET = BUCKET)
+  })
+  run_adapter("offnetwork", {
+    source("scripts/adapt_offnetwork.R")
+    adapt_offnetworklink(.runspec = .runspec, BUCKET = BUCKET)
+    adapt_opmodedistribution(.runspec = .runspec, BUCKET = BUCKET)
+  })
+}
 
 ## CLEANUP ############################################
 gc() # clear cache

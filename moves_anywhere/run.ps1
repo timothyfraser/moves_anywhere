@@ -15,8 +15,11 @@ param(
 if (-not (Test-Path -LiteralPath $Inputs -PathType Container)) {
   [Console]::Error.WriteLine("run.ps1: no such folder: $Inputs"); exit 2
 }
-if (-not (Test-Path -LiteralPath (Join-Path $Inputs "rs_custom.xml"))) {
-  [Console]::Error.WriteLine("run.ps1: $Inputs has no rs_custom.xml"); exit 2
+# A project folder may leave rs_custom.xml out: its parameters.json says "level": "project" and the image writes the run file
+$params = Join-Path $Inputs "parameters.json"
+$isProject = (Test-Path -LiteralPath $params) -and ((Get-Content -LiteralPath $params -Raw) -match '(?i)"level"\s*:\s*"project"')
+if (-not $isProject -and -not (Test-Path -LiteralPath (Join-Path $Inputs "rs_custom.xml"))) {
+  [Console]::Error.WriteLine("run.ps1: $Inputs has no rs_custom.xml (a project run may leave it out if parameters.json says `"level`": `"project`")"); exit 2
 }
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
   [Console]::Error.WriteLine("run.ps1: Docker is not installed or not on PATH"); exit 3

@@ -63,6 +63,18 @@ Tables below borrowed from Cloud MOVES paper.
 
 <sup>1</sup> **AVFT** stands for 'Alternate Vehicle Fuel and Technologies' input table.
 
+## Project-scale tables
+
+A project run (one hour, individual road links) uses five more tables: `link`, `linksourcetypehour`, `driveschedulesecondlink`, `offnetworklink` and `opmodedistribution`. You supply `link.csv` (and `offnetworklink.csv` if there is a parking lot); the others are optional and the image fills in defaults. The adapters write the checked versions as `_link.csv` and so on. The files, columns, defaults and limits are in the [project-scale guide](README_project_scale.md).
+
+**Vehicle ages by county (`AGE_SOURCE`).** The `sourceTypeAgeDistribution` table has three settings, set by `AGE_SOURCE` in the environment or `"age_source"` in `parameters.json` (the environment wins). They work the same in county and project runs (`moves_anywhere/scripts/adapt_ages_county.R`).
+
+- `national` (the default): the national table for the run year, as before.
+- `county`: the county's own table from EPA's National Emissions Inventory, from the nearest inventory year (run years up to 2021 take 2020; 2022 and later take 2023), used as is.
+- `county_adjusted`: the county's own table in 2020 and 2023. In other years, the national table for the run year times the county-to-national ratio of the nearest inventory year, age by age; between 2020 and 2023 the two years' ratios are interpolated. Each ratio is kept between 0.25 and 4.
+
+Both county settings rescale the shares to add up to 1 for each vehicle type, and long-haul types 53 and 62 always keep the national table. If the reference file or the county is missing, the run uses the national table and says so in `_age_source.txt`. Any other value stops the run. The reference file is included in the image (`scripts/reference/nei_sourcetypeagedistribution.rds`, 11.8 MB: 3,223 counties for 2020 and 3,224 for 2023). It was built by `dev/make_nei_ages_reference.R` from EPA's inventory county databases. On Tompkins County, NY (2022), the earlier single `county` setting gave NOx 0.676 and CO2 0.962 of the national-age result, with cars 1.9 years younger and light trucks 2.3 to 3.4 years younger; this used a partial reference file holding 2020 for New York, measured before the full file was built and before the setting was split in three. <!-- source: release/county_ages_effect.csv --> The default stays `national` until this effect has been reviewed.
+
 ## MariaDB Tables Used by Adapt Functions
 
 This section lists all MariaDB database tables that are accessed by the adapt functions in `moves_anywhere/moves_anywhere/scripts/adapt_*.R` when performing MOVES input table adaptation. These tables are read from the default MOVES database to generate adapted input tables.

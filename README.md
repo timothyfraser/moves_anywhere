@@ -10,8 +10,9 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   Contributors: Erin Murphy, Junna Chen, Mahak Bindal, Shungo Najima, Carl Closs
 -   Institution: Gao Labs @ Cornell University
 
-> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`) is the current release, and `run.sh`
-> and `run.ps1` use it by default. `v3.0.0` and `tmf77/moves-anywhere:v2` are the previous images and are
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`) is still the current release (3.1.0), and
+> `run.sh` and `run.ps1` use it by default. Release 3.2.0 (project-scale runs) is the coming release, built and
+> tested from this branch; its Docker tags are not published yet. `v3.0.0` and `tmf77/moves-anywhere:v2` are the previous images and are
 > unchanged. See the [changelog](CHANGELOG.md) for what changed.
 
 ## Contents
@@ -19,6 +20,7 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   [Welcome!](#welcome)
 -   [Quick start](#quick-start)
 -   [What you get back](#what-you-get-back)
+-   [Project-scale runs](#project-scale-runs)
 -   [Cheatsheet](#cheatsheet)
 -   [What's in this repository](#whats-in-this-repository)
 -   [Documentation](#documentation)
@@ -74,6 +76,37 @@ Results land in the same folder as your inputs. The run manifest and replication
 | `run_manifest.json` | A record of the run: status, file hashes, MOVES version, timings. See [the run manifest](docs/RUN_MANIFEST.md) |
 | `replication.tar.xz` | Everything needed to rerun this result on a stock MOVES install. See [the replication kit](docs/REPLICATION_KIT.md) |
 
+## Project-scale runs (beta)
+
+**Beta.** Project runs are a beta feature. Check results before you rely on them, and tell us what you find.
+
+A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
+
+You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (the table is in [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). To try it, copy `moves_anywhere/inputs_project/` (six road links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
+
+```json
+{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+```
+
+Then run it:
+
+```bash
+bash moves_anywhere/run.sh my_project
+```
+
+The results by link are in `my_project/linkdata.csv`.
+
+With no `link.csv`, add `"place": "west,south,east,north"` (a box in decimal degrees of longitude and latitude) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. With `place` in `parameters.json`, MOVES runs straight after the build. To check the links first, build them with `bash moves_anywhere/links.sh` (see [Building links](docs/README_link_sources.md)), then run MOVES.
+
+What has been measured:
+
+- EPA's MOVES5 training-course project exercise, run in this image: all 21 rows match EPA's answer, with a largest relative difference of 5e-8. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
+- With the default vehicle ages, a project run built to copy a county's speeds agrees with the county run to within 2% per mile for NOx, exhaust PM2.5 and CO2. <!-- source: release/county_vs_project_default.csv -->
+
+Project runs are for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data, and the defaults here do not replace that.
+
+Guides: [project-scale runs](docs/README_project_scale.md) and [building links from federal road data (beta)](docs/README_link_sources.md).
+
 ## Cheatsheet
 
 📂 To get started, check out [our cheatsheet](docs/img/moves-anywhere-cheatsheet.png):
@@ -95,6 +128,7 @@ Results land in the same folder as your inputs. The run manifest and replication
 | Guide | Read it when you want to... |
 |----|----|
 | [MOVES inputs](docs/README_MOVES_inputs.md) | know which input tables MOVES needs and what goes in them |
+| [Project-scale runs](docs/README_project_scale.md) | estimate single road links and parking lots for one hour |
 | [The pipeline scripts](docs/README_scripts.md) | see what happens inside the container, step by step |
 | [The `catr` package](docs/README_catr.md) | write runspecs and work with results in R |
 | [The run manifest](docs/RUN_MANIFEST.md) | read or check `run_manifest.json` |
@@ -125,6 +159,7 @@ remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/c
 | Image | Status | Notes |
 |----|----|----|
 | `tmf77/moves-anywhere:v3` (`v3.1`, `v3.1.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
+| `3.2.0` (not published yet) | Coming release | Built and tested from this branch; no Docker tag exists yet. Adds project-scale runs; see the [changelog](CHANGELOG.md). |
 | `tmf77/moves-anywhere:v3.0.0` | Previous release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain, Ubuntu's Ant and rclone, and the system Python packages that 3.1.0 removes or replaces. |
 | `tmf77/moves-anywhere:v2` | Older release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
 

@@ -39,7 +39,7 @@ task_pack() (
   # Not user inputs: files the pipeline itself writes at the top of the folder.
   not_user() {
     case "$1" in
-      data.csv|movesoutput.csv|movesactivityoutput.csv) return 0 ;;
+      data.csv|linkdata.csv|movesoutput.csv|movesactivityoutput.csv) return 0 ;;
       rateperhour.csv|ratepervehicle.csv|rateperdistance.csv|rateperstart.csv) return 0 ;;
       startspervehicle.csv|rateperprofile.csv|movesrun.csv) return 0 ;;
     esac
@@ -114,7 +114,11 @@ EOF
     [ -f "$f" ] && tsv_row "$f" >> "$work/inputs.tsv"
   done
   # Outputs: the objects the platform expects (docs/RUN_TICKET.md), those present.
-  for f in data.csv.gz rateperhour.csv.gz ratepervehicle.csv.gz rateperdistance.csv.gz \
+  # A project run's result is linkdata.csv, a county run's is data.csv. Only the run's own kind is
+  # listed, so a result left in this folder by an earlier run of the other kind is not an output.
+  result_file=data.csv
+  grep -Eqi "<modeldomain[[:space:]]+value[[:space:]]*=[[:space:]]*[\"']PROJECT[\"']" rs_custom.xml 2>/dev/null && result_file=linkdata.csv
+  for f in "$result_file.gz" rateperhour.csv.gz ratepervehicle.csv.gz rateperdistance.csv.gz \
            rateperstart.csv.gz startspervehicle.csv.gz rateperprofile.csv.gz movesrun.csv.gz \
            moveslog.txt.gz replication.tar.xz; do
     [ -f "$f" ] && tsv_row "$f" >> "$work/outputs.tsv"
@@ -142,7 +146,8 @@ EOF
   # MOVES can stop on a bad runspec and the pipeline still reach here. No results means a failed
   # run, whatever exit codes came before: ok must never describe a run with nothing in it.
   if [ "$status" = "ok" ]; then
-    need=data.csv
+    # A project run writes linkdata.csv and never data.csv (result_file is set above).
+    need=$result_file
     grep -qi 'modelscale value="Rates"' rs_custom.xml 2>/dev/null && need=rateperdistance.csv
     if [ ! -s "$need" ] && [ ! -s "$need.gz" ]; then
       status=failed; reason="MOVES produced no results: see moveslog"
