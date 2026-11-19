@@ -603,8 +603,8 @@ option.
    arterial carrying a port's trucks and a suburban collector get the same mix.
 10. **Thin testing.** One county and one hour pass end to end. A second county failed twice for reasons
     we then found. That is two for two on "the first new case breaks something". Not tested at all:
-    weekends, winter (beyond the example in progress), rural road types, more than 7 links (until 7.4
-    runs), evaporative emissions, air toxics, rate mode, electric vehicle shares, counties whose NEI
+    weekends, winter (beyond the example in progress), rural road types, more than 32 links,
+    evaporative emissions, air toxics, rate mode, electric vehicle shares, counties whose NEI
     data are thin, years outside the NEI range.
 11. **The reference numbers are our own.** The test that compares a run with stored results proves the
     code did not change. It does not prove the stored results are right. The only outside comparison is

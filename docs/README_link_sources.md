@@ -21,14 +21,16 @@ bash moves_anywhere/links.sh <folder> --place <5-digit FIPS> --state <two letter
 | `--max-links N` | Refuse to write more than N links. Default 40. See "The link limit". |
 | `--no-fill` | Do not add the remainder link that stands in for roads with no count. See "Roads with no count". |
 | `--overwrite` | Replace an existing `link.csv`. Without it the command refuses. |
-| `--image IMAGE` | The Docker image (the packaged software the command runs in) to use. Default `tmf77/moves-anywhere:v3`, or the environment variable `MOVES_IMAGE` if set. |
+| `--image IMAGE` | The Docker image (the packaged software the command runs in) to use. Default `tmf77/moves-anywhere:v3`, or the environment variable `MOVES_IMAGE` if set. The link builder needs the 3.2 image. The published `v3` image is 3.1.0 and does not contain it, and 3.2 is not on Docker Hub yet. Until it is, build 3.2 locally and pass its tag here. <!-- source: moves_anywhere/links.sh:19,88; CHANGELOG.md 3.2.0; README.md image versions note --> |
 
 Examples:
 
 ```bash
-bash moves_anywhere/links.sh my_run --place 36109 --state NY
-bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite
+bash moves_anywhere/links.sh my_run --place 36109 --state NY --image my-moves-anywhere:3.2
+bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite --image my-moves-anywhere:3.2
 ```
+
+Here `my-moves-anywhere:3.2` stands for a 3.2 image you built locally from this branch. Without `--image` (or `MOVES_IMAGE`), these commands use the published `v3` image (3.1.0) and fail because it lacks `launch_links.sh`.
 
 **Inside an ordinary run.** The same builder also runs from `parameters.json`, with no separate command. Put a project `parameters.json` (`"level": "project"`) with a `place`, and optionally `max_links`, in a folder with no `link.csv`. Then run `run.sh <folder>`. The image builds the links, takes the state from the first two digits of `geoid`, and runs MOVES on the new links in the same run. The folder does not need an `rs_custom.xml`. The image writes a provisional one for the builder, then writes the real one from the road types in the new `link.csv`. `parameters.json` has no key for `--no-fill`, so the remainder link stays on. A refusal stops the run with the same `links:` line. To check the links before MOVES runs, use `links.sh` instead. The keys are listed in [Project-scale runs](README_project_scale.md).
 
@@ -56,7 +58,7 @@ All files go into your folder.
 
 Both are free and need no key. FHWA and USGS publish them as U.S. government data. This command uses no other road, traffic or elevation source.
 
-HPMS gives every public road section a functional class, an urban code, a daily vehicle count (AADT, annual average daily traffic), counts of single-unit and combination trucks, a posted speed limit, lanes, a direction factor and a length. Each section also carries the year of its count (`data_year`). The command picks the state layer whose year is nearest the run year; if two are equally near, the earlier one.
+HPMS gives each public road section a functional class, an urban code, a length, and fields for a daily vehicle count (AADT, annual average daily traffic), counts of single-unit and combination trucks, a posted speed limit, lanes and a direction factor. The count fields are filled for nearly every arterial and collector but for almost no local street (see "Roads with no count"). Each section also carries the year of its count (`data_year`). The command picks the state layer whose year is nearest the run year; if two are equally near, the earlier one.
 
 ### Field names differ by layer year
 
@@ -86,7 +88,7 @@ Every value on every link has a label in `link_sources.csv`.
 
 ## Road type
 
-MOVES has four road types: rural restricted (2), rural unrestricted (3), urban restricted (4) and urban unrestricted (5). "Restricted" means access is controlled, as on a freeway. The command decides from the HPMS functional class and, for class 2, the access-control code.
+MOVES has five road types: off-network (1), rural restricted (2), rural unrestricted (3), urban restricted (4) and urban unrestricted (5). The command assigns only the four on-road types, 2 to 5, because HPMS sections are roads; off-network links (road type 1, such as a parking lot) are not built from HPMS. "Restricted" means access is controlled, as on a freeway. The command decides from the HPMS functional class and, for class 2, the access-control code.
 
 | HPMS functional class | Road type |
 |---|---|
@@ -154,7 +156,7 @@ A second build, in Manhattan (`-73.9760,40.7435,-73.9705,40.7470`, First Avenue 
 - The best comparison is the Queens Midtown Tunnel approach, against the MTA's hourly toll counts for 20 weekdays of July 2022. Both directions together: 6,378 vehicles from the builder against 4,619 measured (1.38). The split was the wrong way round for this hour: the builder sent 59% toward Queens (HPMS's direction factor, which does not say which direction is the busy one), and 58% went toward Manhattan. <!-- source: wave3/counts_check.md -->
 - The street counts are weaker: the nearest New York City counts are from 2015 to 2024, outside July, and some cover a single day.
 
-So, in this place and hour, the builder's hour volumes were about a third too high, and its direction split at a peak hour should not be trusted. Give your own counts in `link.csv` when you have them.
+So, in this place and hour, the builder's hour volumes were about 38% too high (median ratio 1.38, range 0.87 to 1.96), and its direction split at a peak hour should not be trusted. Give your own counts in `link.csv` when you have them.
 
 ## Limits and misuse
 
@@ -165,4 +167,4 @@ So, in this place and hour, the builder's hour volumes were about a third too hi
 - **Count year.** Federal counts are for the year in `data_year`. The year factor scales them with county totals, not with the road's own growth.
 - **Truck counts.** Many minor roads have no truck counts; their mix is the county default.
 - **Federal counts look authoritative and are not project data.** EPA expects project traffic data for regulatory work (for example conformity or a permit). This table is for screening, teaching and comparing options, not for a submission.
-- **Services can change.** The federal services have no promised uptime or rate limit. The command retries once and saves every response, so a table can be rebuilt from `sources/`.
+- **Services can change.** The federal services have no promised uptime or rate limit. The command retries once after a server error and saves every response in `sources/`, so you can see what the services returned. The command cannot rebuild a table from those files; it fetches again each time.

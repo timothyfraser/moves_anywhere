@@ -14,7 +14,7 @@ Terms used below:
 - An **operating mode** is how the engine is working: idling, cruising in a speed band, or braking.
 - **Soak time** is how long the engine was off before it started. A longer soak means a colder start and more emissions.
 
-Project runs use the same `run.sh` as county runs. The image (the Docker package that holds MOVES and these scripts) reads your `link.csv`, fills in everything else from county data, runs MOVES, and writes the results by link.
+Project runs use the same `run.sh` as county runs. The image (the Docker package that holds MOVES and these scripts) reads your `link.csv`, fills in the rest from the county's data and from MOVES defaults, runs MOVES, and writes the results by link.
 
 ## Quick start: one settings file
 
@@ -110,7 +110,7 @@ Run it as you run a county run: `run.sh <folder>`. The [main README](../README.m
 
 ## What is filled in for you, and how far to trust it
 
-Defaults are county averages. A link's traffic volume and length always come from you, and so does the number of vehicles in a parking lot.
+Some defaults come from the county (vehicle mix, speed, parking-lot starts, fuel and weather). Others do not: grade is 0, and the vehicle age and start operating-mode tables are national. A link's traffic volume and length always come from you, and so does the number of vehicles in a parking lot.
 
 | Input | Where the default comes from | When to replace it |
 |----|----|----|
@@ -136,7 +136,7 @@ The table shows what this default changes. Each cell is the per-mile difference,
 | CO2 | 4.28 | 0.08 |
 | CO | 47.52 | -0.06 |
 
-With the default, NOx and exhaust PM2.5 are within 10 percent of the county run and CO2 within 2 percent. <!-- source: release/county_vs_project_default.csv -->
+With the default, NOx, exhaust PM2.5 and CO2 are each within 2 percent of the county run. <!-- source: release/county_vs_project_default.csv -->
 
 To keep the registration ages instead, set `PROJECT_AGES=registration` in the environment, or put `"project_ages": "registration"` in `parameters.json` in the run folder. If both are set, the environment variable wins. Any other value stops the run. A `sourcetypeagedistribution.csv` that you supply is used as given, with no weighting. `diagnostics.txt` and `_project_inputs.csv` record which ages were used.
 
@@ -227,14 +227,14 @@ A hosted service can run a project folder through a run ticket: a file that tell
 The outputs are the same files as a local run, compressed: `linkdata.csv.gz`, `moveslog.txt.gz`,
 `replication.tar.xz` and `run_manifest.json`.
 
-As of 2026-11-18 this is being tested on the CAT development tier only. It is not open to users.
+As of 2026-11-18 this is being tested on a hosted test service only. It is not open to users.
 
 ## Limits
 
 - One hour per run. For several hours, make several runs, one folder each.
 - Built for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data and says there are no default values for off-network inputs. The defaults here do not replace that.
 - The image uses MOVES5. MOVES6 exists; this image has not moved to it yet.
-- Not tested: evaporative emissions, rate mode at project scale, runs with more than 7 links.
+- Not tested: evaporative emissions, rate mode at project scale, runs with more than 32 links. Runs with 16, 17 and 32 links have run. <!-- source: docs/PROJECT_SCALE_DESIGN.md (link limit and run-time notes); release/live_link_build/RESULT.md -->
 
 ---
 
@@ -242,7 +242,7 @@ As of 2026-11-18 this is being tested on the CAT development tier only. It is no
 
 Files that implement a project run (all in `moves_anywhere/scripts/`):
 
-- `project_functions.R`: run-file reading (`is_project`, `project_spec`), rules R1 to R10 (`project_check`), county-table reads (`project_read`), default notes (`project_note`), run-file maker (`project_runspec`).
+- `project_functions.R`: run-file reading (`is_project`, `project_spec`), the run-file rules (`project_check` holds rules 1 to 10 and 13, `project_check_im` rule 12, `adapt_link.R` rule 11), county-table reads (`project_read`), default notes (`project_note`), run-file maker (`project_runspec`).
 - `adapt_link.R`: `link.csv`, vehicle mix, drive schedules. `adapt_offnetwork.R`: `offnetworklink.csv`, soak times.
 - `task_adapt.R`: calls the adapters for a project run only. `importer.R`, `task_check_import.R`: load and check the link tables.
 - `task_postprocess.R`, `task_get_linkdata.R`: write `linkdata.csv`. `task_summarize.R`: `diagnostics.txt`. `task_pack.sh`: manifest result check.

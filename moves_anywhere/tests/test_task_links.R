@@ -143,7 +143,10 @@ empty_fetch = function(url){
   }
   fetch(url)
 }
-refuse(run(B4, fetch = empty_fetch), "no counted section", "refusal: no counted section")
+refuse(run(B4, fetch = empty_fetch), "no roads with traffic counts found in this place (0 road sections returned)", "refusal: no counted section")
+msg_nc = tryCatch(links_refuse(links_no_counts_reason(0L)), links_refusal = function(e){ conditionMessage(e) })
+check(identical(msg_nc, "links: no roads with traffic counts found in this place (0 road sections returned). Try a larger box or give a link.csv."), paste0("no-counts message text (got ", msg_nc, ")"))
+check(lengths(regmatches(msg_nc, gregexpr("links: ", msg_nc, fixed = TRUE))) == 1L && !grepl("counted section", msg_nc, fixed = TRUE), "no-counts message has one links: prefix and no jargon")
 B5 = new_folder("many")
 refuse(run(B5, max_links = 3), "more than MAX_LINKS 3", "refusal: too many links")
 check(length(dir(B5, pattern = "^_.*\\.csv$")) == 0, "a refusal after the county tables leaves no _*.csv")

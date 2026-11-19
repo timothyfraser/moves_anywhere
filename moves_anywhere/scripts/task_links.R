@@ -37,6 +37,12 @@ links_refuse = function(reason){
                  list(message = paste0("links: ", reason), call = NULL)))
 }
 
+#' Plain reason for a place with no road section that has a traffic count (the caller adds "links: " once)
+links_no_counts_reason = function(n_sections){
+  paste0("no roads with traffic counts found in this place (", n_sections, " road sections returned). ",
+         "Try a larger box or give a link.csv.")
+}
+
 #' PLACE text to a box c(w, s, e, n) or a 5-digit FIPS string
 links_parse_place = function(place){
   p = gsub("[[:space:]]", "", as.character(place))
@@ -148,7 +154,7 @@ links_task = function(place, state, max_links = 40, fill = TRUE, overwrite = FAL
   sections = links_fetch_hpms(pl, st, year = spec$year[1], save_dir = save_dir, fetch = fetch, listing = listing)
   links = links_build(sections)
   if(nrow(links) == 0){
-    links_refuse(paste0("the place returned no counted section (", nrow(sections), " sections fetched, none with a count)"))
+    links_refuse(links_no_counts_reason(nrow(sections)))
   }
   # The box's uncounted tally without facility_type 6 (the builder's tally still has them)
   attr(links, "uncounted") = links_uncounted(sections)

@@ -85,7 +85,7 @@ if [ "${PP_LEVEL:-}" = project ]; then
     . "scripts/task_copy_runspec.sh"
     . "scripts/task_start_mysql.sh"
     PLACE="$PP_PLACE" STATE="$PP_STATE" MAX_LINKS="${PP_MAX_LINKS:-40}" Rscript scripts/task_links.R ||
-      project_stop "links: $(tail -1 inputs/link_summary.txt 2>/dev/null || echo 'task_links.R failed')"
+      project_stop "links: $(tail -1 inputs/link_summary.txt 2>/dev/null | sed 's/^links: //' | grep . || echo 'task_links.R failed')"
     [ "$MADE_RS" = 1 ] && rm -f inputs/rs_custom.xml EPA_MOVES_Model/rs_custom.xml
     tick links
   fi

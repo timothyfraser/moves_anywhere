@@ -80,7 +80,7 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
 
-You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from county data. To try it, copy `moves_anywhere/inputs_project/` (seven links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
+You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (the table is in [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). To try it, copy `moves_anywhere/inputs_project/` (six road links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
 
 ```json
 {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
@@ -94,7 +94,7 @@ bash moves_anywhere/run.sh my_project
 
 The results by link are in `my_project/linkdata.csv`.
 
-With no `link.csv`, add `"place": "west,south,east,north"` (a box in decimal degrees of longitude and latitude) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. Check its output before you run MOVES on it.
+With no `link.csv`, add `"place": "west,south,east,north"` (a box in decimal degrees of longitude and latitude) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. With `place` in `parameters.json`, MOVES runs straight after the build. To check the links first, build them with `bash moves_anywhere/links.sh` (see [Building links](docs/README_link_sources.md)), then run MOVES.
 
 What has been measured:
 
