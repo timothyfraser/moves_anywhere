@@ -1,4 +1,6 @@
-# `README`: project-scale runs
+# `README`: project-scale runs (beta)
+
+**Beta.** Project runs are a beta feature. Check results before you rely on them, and tell us what you find.
 
 Part of the MOVES Anywhere guides: see the [index](README.md). The reasoning, assumptions, measurements and known weaknesses behind this guide are in [PROJECT_SCALE_DESIGN.md](PROJECT_SCALE_DESIGN.md).
 

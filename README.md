@@ -76,7 +76,9 @@ Results land in the same folder as your inputs. The run manifest and replication
 | `run_manifest.json` | A record of the run: status, file hashes, MOVES version, timings. See [the run manifest](docs/RUN_MANIFEST.md) |
 | `replication.tar.xz` | Everything needed to rerun this result on a stock MOVES install. See [the replication kit](docs/REPLICATION_KIT.md) |
 
-## Project-scale runs
+## Project-scale runs (beta)
+
+**Beta.** Project runs are a beta feature. Check results before you rely on them, and tell us what you find.
 
 A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
 

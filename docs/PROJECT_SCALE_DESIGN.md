@@ -417,9 +417,9 @@ select, and that may be the whole reason, but we have not confirmed it.
 | EPA example, Washtenaw County, third attempt | Ran. CO 27% above EPA's printed MOVES3 figure on free-flow links, three times above it at idle; unexplained (section 7.3) |
 | County run against project run built from defaults | CO2 within 5%; NOx, CO, hydrocarbons and exhaust PM2.5 1.5 to 2.9 times higher at project scale (section 7.4) |
 | The same project links with travel-weighted vehicle ages (16 links, urban roads) | Agrees with the county run: CO2 +0.1%, CO -0.1%, hydrocarbons 0.0%, NOx +1.5%, exhaust PM2.5 +1.8%, tyre wear +1.4%, brake wear +3.4%. Vehicle age weighting accounts for the whole gap. 1,487 s of MOVES |
-| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Not run on the final commit. The build step alone passed on the first commit. `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
-| Fixture run twice: identical results | Not run (part of the gate) |
-| The fourth refusal (a road type with no link) | Offline test passes; the container test waits for the gate |
+| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Passed (14 steps) on commits 2758e4f and 8f48468. `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
+| Fixture run twice: identical results | Passed (the `sha` step of the gate) |
+| The fourth refusal (a road type with no link) | Offline test passes; the container test passed (the `project` step of the gate) |
 | The county-against-project comparison again, with the new age default | with the travel-weighted default, the project run differs from the county run per mile by 0.04% (THC), -0.06% (CO), 1.53% (NOx), 0.08% (CO2), 1.83% (exhaust PM2.5), 3.37% (brake PM2.5) and 1.35% (tyre PM2.5) on urban unrestricted roads; with registration ages the same differences were 85.42%, 47.52%, 93.54%, 4.28%, 164.72%, -3.54% and 1.65%. <!-- source: release/county_vs_project_default.csv --> |
 | Reference years 2019 and 2040, county-run settings | Both years ran with the same pollutant-process set a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040; CO2 per mile in 2040 is about 45% of 2019. MOVES took 876 s and 963 s on a busy machine. One range check (CO2 per mile between 250 and 700 g) failed on five links, so it is not a limit we rely on. <!-- source: release/years_2019_2040.csv, release/years_2019_2040_checks.csv --> |
 
@@ -661,7 +661,7 @@ dependency.
 
 | Item | Kind | Note |
 |---|---|---|
-| Finish the pending checks in 7.5 | In progress | |
+| Finish the pending checks in 7.5 | Done: full gate passed on commits 2758e4f and 8f48468 | |
 | Vehicle ages at project scale: registration or travel-weighted (section 7.4) | Decided: travel-weighted by default; `PROJECT_AGES=registration` switches back (section 9) | The reference results changed with it |
 | County ages (`AGE_SOURCE=county` or `county_adjusted`) as the default at county scale | Open: `national` stays the default until the measured change is reviewed (section 9) | Changes every published county result; the one measurement predates the split into three settings |
 | Hourly county runs crash in the summary step (section 7.4) | Fixed in this release, with a replay test | Why that run had no population rows is not settled |
@@ -671,7 +671,7 @@ dependency.
 | Check a user's operating-mode table against the run's vehicle types and pollutants | Backlog | |
 | Re-run county-scale runs with link and hourly output (section 3) and put them under test | Backlog | Run and confirmed to compute when MOVESAI was built; no automated test and no reference result exists |
 | Check every link and pollutant appears in the output (red team 5) | Backlog | |
-| Warn on 0 mph links in `diagnostics.txt` (red team 7) | Backlog | |
+| Warn on 0 mph links in `diagnostics.txt` (red team 7) | Done: built (`task_summarize.R`); a flag in `linkdata.csv` stays in the backlog | |
 | A flag on each `linkdata.csv` row for "used a default" (red team 1) | Backlog | |
 | Regional fuel instead of New York's (red team 3) | Decided: New York fuel stays the default for every county (D92, 2026-11-18) | MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against. A user can still supply `fuelsupply.csv` and `fuelformulation.csv` |
 | Many hours in one command | Backlog | Each hour is a separate MOVES run |
@@ -692,7 +692,8 @@ dependency.
   `task_adapt.R`, `task_importer.sh`, `task_postprocess.R`, `task_summarize.R`, `task_compress_outputs.sh`,
   `task_pack.sh`, `task_push_outputs.sh`, `task_runspec.R`.
 - A run is a project run when `rs_custom.xml` contains `<modeldomain value="PROJECT"/>`. Every change to
-  an existing script is behind that test.
+  an existing script is behind that test, with three exceptions that reach county runs: the `AGE_SOURCE`
+  setting (default `national`, the same age table as 3.1.0), the summary-step fix and the partial-table fix.
 - Tests: `moves_anywhere/tests/test_project_functions.R`, `test_adapt_link.R`, `test_adapt_offnetwork.R`,
   `test_importer_project.R`, `test_linkdata.R`, `test_runspec_project.R` (run with `Rscript` from the
   repository root, no Docker); `test_pack_project.sh`; `test_project.sh --image <image>` (Docker); gate

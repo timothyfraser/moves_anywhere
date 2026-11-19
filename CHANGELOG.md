@@ -2,11 +2,11 @@
 
 ## 3.2.0 (release candidate)
 
-Adds project-scale runs: emissions on individual road links and parking lots for one hour. Guide: [docs/README_project_scale.md](docs/README_project_scale.md).
+Adds project-scale runs (beta): emissions on individual road links and parking lots for one hour. Guide: [docs/README_project_scale.md](docs/README_project_scale.md).
 
 ### What changed
 
-- **Project-scale runs from a folder.** A run file (`rs_custom.xml`, the MOVES runspec) with `<modeldomain value="PROJECT"/>` makes a project run. Put `rs_custom.xml` and `link.csv` in a folder (plus `offnetworklink.csv` for a parking lot, and optional vehicle mix, drive schedule and operating-mode tables) and run it with the same `run.sh` as a county run. The image fills in the vehicle mix, link speed, grade, engine starts, soak times and the county tables, and records each default it used.
+- **Project-scale runs (beta) from a folder.** A run file (`rs_custom.xml`, the MOVES runspec) with `<modeldomain value="PROJECT"/>` makes a project run. Put `rs_custom.xml` and `link.csv` in a folder (plus `offnetworklink.csv` for a parking lot, and optional vehicle mix, drive schedule and operating-mode tables) and run it with the same `run.sh` as a county run. The image fills in the vehicle mix, link speed, grade, engine starts, soak times and the county tables, and records each default it used.
 - **`linkdata.csv`.** The result of a project run: one row per link, pollutant, process, vehicle type and fuel, with grams, miles, hours, starts and vehicles. A project run never writes `data.csv`. `diagnostics.txt` lists each link and the defaults used. `linkdata.csv.gz` is the result in `run_manifest.json`.
 - **Refusals with reasons.** A project run stops with a one-line reason when its run file breaks one of the 13 rules in the guide (one county, year, month, day type and hour; hourly link output; grams, miles, hours; inventory mode; custom database; a link for every road type; no county result in the folder) or its link inputs are bad. The image checks because MOVES itself accepts such a run and produces nothing.
 - **`LEVEL=project` helper.** `task_runspec.R` makes a project run file from `GEOID`, `YEAR`, `MONTH`, `DAY`, `HOUR` and optional `ROADTYPES`.
@@ -17,6 +17,8 @@ Adds project-scale runs: emissions on individual road links and parking lots for
 - **Link builder (beta).** `links.sh` builds a project run folder from live federal data (FHWA's Highway Performance Monitoring System, HPMS, and USGS 3DEP elevation): road type, length, hourly volume (with a year factor), vehicle mix from truck counts, grade, and a remainder link for roads with no count. Every value is labelled measured, derived or default, and every response is saved. Guide: [docs/README_link_sources.md](docs/README_link_sources.md). A live build for a box in Ithaca, NY made 17 links in 87 s (10.2% of values default) and ran in MOVES in 371 s. Of the 16 road links, 13 were within 10% of the flat fixture's CO2 per mile; the three outliers are the steepest links. <!-- source: release/live_link_build/RESULT.md -->
 - **Summary-step fix.** A run with no vehicle-population or CO2-equivalent rows no longer fails at the summary step. The fault dates from 2025-03-25 and is in 3.1.0.
 - **Partial-table fix.** A user table that covers only some vehicle types no longer stops the fuel-technology and age adapters; the types it leaves out take the national defaults.
+- **Adapter errors are always logged.** When a step of the adapt stage fails, the log now shows the real error. Before, the error handler itself could fail and hide it.
+- **Adapt-stage and failure-path fixes.** The adapt stage closes its database connections on every path (the default branch of the age-distribution adapter never closed its connection). A run that fails before MOVES starts no longer points to a MOVES log that does not exist; a failure after MOVES ran keeps and pushes the log.
 - **Gate.** New step `replay` (the summary step on saved MOVES outputs, no MOVES run, `tests/test_summarize_replay.sh`); `run_gate.sh --fast` for the short gate (not a release gate); step 14, `epa` (full gate only; `tests/test_epa_project.sh`, about 3 minutes of MOVES). The four link-builder unit tests are part of `project-unit`.
 - **EPA's training exercise as a fixture.** `inputs_epa_project/` is a project run from EPA's MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key), with EPA's results and a comparison script (`tests/compare_epa_project.py`, `tests/test_epa_project.sh`). Source: US EPA; its folder README gives the attribution and every change. EPA's second run (drive schedules) is also reproduced: 21 of 21 rows, largest relative difference about 5e-8. <!-- source: epa_moves5_exercise/comparison_run2.csv -->
 - **Tests no longer default to a path on one machine.** `test_ticket_mode.sh` defaulted its fixture to a path on one machine (since 3.1.0); it now defaults to the repository's `inputs_ny`. `testme.sh` and `testme_cloud.sh` use placeholders.
@@ -24,15 +26,15 @@ Adds project-scale runs: emissions on individual road links and parking lots for
 ### What did not change
 
 - As in 3.1.0, a fuel-technology table that leaves out some strata of a vehicle type it covers gives those strata zero.
-- County runs take the same path through the scripts: every change to an existing script applies only to project runs. The gate's county fixture checks that county runs are unchanged.
+- County runs take the 3.1.0 path, with three changes that reach them too: the `AGE_SOURCE` setting (default `national`, which gives the same age table as 3.1.0); the summary-step fix; and the partial-table fix. Every other change to an existing script applies only to project runs. The gate's county fixture checks that a county run with default settings gives the same results as 3.1.0.
 - The run manifest schema: `manifest_version` stays 1.
 
 ### What is not included
 
 - MOVES6: the image stays on MOVES5.
-- Not tested: evaporative emissions and rate mode at project scale. Runs with 16 and 17 links have run (the live link build).
+- Not tested: evaporative emissions, rate mode at project scale, and runs with more than 32 links. Runs with 16, 17 and 32 links have run.
 
-Checks: full gate PASS on commit 2758e4f, 14 steps in 1,584 s (static, compare-unit, build, county fixture, compare, manifest, pack, ticket, bad-table, sha, project-unit, project, replay, epa); EPA's MOVES5 course project exercise reproduced on both runs, 21 of 21 rows each, largest relative difference 5e-8; project against county scale with the age default, 16 urban links: NOx +1.5%, exhaust PM2.5 +1.8%, CO2 +0.1% per mile; 2019 and 2040 project runs complete; a 17-link live build of downtown Ithaca from federal data ran in MOVES in 371 s. <!-- source: release/gate_full.txt, epa_moves5_exercise/comparison_run1b.csv and comparison_run2.csv, release/county_vs_project_default.csv, release/years_2019_2040.csv, release/live_link_build/RESULT.md -->
+Checks: full gate PASS on commit 282fb16 <!-- PENDING: gate 282fb16 -->, 14 steps in <!-- PENDING: seconds --> s (static, compare-unit, build, county fixture, compare, manifest, pack, ticket, bad-table, sha, project-unit, project, replay, epa); EPA's MOVES5 course project exercise reproduced on both runs, 21 of 21 rows each, largest relative difference 5e-8; project against county scale with the age default, 16 urban links: NOx +1.5%, exhaust PM2.5 +1.8%, CO2 +0.1% per mile; 2019 and 2040 project runs complete; a 17-link live build of downtown Ithaca from federal data ran in MOVES in 371 s; city checks for Manhattan and Buffalo (Erie County), NY, 2022, against the CAT county results: CO2 per mile within 7% on road types 4 and 5; the link builder's hour volumes in Manhattan are about 1.4 times measured counts. <!-- source: <!-- PENDING: gate summary file -->, wave3/manhattan_vs_cat_2022.csv, wave3/buffalo_vs_cat_2022.csv, wave3/counts_check.md, epa_moves5_exercise/comparison_run1b.csv and comparison_run2.csv, release/county_vs_project_default.csv, release/years_2019_2040.csv, release/live_link_build/RESULT.md -->
 
 ## 3.1.0
 
