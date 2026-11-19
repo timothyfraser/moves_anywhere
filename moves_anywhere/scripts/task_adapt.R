@@ -77,7 +77,7 @@ adapt_reason = function(e){
   while(!is.null(inner$parent) && inherits(inner$parent, "condition")){ inner = inner$parent }
   out = adapt_first_line(adapt_safe_message(inner))
   if(!nzchar(out)){ out = adapt_first_line(adapt_safe_message(e)) }
-  if(!nzchar(out)){ out = "see moveslog.txt.gz" }
+  if(!nzchar(out)){ out = "failed before MOVES started; there is no MOVES log" }
   out
 }
 

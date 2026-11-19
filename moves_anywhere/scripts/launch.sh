@@ -39,13 +39,33 @@ mkdir -p /cat/inputs; rm -f "$TIMINGS"
 LAST_TICK=$(date +%s)
 tick() { local n; n=$(date +%s); mkdir -p /cat/inputs; echo "$1 $((n - LAST_TICK))" >> "$TIMINGS"; LAST_TICK=$n; }
 PUSHED=0
+# MOVES_STARTED=1 once MOVES is launched (step 10): before that there is no MOVES log to point to.
+MOVES_STARTED=0
+# stop_fallback <step> <rc>: write stop_reason unless the step already wrote one.
+stop_fallback() {
+  [ -f /cat/run/stop_reason ] && return 0
+  if [ "$MOVES_STARTED" = 1 ]; then
+    printf '%s failed (exit %s): see moveslog.txt.gz' "$1" "$2" > /cat/run/stop_reason
+  else
+    printf '%s failed (exit %s) before MOVES started; there is no MOVES log' "$1" "$2" > /cat/run/stop_reason
+  fi
+}
 # On any non-zero exit, still push a failed manifest (not for config/ticket errors: nowhere trusted to write).
 on_exit() {
   rc=$?
   trap - EXIT
   if [ "$rc" -ne 0 ] && [ "$MOVES_IO" != mounted ] && [ "$PUSHED" = 0 ] && [ "$rc" -ne 3 ] && [ "$rc" -ne 5 ]; then
     PUSHED=1
-    mkdir -p /cat/run; [ -f /cat/run/stop_reason ] || printf 'MOVES exited %s: see moveslog.txt.gz' "$rc" > /cat/run/stop_reason
+    mkdir -p /cat/run
+    if [ "$MOVES_STARTED" = 1 ]; then
+      [ -f /cat/run/stop_reason ] || printf 'MOVES exited %s: see moveslog.txt.gz' "$rc" > /cat/run/stop_reason
+      # MOVES ran: keep its log (steps 12 and 14 may not have run) and push it with the failed manifest.
+      if [ -f /cat/EPA_MOVES_Model/moveslog.txt ] && [ -d /cat/inputs ]; then
+        cp -f /cat/EPA_MOVES_Model/moveslog.txt /cat/inputs/moveslog.txt           && gzip -c /cat/inputs/moveslog.txt > /cat/inputs/moveslog.txt.gz.part           && mv -f /cat/inputs/moveslog.txt.gz.part /cat/inputs/moveslog.txt.gz
+      fi
+    else
+      [ -f /cat/run/stop_reason ] || printf 'Run exited %s before MOVES started; there is no MOVES log' "$rc" > /cat/run/stop_reason
+    fi
     cd /cat && PUSH_STATUS=failed bash scripts/task_push_outputs.sh
   fi
   exit "$rc"
@@ -113,7 +133,7 @@ tick check_inputs
 
 # 4. Check R packages ####
 # Check if all R packages are installed.
-Rscript "scripts/task_check_packages.R" || { rc=$?; [ -f /cat/run/stop_reason ] || printf '%s failed (exit %s): see moveslog.txt.gz' "task_check_packages.R" "$rc" > /cat/run/stop_reason; exit "$rc"; }
+Rscript "scripts/task_check_packages.R" || { rc=$?; stop_fallback "task_check_packages.R" "$rc"; exit "$rc"; }
 
 # 5. Start MySQL ####
 # Start up mysql
@@ -121,16 +141,16 @@ Rscript "scripts/task_check_packages.R" || { rc=$?; [ -f /cat/run/stop_reason ] 
 
 # 6. Adapt inputs ####
 # Initiate the adapt protocol
-Rscript "scripts/task_adapt.R" || { rc=$?; [ -f /cat/run/stop_reason ] || printf '%s failed (exit %s): see moveslog.txt.gz' "task_adapt.R" "$rc" > /cat/run/stop_reason; exit "$rc"; }
+Rscript "scripts/task_adapt.R" || { rc=$?; stop_fallback "task_adapt.R" "$rc"; exit "$rc"; }
 tick adapt
 
 # 7. Create custom database ####
 # Create custom database
-Rscript "scripts/task_db_create.R" || { rc=$?; [ -f /cat/run/stop_reason ] || printf '%s failed (exit %s): see moveslog.txt.gz' "task_db_create.R" "$rc" > /cat/run/stop_reason; exit "$rc"; }
+Rscript "scripts/task_db_create.R" || { rc=$?; stop_fallback "task_db_create.R" "$rc"; exit "$rc"; }
 
 # 8. Create importer ####
 # Create importer script
-Rscript "scripts/task_create_importer.R" || { rc=$?; [ -f /cat/run/stop_reason ] || printf '%s failed (exit %s): see moveslog.txt.gz' "task_create_importer.R" "$rc" > /cat/run/stop_reason; exit "$rc"; }
+Rscript "scripts/task_create_importer.R" || { rc=$?; stop_fallback "task_create_importer.R" "$rc"; exit "$rc"; }
 tick db_create
 
 # 9. Import tables ####
@@ -140,13 +160,14 @@ tick importer
 
 # 10. Launch MOVES ####
 # Launch MOVES
+MOVES_STARTED=1
 . "scripts/task_launch_moves.sh"
 tick moves
 
 
 # 11. Postprocess ####
 # Postprocess MOVES output data in R
-Rscript "scripts/task_postprocess.R" || { rc=$?; [ -f /cat/run/stop_reason ] || printf '%s failed (exit %s): see moveslog.txt.gz' "task_postprocess.R" "$rc" > /cat/run/stop_reason; exit "$rc"; }
+Rscript "scripts/task_postprocess.R" || { rc=$?; stop_fallback "task_postprocess.R" "$rc"; exit "$rc"; }
 tick postprocess
 
 # 12. Copy MOVES logs ####
@@ -155,7 +176,7 @@ tick postprocess
 
 # 13. Summarize ####
 # Summarize results quickly for diagnostics
-Rscript "scripts/task_summarize.R" || { rc=$?; [ -f /cat/run/stop_reason ] || printf '%s failed (exit %s): see moveslog.txt.gz' "task_summarize.R" "$rc" > /cat/run/stop_reason; exit "$rc"; }
+Rscript "scripts/task_summarize.R" || { rc=$?; stop_fallback "task_summarize.R" "$rc"; exit "$rc"; }
 
 # 14. Compress outputs ####
 # Compress outputs (child process: it must never end this job), then pack, then push (ticket/sync).

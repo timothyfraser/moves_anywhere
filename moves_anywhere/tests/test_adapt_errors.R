@@ -8,5 +8,9 @@ bad <- structure(class = c("weird", "error", "condition"), list())
 stopifnot(nzchar(adapt_safe_message(bad)))
 stopifnot(adapt_safe_message(simpleError("boom")) == "boom")
 stopifnot(adapt_reason(simpleError("first line\nsecond")) == "first line")
+# Adapt always runs before MOVES: the fallback must not point to a moveslog that was never made
+fb <- adapt_reason(simpleError(""))
+stopifnot(fb == "failed before MOVES started; there is no MOVES log", !grepl("moveslog", fb))
+stopifnot(nchar(paste0("adapt failed on ", "offnetwork", ": ", fb)) <= 110)
 cat("PASS: test_adapt_errors.R
 ")
