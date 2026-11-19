@@ -202,6 +202,9 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
       filter(yearID %in% !!.year) %>%
       collect()
     
+    # Disconnect from database (this branch left its connection open, to be closed later by R's clean-up)
+    dbDisconnect(custom)
+    
     # Import table!
     import_table(data = data, tablename = f$changed, .custom = .custom, adapt = TRUE, save = TRUE, volume = BUCKET)
     

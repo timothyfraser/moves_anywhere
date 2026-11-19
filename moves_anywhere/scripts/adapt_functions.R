@@ -86,12 +86,12 @@ get_table = function(tablename){
   rs = catr::translate_rs(.runspec = "EPA_MOVES_Model/rs_custom.xml")
   .custom = rs$defaultdbname
   custom = catr::connect("mariadb", .custom)
+  # Close the connection on every exit, error included, so it is never left to the garbage collector
+  on.exit(DBI::dbDisconnect(custom), add = TRUE)
   
   data = custom %>% 
     tbl(tablename) %>%
     collect()
-  
-  dbDisconnect(custom)
   
   return(data) 
 }
