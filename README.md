@@ -78,25 +78,27 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 ## Project-scale runs
 
-A county run estimates emissions for a whole county over a year. A project run estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
+A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
 
-You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from county data. To try it, copy `moves_anywhere/inputs_project/` (seven links and a parking lot) to a new folder `my_project`, delete its `rs_custom.xml`, and put this in its `parameters.json`:
+You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from county data. To try it, copy `moves_anywhere/inputs_project/` (seven links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
 
 ```json
 {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
 ```
 
-Then run it. The results by link are in `my_project/linkdata.csv`.
+Then run it:
 
 ```bash
 bash moves_anywhere/run.sh my_project
 ```
 
-With no `link.csv`, add `"place": "west,south,east,north"` (a box in degrees) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System, and grade from USGS 3DEP elevation. Check its output before you run MOVES on it.
+The results by link are in `my_project/linkdata.csv`.
 
-What was measured:
+With no `link.csv`, add `"place": "west,south,east,north"` (a box in decimal degrees of longitude and latitude) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. Check its output before you run MOVES on it.
 
-- EPA's MOVES5 training-course project exercise, run in this image, matches all 21 rows of EPA's answer to within 5e-8 (relative difference). <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
+What has been measured:
+
+- EPA's MOVES5 training-course project exercise, run in this image: all 21 rows match EPA's answer, with a largest relative difference of 5e-8. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
 - With the default vehicle ages, a project run built to copy a county's speeds agrees with the county run to within 2% per mile for NOx, exhaust PM2.5 and CO2. <!-- source: release/county_vs_project_default.csv -->
 
 Project runs are for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data, and the defaults here do not replace that.
