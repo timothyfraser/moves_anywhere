@@ -58,12 +58,25 @@ adapt_first_line = function(msg){
   if(length(lines) == 0) "" else lines[1]
 }
 
+# conditionMessage() that cannot itself fail. A malformed condition (seen once on Cloud MOVES, 2026-11-19: the handler
+# died with "VECTOR_ELT() can only be applied to a 'list', not a 'NULL'" and the real cause was lost) falls back to
+# the printed condition, so the log always says what went wrong.
+adapt_safe_message = function(e){
+  out = tryCatch(conditionMessage(e), error = function(e2) NULL)
+  if(is.null(out) || !length(out)){
+    out = tryCatch(paste(utils::capture.output(print(e)), collapse = "
+"), error = function(e2) "unreadable error")
+  }
+  paste(as.character(out), collapse = "
+")
+}
+
 # Short reason for a failed adapter: the innermost cause of the error, else the outer message
 adapt_reason = function(e){
   inner = e
   while(!is.null(inner$parent) && inherits(inner$parent, "condition")){ inner = inner$parent }
-  out = adapt_first_line(conditionMessage(inner))
-  if(!nzchar(out)){ out = adapt_first_line(conditionMessage(e)) }
+  out = adapt_first_line(adapt_safe_message(inner))
+  if(!nzchar(out)){ out = adapt_first_line(adapt_safe_message(e)) }
   if(!nzchar(out)){ out = "see moveslog.txt.gz" }
   out
 }
@@ -71,7 +84,7 @@ adapt_reason = function(e){
 # Run one adapter group; on error, record why and stop the run with status 1 (read by launch.sh)
 run_adapter = function(name, expr){
   tryCatch(force(expr), error = function(e){
-    full = conditionMessage(e)
+    full = adapt_safe_message(e)
     msg = paste0("adapt failed on ", name, ": ", adapt_reason(e))
     msg = substr(msg, 1, 110)
     if(dir.exists("/cat/run")){ writeLines(msg, "/cat/run/stop_reason", sep = "") }
