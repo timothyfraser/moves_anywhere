@@ -7,6 +7,7 @@
 # Called by: Developer tool: exactness gate between two output folders
 #            (docs/REPLICATION_KIT.md; tested by test_compare_outputs.py).
 # Reads:     <dirA>/ and <dirB>/: movesoutput.csv, movesactivityoutput.csv, data.csv
+#            (with --project: movesoutput.csv, movesactivityoutput.csv, linkdata.csv)
 # Writes:    stdout only (one line per file, or one JSON object with --json)
 # Exits:     0 if no file FAILs; 1 if any file FAILs; 2 on a usage error (argparse)
 ###############################################################################
@@ -14,6 +15,7 @@
 
 Usage:
     compare_outputs.py <dirA> <dirB> [--files movesoutput,movesactivityoutput,data] [--json]
+    compare_outputs.py <dirA> <dirB> --project [--files movesoutput,movesactivityoutput,linkdata] [--json]
 
 The comparison is exact. For each file the rows are grouped by a key, the
 metric columns are summed per key (rows sorted by key first so float
@@ -33,6 +35,15 @@ Files:
                               fueltype, roadtype
                          sum: emissions, vmt, sourcehours, vehicles, starts,
                               idlehours, hoteld, hotelb, hotelo
+
+With --project (a project-scale run: one hour, road links) a second set of specs is used:
+    movesoutput          key: the movesoutput key above plus linkID, dayID, hourID
+                         sum: emissionQuant
+    movesactivityoutput  key: the movesactivityoutput key above plus linkID, dayID, hourID
+                         sum: activity
+    linkdata             key: link, pollutant, process, sourcetype, fueltype
+                         sum: emissions, vmt, sourcehours, starts, vehicles
+There is no data.csv in a project run. The comparison stays exact.
 
 A key column is used only if it appears in the header of both files.
 Empty cells and NA count as 0 in sums. A file missing from both folders is
@@ -63,6 +74,24 @@ SPECS = {
                  "regclass", "fueltype", "roadtype"],
         "metrics": ["emissions", "vmt", "sourcehours", "vehicles", "starts",
                     "idlehours", "hoteld", "hotelb", "hotelo"],
+    },
+}
+# Project-scale runs (--project): the same files with the link in the key, and linkdata.csv
+PROJECT_SPECS = {
+    "movesoutput": {
+        "filename": "movesoutput.csv",
+        "keys": SPECS["movesoutput"]["keys"] + ["linkID", "dayID", "hourID"],
+        "metrics": ["emissionQuant"],
+    },
+    "movesactivityoutput": {
+        "filename": "movesactivityoutput.csv",
+        "keys": SPECS["movesactivityoutput"]["keys"] + ["linkID", "dayID", "hourID"],
+        "metrics": ["activity"],
+    },
+    "linkdata": {
+        "filename": "linkdata.csv",
+        "keys": ["link", "pollutant", "process", "sourcetype", "fueltype"],
+        "metrics": ["emissions", "vmt", "sourcehours", "starts", "vehicles"],
     },
 }
 SAMPLE = 10
@@ -112,8 +141,8 @@ def _fmt_key(keys, key):
     return ",".join("%s=%s" % (k, v) for k, v in zip(keys, key))
 
 
-def compare_file(name, dir_a, dir_b):
-    spec = SPECS[name]
+def compare_file(name, dir_a, dir_b, specs=SPECS):
+    spec = specs[name]
     pa = os.path.join(dir_a, spec["filename"])
     pb = os.path.join(dir_b, spec["filename"])
     ea, eb = os.path.isfile(pa), os.path.isfile(pb)
@@ -199,17 +228,23 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Exact comparison of two MOVES output folders.")
     ap.add_argument("dir_a")
     ap.add_argument("dir_b")
-    ap.add_argument("--files", default=",".join(SPECS),
-                    help="comma-separated subset of: %s" % ",".join(SPECS))
+    ap.add_argument("--files", default=None,
+                    help="comma-separated subset of: %s (with --project: %s)"
+                    % (",".join(SPECS), ",".join(PROJECT_SPECS)))
     ap.add_argument("--json", action="store_true", help="print one JSON object")
+    ap.add_argument("--project", action="store_true",
+                    help="project-scale run: link-level keys and linkdata.csv instead of data.csv")
     args = ap.parse_args(argv)
 
+    specs = PROJECT_SPECS if args.project else SPECS
+    if args.files is None:
+        args.files = ",".join(specs)
     names = [n.strip() for n in args.files.split(",") if n.strip()]
-    bad = [n for n in names if n not in SPECS]
+    bad = [n for n in names if n not in specs]
     if bad:
         ap.error("unknown file(s): %s" % ",".join(bad))
 
-    results = [compare_file(n, args.dir_a, args.dir_b) for n in names]
+    results = [compare_file(n, args.dir_a, args.dir_b, specs) for n in names]
     failed = any(r["status"] == "FAIL" for r in results)
     overall = "FAIL" if failed else "PASS"
     if args.json:

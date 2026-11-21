@@ -6,7 +6,7 @@
 #            replication.tar.xz and run_manifest.json belong to task_pack.sh, not here.
 # Called by: launch.sh, step 14 of launch.sh.
 #            launch.sh runs this as a child process (never sourced), so it may exit normally.
-# Reads:     /cat/inputs: data.csv, moveslog.txt, rateperhour.csv, ratepervehicle.csv,
+# Reads:     /cat/inputs: data.csv, linkdata.csv (project), moveslog.txt, rateperhour.csv, ratepervehicle.csv,
 #            rateperdistance.csv, rateperstart.csv, startspervehicle.csv, rateperprofile.csv,
 #            movesrun.csv (each only if present)
 # Writes:    /cat/inputs/<file>.gz for each file read (via <file>.gz.part)
@@ -19,8 +19,12 @@ cd "/cat" || { echo "Failed to change directory"; exit 1; }
 IN="inputs"
 rc=0
 
-# Inventory mode writes data.csv; rate mode writes the rate tables instead.
-for f in data.csv moveslog.txt rateperhour.csv ratepervehicle.csv rateperdistance.csv \
+# Inventory mode writes data.csv (a project run writes linkdata.csv instead); rate mode writes the rate tables instead.
+# Each kind of run compresses only its own result, so a result file left in this folder by an
+# earlier run of the other kind is never shipped.
+RESULT=data.csv
+grep -Eqi "<modeldomain[[:space:]]+value[[:space:]]*=[[:space:]]*[\"']PROJECT[\"']" "$IN/rs_custom.xml" 2>/dev/null && RESULT=linkdata.csv
+for f in "$RESULT" moveslog.txt rateperhour.csv ratepervehicle.csv rateperdistance.csv \
          rateperstart.csv startspervehicle.csv rateperprofile.csv movesrun.csv; do
   if [ -f "$IN/$f" ]; then
     gzip -c "$IN/$f" > "$IN/$f.gz.part" && mv -f "$IN/$f.gz.part" "$IN/$f.gz" \

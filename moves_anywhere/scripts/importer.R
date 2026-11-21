@@ -4,7 +4,8 @@
 # Does:      Fills the importer template with the runspec's selections and the paths of the
 #            custom input tables (_<table>.csv) present in the inputs folder.
 # Called by: task_create_importer.R, step 8 of launch.sh (sourced; defines create_importer())
-# Reads:     <BUCKET>/rs_custom.xml, <SOURCE>/importer_template.xml, <BUCKET>/_<table>.csv (if present)
+# Reads:     <BUCKET>/rs_custom.xml, <SOURCE>/importer_template.xml (county) or
+#            <SOURCE>/importer_template_project.xml (project run), <BUCKET>/_<table>.csv (if present)
 # Writes:    <BUCKET>/importer.xml
 # Needs:     dplyr, readr, xml2
 ###############################################################################
@@ -32,7 +33,10 @@ create_importer = function(BUCKET = "/cat/inputs", SOURCE= "scripts", dir = "/ca
   rs = paste0(BUCKET, "/rs_custom.xml") %>% 
     xml2::read_xml() %>% as_list()
   
-  imp = paste0(SOURCE, "/importer_template.xml") %>%
+  # A project run (MOVES domain PROJECT) uses its own template
+  project = isTRUE(toupper(attr(rs$runspec$modeldomain, "value")) == "PROJECT")
+  
+  imp = paste0(SOURCE, "/", ifelse(project, "importer_template_project.xml", "importer_template.xml")) %>%
     xml2::read_xml() %>%
     as_list()
   
@@ -254,6 +258,45 @@ create_importer = function(BUCKET = "/cat/inputs", SOURCE= "scripts", dir = "/ca
   if(file.exists(path)){
     path = fix_path(path)
     imp$moves$importer$onroadretrofit$parts$onRoadRetrofit$filename = list(path)
+  }
+  
+  # Project run: the five link tables, then drop the county-only sections
+  if(project){
+    path = paste0(BUCKET, "/", "_link.csv")
+    if(file.exists(path)){
+      path = fix_path(path)
+      imp$moves$importer$link$parts$link$filename = list(path)
+    }
+    
+    path = paste0(BUCKET, "/", "_linksourcetypehour.csv")
+    if(file.exists(path)){
+      path = fix_path(path)
+      imp$moves$importer$linksourcetypehour$parts$linkSourceTypeHour$filename = list(path)
+    }
+    
+    path = paste0(BUCKET, "/", "_driveschedulesecondlink.csv")
+    if(file.exists(path)){
+      path = fix_path(path)
+      imp$moves$importer$driveschedulesecondlink$parts$driveScheduleSecondLink$filename = list(path)
+    }
+    
+    path = paste0(BUCKET, "/", "_offnetworklink.csv")
+    if(file.exists(path)){
+      path = fix_path(path)
+      imp$moves$importer$offnetworklink$parts$offNetworkLink$filename = list(path)
+    }
+    
+    path = paste0(BUCKET, "/", "_opmodedistribution.csv")
+    if(file.exists(path)){
+      path = fix_path(path)
+      imp$moves$importer$linkopmodedistribution$parts$opModeDistribution$filename = list(path)
+    }
+    
+    # The county adapters still write their _*.csv files, and the blocks above re-created
+    # these sections by assignment: remove them, MOVES rejects them in project mode
+    for(sec in c("avgspeeddistribution","roadtypedistribution","sourcetypepopulation","starts","vehicletypevmt","idle")){
+      imp$moves$importer[[sec]] = NULL
+    }
   }
   
   # path = paste0(BUCKET, "/", "_.csv")

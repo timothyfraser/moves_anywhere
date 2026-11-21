@@ -6,16 +6,31 @@
 # Called by: task_adapt.R, step 6 of launch.sh
 # Reads:     EPA_MOVES_Model/rs_custom.xml (runspec); inputs/sourcetypeagedistribution.csv if provided,
 #            otherwise the sourcetypeagedistribution table in the runspec's default database (MariaDB)
-# Writes:    inputs/_sourcetypeagedistribution.csv
-# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); catr, DBI, RMariaDB, dplyr, stringr
+#            With AGE_SOURCE (environment) or "age_source" (inputs/parameters.json) set to county or
+#            county_adjusted and no user table, the county's NEI ages replace the national ones
+#            (adapt_ages_county.R says how each setting builds them).
+# Writes:    inputs/_sourcetypeagedistribution.csv; inputs/_age_source.txt (only when age_source is
+#            county or county_adjusted)
+# Needs:     adapt_functions.R (get_changes, get_is_custom, get_data, import_table); adapt_ages_county.R
+#            (sourced below); catr, DBI, RMariaDB, dplyr, stringr, jsonlite
 ###############################################################################
+
+# County ages (the setting, the lookup and the year method): next to this file, from /cat or the repository root
+for(.f in c("scripts/adapt_ages_county.R", "moves_anywhere/scripts/adapt_ages_county.R")){
+  if(!exists("ages_county_table", mode = "function") && file.exists(.f)){ source(.f) }
+}
 
 #' Adapt the sourcetypeagedistribution table
 #' @param .runspec path to the run's runspec (XML)
-adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml"){
+#' @param .reference the NEI county age table (used only when age_source is county or county_adjusted)
+adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom.xml",
+                                           .reference = "scripts/reference/nei_sourcetypeagedistribution.rds"){
   
   table = "sourcetypeagedistribution"
   BUCKET = "inputs"
+  # Which age table the run asked for: national (default, unchanged), county or county_adjusted; no stale note survives
+  if(file.exists(paste0(BUCKET, "/_age_source.txt"))){ unlink(paste0(BUCKET, "/_age_source.txt")) }
+  .age_source = if(exists("ages_source_mode", mode = "function")){ ages_source_mode(BUCKET) }else{ "national" }
   
   # Get your list of key values from your runspec
   rs = catr::translate_rs(.runspec = .runspec)
@@ -71,8 +86,10 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
       62, 41
     )
     
-    # Are these matrices entirely the same?
-    is_same = all(tallynormal == tally)
+    # Are these tallies entirely the same? Same number of rows and, joined by sourceTypeID, every
+    # count equal. (Comparing the data frames with == errors when a table omits vehicle types.)
+    tallyjoin = inner_join(by = "sourceTypeID", x = tallynormal, y = ungroup(tally), suffix = c("_normal", "_data"))
+    is_same = nrow(tally) == nrow(tallynormal) && nrow(tallyjoin) == nrow(tallynormal) && all(tallyjoin$n_normal == tallyjoin$n_data)
     
     # If they are not, we will fill in the ageFraction for missing strata with DEFAULTS. 
     if(!is_same){
@@ -135,7 +152,8 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
         # Weight the ageFraction
         # so that we downweight any custom input data cases 
         # to make room for the proportional share of data represented by the defaults
-        mutate(ageFraction = ageFraction * (1 - weight))  %>%
+        # A sourcetype-year with no custom rows at all (weight 1) keeps the national default as is
+        mutate(ageFraction = ifelse(weight == 1, ageFraction, ageFraction * (1 - weight)))  %>%
         # Drop the weight at the end
         select(-weight, -group)
       
@@ -153,6 +171,26 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
     # Import the table
     import_table(data = data, tablename = f$changed, .custom = .custom, adapt = FALSE, save = TRUE, volume = BUCKET)
     
+    # The user's table wins over the county table
+    if(.age_source %in% c("county", "county_adjusted")){
+      ages_source_note(paste0("ages: user table (age_source ", .age_source,
+                              " asked for; the user's sourcetypeagedistribution.csv wins)"),
+                       "user", .runspec = .runspec, BUCKET = BUCKET)
+    }
+
+    # If not provided and the run asked for county ages (either setting), use the NEI county table
+  }else if(!f$is_custom && .age_source %in% c("county", "county_adjusted")){
+    # National rows for the run year and the two NEI years (the ratio method needs them)
+    custom = connect("mariadb", .custom)
+    national = custom %>% tbl(table) %>% 
+      filter(yearID %in% !!unique(c(.year, 2020, 2023))) %>%
+      collect()
+    dbDisconnect(custom)
+    result = ages_county_table(national = national, reference = ages_county_reference(.reference),
+                               .geoidchar = .geoidchar, .year = .year, .mode = .age_source)
+    import_table(data = result$data, tablename = f$changed, .custom = .custom, adapt = TRUE, save = TRUE, volume = BUCKET)
+    ages_source_note(result$line, if(result$used){ "county" }else{ "default" }, .runspec = .runspec, BUCKET = BUCKET)
+    
     # If not provided, estimate a default
   }else if(!f$is_custom){
     # Connect to database
@@ -163,6 +201,9 @@ adapt_sourcetypeagedistribution = function(.runspec = "EPA_MOVES_Model/rs_custom
     data = custom %>% tbl(table) %>% 
       filter(yearID %in% !!.year) %>%
       collect()
+    
+    # Disconnect from database (this branch left its connection open, to be closed later by R's clean-up)
+    dbDisconnect(custom)
     
     # Import table!
     import_table(data = data, tablename = f$changed, .custom = .custom, adapt = TRUE, save = TRUE, volume = BUCKET)

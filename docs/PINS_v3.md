@@ -37,6 +37,10 @@ These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starti
 
 MOVES debug data is a run-time switch (`"debug": true` in `parameters.json`), not a build argument. v2 applied the `keepDebugData = true` edit on every run, so v2 always kept debug data.
 
+## 3.2.0
+
+Pins are unchanged in 3.2.0: R, the R packages, MOVES (commit `2c4cd1ab...`), Go, rclone and Ant are as in 3.1.0 (`git diff v3.1.0 -- moves_anywhere/Dockerfile` shows only the version string, the description label and a comment line).
+
 ## Toolchain around MOVES in v3.1.0
 
 | Tool | 3.0.0 | 3.1.0 |

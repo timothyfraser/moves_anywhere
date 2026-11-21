@@ -1,0 +1,8 @@
+linkID,roadTypeID,linkLength,linkVolume,linkAvgSpeed,linkAvgGrade,linkDescription
+1,5,0.5,800,25,0,arterial 25 mph flat
+2,5,0.5,800,25,4,arterial 25 mph 4pct upgrade
+3,5,0.1,800,8,0,arterial queue 8 mph
+4,4,1.0,3000,55,0,freeway 55 mph
+5,5,0.5,800,,0,arterial default speed
+6,5,0.5,800,21.3,0,arterial stop-and-go drive schedule
+7,1,0,0,0,0,parking lot and truck stop (off-network)

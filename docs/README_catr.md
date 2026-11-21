@@ -12,7 +12,7 @@ The `catr` package is an R package designed to facilitate execution of default o
 **Maintainer**: Timothy Fraser <tmf77@cornell.edu>  
 **License**: Apache License (>= 2), see [LICENSE](../LICENSE)
 
-For installation instructions, see the [main README](../README.md#download-the-catr-package-using).
+For installation instructions, see the [main README](../README.md#the-catr-package).
 
 ## Directory Structure
 

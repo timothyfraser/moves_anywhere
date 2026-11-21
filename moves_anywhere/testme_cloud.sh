@@ -11,7 +11,7 @@
 ###############################################################################
 
 #/bin/bash
-# REPO="/c/Users/tmf77/OneDrive - Cornell University/Documents/rstudio/moves_anywhere/moves_anywhere"
+# REPO="<your repository>/moves_anywhere"
 REPO="$(git rev-parse --show-toplevel)/moves_anywhere" && cd "$REPO"
 
 # SELECT BUCKET

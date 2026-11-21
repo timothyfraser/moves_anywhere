@@ -49,7 +49,12 @@ Normative. The pack step (`scripts/task_pack.sh`, after `task_summarize.R`) writ
 | `run_id` | matching | must equal the run it was written for; otherwise ignored and logged |
 | `status` | the order status | `ok` → done; `failed` → failed |
 | `stop_reason` | the order message | shown as `failed: <stop_reason>` (truncated to fit 110 characters) |
-| `outputs[name = data.csv.gz]` (inventory) or the `rateper*.csv.gz` set (rate) | result availability | `status: ok` with the result object missing from `outputs`, or missing from the store, is treated as failed: `manifest ok but result missing` |
+| `outputs[name = data.csv.gz]` (inventory), `linkdata.csv.gz` (project scale) or the `rateper*.csv.gz` set (rate) | result availability | `status: ok` with the result object missing from `outputs`, or missing from the store, is treated as failed: `manifest ok but result missing` |
+
+A project-scale run (its `rs_custom.xml` has `<modeldomain value="PROJECT"/>`) is an inventory-type
+run with a different result object: `linkdata.csv.gz`, one row per link, pollutant, process, vehicle
+type and fuel, in grams for the hour. It has no `data.csv.gz`. `mode` stays `inv`, no field was added,
+and `manifest_version` stays 1. For these runs the platform's result check looks for `linkdata.csv.gz`.
 
 Everything else (`mode`, `image`, `moves`, `runspec`, `inputs`, the rest of `outputs`,
 `timings`, `started_at`, `finished_at`, `host`) is informational: kept for audit, support,

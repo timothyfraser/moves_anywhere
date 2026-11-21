@@ -134,5 +134,83 @@ class CompareOutputsTest(unittest.TestCase):
                          ["movesoutput.csv", "data.csv"])
 
 
+LD_HEADER = "link,pollutant,process,sourcetype,fueltype,emissions,vmt,sourcehours,starts,vehicles"
+LD_ROWS = ["5,2,1,21,1,1.5,10,0.2,NA,3", "6,2,1,21,1,2.5,20,0.4,NA,6"]
+PMO_HEADER = ("MOVESRunID,iterationID,yearID,monthID,dayID,hourID,linkID,pollutantID,processID,"
+              "sourceTypeID,regClassID,fuelTypeID,roadTypeID,modelYearID,emissionQuant")
+PMO_ROWS = ["1,1,2022,7,5,8,5,2,1,21,10,1,5,2020,1.5", "1,1,2022,7,5,8,6,2,1,21,10,1,5,2020,2.5"]
+
+
+def make_project(root, label, ld_rows=None, mo_rows=None):
+    folder = os.path.join(root, label)
+    os.makedirs(folder)
+    write(folder, "linkdata.csv", LD_HEADER, ld_rows or LD_ROWS)
+    write(folder, "movesoutput.csv", PMO_HEADER, mo_rows or PMO_ROWS)
+    return folder
+
+
+class ProjectCompareTest(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+    def test_identical_project_dirs_pass(self):
+        a = make_project(self.root, "a")
+        b = make_project(self.root, "b")
+        code, text = run(a, b, "--project")
+        self.assertEqual(code, 0, text)
+        self.assertIn("PASS  linkdata.csv", text)
+        self.assertIn("PASS  movesoutput.csv", text)
+        self.assertIn("SKIP  movesactivityoutput.csv", text)
+
+    def test_changed_emissions_in_linkdata_fails(self):
+        a = make_project(self.root, "a")
+        changed = [LD_ROWS[0], "6,2,1,21,1,2.6,20,0.4,NA,6"]
+        b = make_project(self.root, "b", ld_rows=changed)
+        code, text = run(a, b, "--project")
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL  linkdata.csv", text)
+        self.assertIn("link=6", text)
+        self.assertIn("emissions", text)
+
+    def test_two_links_are_not_confused(self):
+        # Same pollutant, process, vehicle type and fuel on two links: swapping their values must fail
+        a = make_project(self.root, "a")
+        swapped = ["5,2,1,21,1,2.5,20,0.4,NA,6", "6,2,1,21,1,1.5,10,0.2,NA,3"]
+        mo_swapped = [PMO_ROWS[0].replace("1.5", "2.5"), PMO_ROWS[1].replace("2.5", "1.5")]
+        b = make_project(self.root, "b", ld_rows=swapped, mo_rows=mo_swapped)
+        code, text = run(a, b, "--project")
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL  linkdata.csv", text)
+        self.assertIn("FAIL  movesoutput.csv", text)
+        self.assertIn("link=5", text)
+        self.assertIn("linkID=5", text)
+
+    def test_project_json_files_and_metrics(self):
+        a = make_project(self.root, "a")
+        b = make_project(self.root, "b")
+        code, text = run(a, b, "--project", "--json", "--files", "linkdata")
+        self.assertEqual(code, 0)
+        obj = json.loads(text)
+        self.assertEqual([f["file"] for f in obj["files"]], ["linkdata.csv"])
+        self.assertEqual(obj["files"][0]["metric_columns"],
+                         ["emissions", "vmt", "sourcehours", "starts", "vehicles"])
+
+    def test_spec_sets_are_kept_apart(self):
+        a = make_project(self.root, "a")
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                run(a, a, "--project", "--files", "data")
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                run(a, a, "--files", "linkdata")
+
+    def test_default_specs_unchanged(self):
+        self.assertEqual(sorted(co.SPECS), ["data", "movesactivityoutput", "movesoutput"])
+        self.assertEqual(co.SPECS["movesoutput"]["keys"],
+                         ["pollutantID", "processID", "sourceTypeID", "monthID",
+                          "fuelTypeID", "roadTypeID", "regClassID", "modelYearID"])
+
+
 if __name__ == "__main__":
     unittest.main()

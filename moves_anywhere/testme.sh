@@ -156,7 +156,7 @@ q()
 R
 
 # working directory should be moves_anywhere/moves_anywhere
-path = "C:/Users/tmf77/OneDrive - Cornell University/Documents/rstudio/moves_anywhere/moves_anywhere"
+path = "<your moves_anywhere/moves_anywhere folder>"
 # Set working directory
 setwd(path)
 # Install catr

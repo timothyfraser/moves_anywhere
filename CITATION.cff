@@ -1,9 +1,10 @@
 # CITATION.cff for MOVES Anywhere (CFF 1.2.0).
-# The v3 line is unreleased, so `version` and `date-released` are left out.
-# They are filled in at release.
+# `version` and `date-released` are those of the latest release.
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
 type: software
+version: 3.2.0
+date-released: 2026-11-21
 title: "MOVES Anywhere"
 authors:
   - family-names: Fraser

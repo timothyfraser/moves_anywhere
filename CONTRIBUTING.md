@@ -2,7 +2,7 @@
 
 How to propose a change, and the header every script in `moves_anywhere/scripts/` carries.
 
-> **Image versions:** `tmf77/moves-anywhere:v3` is the current release (3.1.0). `v3.0.0` and `v2` are previous images and do not change.
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.2` and `v3.2.0`) is the current release (3.2.0). `v3.1.0`, `v3.0.0` and `v2` are previous images and do not change.
 > A change to the scripts goes into `v3`.
 
 ## Proposing a change
@@ -11,6 +11,7 @@ How to propose a change, and the header every script in `moves_anywhere/scripts/
 2. Keep one change per branch: a header batch, a bug fix, or a guide. Not all three.
 3. Open a pull request into `main`. Say what you changed and how you checked it.
 4. Nothing is pushed straight to `main`, and nothing is pushed to Docker Hub from a pull request.
+5. Check your change with the gate, from the repository root. While you work, run `bash moves_anywhere/tests/run_gate.sh --fast`: it builds the image and runs the static, unit, summary-replay and refusal checks, with no MOVES run (about 9 to 15 minutes), and its summary says it is not a release gate. Before a release, run the full gate, `bash moves_anywhere/tests/run_gate.sh`, which also runs MOVES.
 
 ## The script header
 

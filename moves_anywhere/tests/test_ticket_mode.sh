@@ -20,7 +20,7 @@ cd "$REPO" || exit 1
 IMAGE=${IMAGE:-tmf77/moves-anywhere:v3}
 SCRIPTS="$(pwd -W 2>/dev/null || pwd)/moves_anywhere/scripts"
 TESTS="$(pwd -W 2>/dev/null || pwd)/moves_anywhere/tests"
-FIXTURE=${1:-${FIXTURE:-C:/Users/tmf77/cloud_moves/moves_anywhere/moves_anywhere/inputs_ny}}
+FIXTURE=${1:-${FIXTURE:-$REPO/moves_anywhere/inputs_ny}}
 WORK="$REPO/moves_anywhere/tests/.work"
 FAILS=0
 TESTS_DIR="$REPO/moves_anywhere/tests"
