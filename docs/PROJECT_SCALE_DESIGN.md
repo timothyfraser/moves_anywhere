@@ -24,7 +24,7 @@ not hidden.
 | Part | Can it be filled in? | State |
 |---|---|---|
 | County background (fuel, vehicle ages, weather, inspection programme) | Yes, by the same code as a county run | Works. Measured. |
-| Link attributes other than traffic (vehicle mix, speed if unknown, grade, engine starts and soak times on a parking lot) | Yes, as county averages | Built. Measured on one county; one external comparison in progress. |
+| Link attributes other than traffic (vehicle mix, speed if unknown, grade, engine starts and soak times on a parking lot) | Yes, as county averages | Built. Measured on one county; city checks in Manhattan and Buffalo (section 7.5). |
 | The links themselves (where the road is, how long, how much traffic) | Not from MOVES or its database. Would need road and traffic data from elsewhere | Built as a beta in release 3.2 from federal data (section 5.4). Daily counts, county speeds: a screening input, not project traffic data. |
 
 - What drives a result: vehicle-miles first (traffic volume x length, which always come from the
@@ -417,11 +417,12 @@ select, and that may be the whole reason, but we have not confirmed it.
 | EPA example, Washtenaw County, third attempt | Ran. CO 27% above EPA's printed MOVES3 figure on free-flow links, three times above it at idle; unexplained (section 7.3) |
 | County run against project run built from defaults | CO2 within 5%; NOx, CO, hydrocarbons and exhaust PM2.5 1.5 to 2.9 times higher at project scale (section 7.4) |
 | The same project links with travel-weighted vehicle ages (16 links, urban roads) | Agrees with the county run: CO2 +0.1%, CO -0.1%, hydrocarbons 0.0%, NOx +1.5%, exhaust PM2.5 +1.8%, tyre wear +1.4%, brake wear +3.4%. Vehicle age weighting accounts for the whole gap. 1,487 s of MOVES |
-| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Passed (14 steps) on commits 2758e4f and 8f48468. `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
+| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Passed (14 steps) on commit 282fb16, in 3,624 s, and earlier on 2758e4f and 8f48468. <!-- source: cloud_moves docs/audit/project_scale_2026-11/wave4/gate_full_282fb16.txt --> `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
 | Fixture run twice: identical results | Passed (the `sha` step of the gate) |
 | The fourth refusal (a road type with no link) | Offline test passes; the container test passed (the `project` step of the gate) |
 | The county-against-project comparison again, with the new age default | with the travel-weighted default, the project run differs from the county run per mile by 0.04% (THC), -0.06% (CO), 1.53% (NOx), 0.08% (CO2), 1.83% (exhaust PM2.5), 3.37% (brake PM2.5) and 1.35% (tyre PM2.5) on urban unrestricted roads; with registration ages the same differences were 85.42%, 47.52%, 93.54%, 4.28%, 164.72%, -3.54% and 1.65%. <!-- source: release/county_vs_project_default.csv --> |
 | Reference years 2019 and 2040, county-run settings | Both years ran with the same pollutant-process set a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040; CO2 per mile in 2040 is about 45% of 2019. MOVES took 876 s and 963 s on a busy machine. One range check (CO2 per mile between 250 and 700 g) failed on five links, so it is not a limit we rely on. <!-- source: release/years_2019_2040.csv, release/years_2019_2040_checks.csv --> |
+| City checks: Manhattan (36061) and Buffalo (Erie County, 36029), 2022, link-builder boxes run in MOVES; grams per mile compared with the CAT county results for the same road type | CO2 per mile is within 7% of CAT on road types 4 and 5: Manhattan 1.07 and 1.05 times CAT, Buffalo 0.98 and 1.00. NOx per mile: Manhattan 1.05 and 1.02 times CAT, Buffalo 0.82 and 0.84. Exhaust PM2.5 per mile in Manhattan is 1.39 and 1.23 times CAT. Buffalo road type 3 rests on 0.2 vehicle-miles and should not be read. Traffic counts, Manhattan only: the link builder's 7:00 hour volumes are 1.38 times measured counts (median of 8 comparisons, range 0.87 to 1.96); at the Queens Midtown Tunnel the builder puts 59% of traffic toward Queens, while the measured flow at 7:00 is 58% toward Manhattan. No measured hourly counts were found for Buffalo. Both runs are beta link-builder inputs, not a validation of the model. <!-- source: cloud_moves docs/audit/project_scale_2026-11/wave3/manhattan_vs_cat_2022.csv, wave3/buffalo_vs_cat_2022.csv, wave3/counts_check.md --> |
 
 ### 7.6 EPA's MOVES5 course exercise
 
@@ -603,7 +604,7 @@ option.
    arterial carrying a port's trucks and a suburban collector get the same mix.
 10. **Thin testing.** One county and one hour pass end to end. A second county failed twice for reasons
     we then found. That is two for two on "the first new case breaks something". Not tested at all:
-    weekends, winter (beyond the example in progress), rural road types, more than 32 links,
+    weekends, winter (beyond EPA's January exercise, section 7.6), rural road types, more than 32 links,
     evaporative emissions, air toxics, rate mode, electric vehicle shares, counties whose NEI
     data are thin, years outside the NEI range.
 11. **The reference numbers are our own.** The test that compares a run with stored results proves the
@@ -661,7 +662,7 @@ dependency.
 
 | Item | Kind | Note |
 |---|---|---|
-| Finish the pending checks in 7.5 | Done: full gate passed on commits 2758e4f and 8f48468 | |
+| Finish the pending checks in 7.5 | Done: full gate passed on commit 282fb16 (and earlier on 2758e4f and 8f48468) | |
 | Vehicle ages at project scale: registration or travel-weighted (section 7.4) | Decided: travel-weighted by default; `PROJECT_AGES=registration` switches back (section 9) | The reference results changed with it |
 | County ages (`AGE_SOURCE=county` or `county_adjusted`) as the default at county scale | Open: `national` stays the default until the measured change is reviewed (section 9) | Changes every published county result; the one measurement predates the split into three settings |
 | Hourly county runs crash in the summary step (section 7.4) | Fixed in this release, with a replay test | Why that run had no population rows is not settled |

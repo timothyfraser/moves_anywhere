@@ -20,7 +20,7 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   [Welcome!](#welcome)
 -   [Quick start](#quick-start)
 -   [What you get back](#what-you-get-back)
--   [Project-scale runs](#project-scale-runs)
+-   [Project-scale runs](#project-scale-runs-beta)
 -   [Cheatsheet](#cheatsheet)
 -   [What's in this repository](#whats-in-this-repository)
 -   [Documentation](#documentation)
