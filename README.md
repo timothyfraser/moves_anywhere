@@ -10,10 +10,9 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 -   Contributors: Erin Murphy, Junna Chen, Mahak Bindal, Shungo Najima, Carl Closs
 -   Institution: Gao Labs @ Cornell University
 
-> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.1` and `v3.1.0`) is still the current release (3.1.0), and
-> `run.sh` and `run.ps1` use it by default. Release 3.2.0 (project-scale runs) is the coming release, built and
-> tested from this branch; its Docker tags are not published yet. `v3.0.0` and `tmf77/moves-anywhere:v2` are the previous images and are
-> unchanged. See the [changelog](CHANGELOG.md) for what changed.
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.2` and `v3.2.0`) is the current release (3.2.0), and
+> `run.sh` and `run.ps1` use it by default. 3.2.0 adds project-scale runs (beta). `v3.1.0`, `v3.0.0` and
+> `tmf77/moves-anywhere:v2` are the previous images and are unchanged. See the [changelog](CHANGELOG.md) for what changed.
 
 ## Contents
 
@@ -80,7 +79,7 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 **Beta.** Project runs are a beta feature. Check results before you rely on them, and tell us what you find.
 
-A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0, whose image is not published yet (see [Versions](#versions)).
+A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0 (see [Versions](#versions)).
 
 You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (the table is in [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). To try it, copy `moves_anywhere/inputs_project/` (six road links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
 
@@ -158,9 +157,9 @@ remotes::install_url("https://github.com/timothyfraser/moves_anywhere/raw/main/c
 
 | Image | Status | Notes |
 |----|----|----|
-| `tmf77/moves-anywhere:v3` (`v3.1`, `v3.1.0`) | Current release | `run.sh` and `run.ps1` use it by default; see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
-| `3.2.0` (not published yet) | Coming release | Built and tested from this branch; no Docker tag exists yet. Adds project-scale runs; see the [changelog](CHANGELOG.md). |
-| `tmf77/moves-anywhere:v3.0.0` | Previous release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain, Ubuntu's Ant and rclone, and the system Python packages that 3.1.0 removes or replaces. |
+| `tmf77/moves-anywhere:v3` (`v3.2`, `v3.2.0`) | Current release | `run.sh` and `run.ps1` use it by default. Adds project-scale runs (beta); see [version pins](docs/PINS_v3.md) and the [changelog](CHANGELOG.md). |
+| `tmf77/moves-anywhere:v3.1.0` (`v3.1`) | Previous release | Unchanged. |
+| `tmf77/moves-anywhere:v3.0.0` | Older release | Unchanged. Same MOVES and scripts as 3.1.0; it still holds the Go 1.13 toolchain, Ubuntu's Ant and rclone, and the system Python packages that 3.1.0 removes or replaces. |
 | `tmf77/moves-anywhere:v2` | Older release | Unchanged; use it by setting `MOVES_IMAGE=tmf77/moves-anywhere:v2`. |
 
 ## Citation

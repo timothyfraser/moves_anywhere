@@ -2,7 +2,7 @@
 
 How to propose a change, and the header every script in `moves_anywhere/scripts/` carries.
 
-> **Image versions:** `tmf77/moves-anywhere:v3` is still the current release (3.1.0). 3.2.0 is the coming release, built and tested from this branch; its Docker tags are not published yet. `v3.0.0` and `v2` are previous images and do not change.
+> **Image versions:** `tmf77/moves-anywhere:v3` (also `v3.2` and `v3.2.0`) is the current release (3.2.0). `v3.1.0`, `v3.0.0` and `v2` are previous images and do not change.
 > A change to the scripts goes into `v3`.
 
 ## Proposing a change

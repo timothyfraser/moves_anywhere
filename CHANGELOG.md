@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.2.0 (release candidate)
+## 3.2.0
 
 Adds project-scale runs (beta): emissions on individual road links and parking lots for one hour. Guide: [docs/README_project_scale.md](docs/README_project_scale.md).
 
