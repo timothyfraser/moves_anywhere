@@ -49,9 +49,26 @@ dir.create("inputs", showWarnings = FALSE)
 custom_rs(.geoid = "36109", .year = 2025, .path = "inputs/rs_custom.xml")
 ```
 
-**2. 📂 Add any custom input tables you have** to the same folder, as `<tablename>.csv`. Have none? That's fine. `moves_anywhere` fills in the rest from MOVES defaults.
+**2. ⚙️ Write the settings.** Save this as `inputs/parameters.json`. The run reads it to build `data.csv`. Without it, the run is reported as failed even when MOVES finishes.
 
-**3. ▶️ Run it:**
+```json
+{
+  "geoid": "36109",
+  "level": "county",
+  "year": 2025,
+  "mode": "inv",
+  "geoaggregation": "county",
+  "timeaggregation": "year",
+  "pollutant": [98, 3, 87, 2, 31, 33, 110, 100, 106, 107, 116, 117],
+  "by": [1, 16, 8, 12, 14, 15]
+}
+```
+
+`catr::rs_to_parameters()` can write this file from a run file. Keep `geoid`, `year` and `pollutant` the same as in your runspec.
+
+**3. 📂 Add any custom input tables you have** to the same folder, as `<tablename>.csv`. Have none? That's fine. `moves_anywhere` fills in the rest from MOVES defaults.
+
+**4. ▶️ Run it:**
 
 ``` bash
 bash moves_anywhere/run.sh inputs
@@ -60,6 +77,10 @@ bash moves_anywhere/run.sh inputs
 ``` powershell
 powershell -ExecutionPolicy Bypass -File moves_anywhere\run.ps1 inputs
 ```
+
+One county and one year takes about 4 minutes on a laptop. `data.csv` appears beside your inputs.
+
+No `data.csv`? Open `run_manifest.json` and `moveslog.txt` in the same folder. See [the run manifest](docs/RUN_MANIFEST.md).
 
 ✅ The script exits `0` only when the run produced results.
 
