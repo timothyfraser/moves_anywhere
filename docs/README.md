@@ -15,5 +15,6 @@ This is the index of the guides in this folder. Start with the [main README](../
 | [The replication kit](REPLICATION_KIT.md) | How to rerun a result on a stock MOVES install. |
 | [The `catr` package](README_catr.md) | Writing runspecs and reading results in R. |
 | [Version pins](PINS_v3.md) | The exact MOVES, R and package versions inside the image. |
+| [Docker Hub overview](DOCKERHUB_OVERVIEW.md) | The short page shown on the Docker Hub listing, with links. |
 | [Developer tools](README_dev.md) | Tools for building and testing the image yourself. |
 | [The older base image](README_docker_moves.md) | The `docker_moves` base image, kept for reference. |
