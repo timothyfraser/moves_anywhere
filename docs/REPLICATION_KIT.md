@@ -4,14 +4,18 @@ Part of the MOVES Anywhere guides: see the [index](README.md).
 
 Every finished run ends with a file called `replication.tar.xz`. It holds everything needed
 to get the same numbers out of EPA's own MOVES, with none of this project's software: the
-runspec, the tables MOVES actually read, and the results we got. If you do not trust the
+runspec, the tables MOVES actually read, and the results we got.
+
+If you do not trust the
 cloud, or a reviewer wants proof, or you want to change one input and rerun by hand, this is
 the file to start from. A typical kit is about 6 MB.
 
 To check a result, you rebuild the MOVES input database from the kit, run the runspec in
 MOVES, and compare your `movesoutput` table with the `movesoutput.csv` in the kit. The match
 is exact: for every combination of pollutant, process, vehicle type, month, fuel, road type,
-regulatory class and model year, the sum of `emissionQuant` must be identical. MOVES is
+regulatory class and model year, the sum of `emissionQuant` must be identical.
+
+MOVES is
 deterministic, so a different number means a different MOVES build or a different default
 database, not noise.
 
@@ -92,9 +96,12 @@ never fails the step. A missing `moveslog.txt` (only the `.gz` exists) is not re
 
 Determinism: the member list is sorted (`LC_ALL=C sort`), passed with `tar -T --no-recursion`,
 with `--mtime=@0 --owner=0 --group=0 --numeric-owner --mode='u=rw,go=r'`, then `xz -6 -T0`.
-Two runs on the same folder give the same SHA-256. Across hosts the bytes can differ only if
+Two runs on the same folder give the same SHA-256.
+
+Across hosts the bytes can differ only if
 `xz` runs single-threaded on one host and multi-threaded on another (the block layout
 differs; the content does not), so compare members, not the archive hash, across machines.
+
 The archive is written as `replication.tar.xz.part` and renamed, so a crash never leaves a
 truncated kit.
 
@@ -103,15 +110,23 @@ truncated kit.
 `task_pack.sh` writes `run_manifest.json` in `$INPUTS_DIR` right after the kit. `inputs` are
 `rs_custom.xml`, `parameters.json` and the user CSVs (not `_*.csv`); `outputs` are those of
 `data.csv.gz`, the seven rate `*.csv.gz` objects, `moveslog.txt.gz` and `replication.tar.xz`
-that exist; the manifest does not list itself. Settings come from `parameters.json` (its
-`pollutant` array becomes `runspec.pollutants`); `mode` `rates` becomes `rate`. Environment:
+that exist; the manifest does not list itself.
+
+Settings come from `parameters.json` (its
+`pollutant` array becomes `runspec.pollutants`); `mode` `rates` becomes `rate`.
+
+Environment:
 `RUN_ID`, `MOVES_IMAGE`, `MOVES_IMAGE_DIGEST`, `MOVES_COMMIT` (a git checkout at
 `MOVES_DIR`, default `/cat/EPA_MOVES_Model`, wins over the variable), `MOVES_DEFAULT_DB`
 (default `movesdb20241112`), `MOVES_DEBUG`, `RUN_STATUS` (default `ok`), `RUN_STOP_REASON`,
-`RUN_STARTED_AT`, `RUN_FINISHED_AT`. Stage seconds come from `$INPUTS_DIR/.timings`
+`RUN_STARTED_AT`, `RUN_FINISHED_AT`.
+
+Stage seconds come from `$INPUTS_DIR/.timings`
 (`stage seconds` per line; an absent stage is omitted); `pack` defaults to the step's own
 duration. Without `RUN_STARTED_AT`, `started_at` is `finished_at` minus the recorded
-timings. The manifest is validated with `jsonschema` against the schema block in
+timings.
+
+The manifest is validated with `jsonschema` against the schema block in
 `RUN_MANIFEST.md` when both are available, else with structural checks; an invalid manifest is
 still written and the step returns 1. If the kit cannot be built, an otherwise `ok` run is
 recorded as `failed` with `stop_reason` `replication kit could not be built`.
@@ -122,6 +137,7 @@ Exact. `scripts/compare_outputs.py <kit-folder> <your-folder>` groups `movesoutp
 `pollutantID, processID, sourceTypeID, monthID, fuelTypeID, roadTypeID, regClassID,
 modelYearID` and `movesactivityoutput.csv` by `activityTypeID, sourceTypeID, monthID,
 fuelTypeID, roadTypeID, regClassID, modelYearID`; summed metrics must be bit-identical.
+
 Run-metadata columns (`MOVESRunID`, timestamps) are ignored. There is no tolerance band:
 a mismatch means a different MOVES commit or default database. Record both from the
 manifest's `moves` block before debugging anything else.

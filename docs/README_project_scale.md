@@ -25,7 +25,7 @@ A project run can start from one settings file. Make a new folder and put in it:
 - `parameters.json`, with `"level": "project"` and the county, year, month, day type and hour;
 - `link.csv`, or a `place` in `parameters.json` so that the image builds the links from federal road data first (see [Building links](README_link_sources.md)).
 
-Then run `run.sh <folder>`. The image writes the run file, `rs_custom.xml`, itself. (The run file is what MOVES calls a runspec: the XML file that tells MOVES what to compute.) For example, copy the example folder `moves_anywhere/inputs_project/` (the test fixture, "the fixture" below) to a new folder, delete its `rs_custom.xml`, and put this in its `parameters.json`:
+Then run `run.sh <folder>`. The image writes the run file, `rs_custom.xml`, itself. (The run file is what MOVES calls a runspec: the XML file that tells MOVES what to compute.) For example, copy the example folder `moves_anywhere/inputs_project/` (the test fixture, "the fixture" below) to a new folder, delete its `rs_custom.xml`, and save this whole file as its `parameters.json`:
 
 ```json
 {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
@@ -35,7 +35,9 @@ These settings match the county, year, month, day type and hour in the fixture's
 
 ## `parameters.json` for a project run
 
-Only a `parameters.json` with `"level": "project"` is read this way. Without that key, or with any other value, the file is treated as a county run's settings and this step is skipped. Upper or lower case does not matter in `level`, `day`, `age_source` and `project_ages`. Keys not in the table are ignored, and the log lists them (`parameters.json: ignored keys: ...`). A file that is not valid JSON stops the run with `parameters.json: not valid JSON (...)`.
+Only a `parameters.json` with `"level": "project"` is read this way. Without that key, or with any other value, the file is treated as a county run's settings and this step is skipped.
+
+Upper or lower case does not matter in `level`, `day`, `age_source` and `project_ages`. Keys not in the table are ignored, and the log lists them (`parameters.json: ignored keys: ...`). A file that is not valid JSON stops the run with `parameters.json: not valid JSON (...)`.
 
 A refused key stops the run before MOVES starts. The run ends with exit code 1 (an error status) and one line that names the key. For a missing required key the line is `parameters.json: <key> must be given for a project run: <allowed values>`; for a wrong value it is `parameters.json: <key> must be <allowed values>`. The table quotes the part after `must be`.
 
@@ -47,7 +49,7 @@ A refused key stops the run before MOVES starts. The run ends with exit code 1 (
 | `month` | Required | 1 to 12 | none | `month must be a month from 1 to 12` |
 | `day` | Required | `"weekday"` or `"weekend"`, or MOVES's codes 5 (weekday) and 2 (weekend) | none | `day must be "weekday", "weekend", 5 or 2` |
 | `hour` | Required | 1 to 24, in MOVES's numbering: hour 8 is 7:00 to 7:59 | none | `hour must be an hour from 1 to 24 (8 is 7:00 to 7:59)` |
-| `pollutant` | Optional | A list of MOVES pollutant IDs, for example `[90, 3]` | The 21 a county run file gets: 90, 98, 2, 118, 112, 119, 5, 33, 32, 6, 3, 100, 110, 106, 107, 116, 117, 115, 31, 91, 1 <!-- source: moves_anywhere/scripts/project_parameters.R, PROJECT_POLLUTANTS; moves_anywhere/inputs_ny/parameters.json --> | `pollutant must be a list of MOVES pollutant IDs (positive whole numbers)` |
+| `pollutant` | Optional | A list of MOVES pollutant IDs, for example `[90, 3]` | The 21 of the shipped county example (`moves_anywhere/inputs_ny/parameters.json`): 90, 98, 2, 118, 112, 119, 5, 33, 32, 6, 3, 100, 110, 106, 107, 116, 117, 115, 31, 91, 1. (`catr::custom_rs()` selects only 12 by default.) <!-- source: moves_anywhere/scripts/project_parameters.R:7 (PROJECT_POLLUTANTS); moves_anywhere/inputs_ny/parameters.json; catr/R/custom_rs.R:60 --> | `pollutant must be a list of MOVES pollutant IDs (positive whole numbers)` |
 | `roadtypes` | Optional | A list of road types from 1 to 5, for example `[1, 4, 5]` | The road types in `link.csv` | `roadtypes must be a list of road types from 1 to 5`. With no `roadtypes`, no `link.csv` and no `place`, the run stops with `task_runspec.R failed: could not make rs_custom.xml from parameters.json`. |
 | `place` | Optional | A box `"west,south,east,north"` in degrees, or a 5-digit county FIPS code as a string | none: you give `link.csv` | `place must be a box "west,south,east,north" (degrees, west < east, south < north) or a 5-digit county FIPS code`. Used only when the folder has no `link.csv`. If the link builder refuses, the run stops with `links: ` and the builder's reason. |
 | `max_links` | Optional | A whole number of 1 or more | 40 | `max_links must be a positive whole number` |
@@ -98,17 +100,47 @@ A project run file is a county run file with different settings. The image refus
 
 The line `<modeldomain value="PROJECT"/>` is what tells the image this is a project run. With a project `parameters.json` (see the quick start) you do not need to write this file: the image writes it with `task_runspec.R` from the values in `parameters.json`.
 
-You can still write the file by hand, or run the helper `task_runspec.R` yourself. Give it these environment variables (named settings in the shell that runs it): `LEVEL=project`, `GEOID`, `YEAR`, `MONTH`, `DAY` (2 for weekend, 5 for weekday) and `HOUR` (1 to 24; hour 8 is 7:00 to 7:59). `ROADTYPES` (for example `1,4,5`) is optional; without it the helper reads the road types in `inputs/link.csv`. The helper keeps only the MOVES processes tested at project scale, and checks the result against the rules above. Those processes are running exhaust, brake wear, tire wear and crankcase running exhaust; with road type 1, also starts, crankcase start, extended idle and auxiliary power.
+You can still write the file by hand, or run the helper `task_runspec.R` yourself.
+
+Give it these environment variables (named settings in the shell that runs it): `LEVEL=project`, `GEOID`, `YEAR`, `MONTH`, `DAY` (2 for weekend, 5 for weekday) and `HOUR` (1 to 24; hour 8 is 7:00 to 7:59).
+
+`ROADTYPES` (for example `1,4,5`) is optional; without it the helper reads the road types in `inputs/link.csv`. The helper keeps only the MOVES processes tested at project scale, and checks the result against the rules above.
+
+Those processes are running exhaust, brake wear, tire wear and crankcase running exhaust; with road type 1, also starts, crankcase start, extended idle and auxiliary power.
 
 The worked example is `moves_anywhere/inputs_project/rs_custom.xml`: Tompkins County, NY (36109), 2022, month 7, day 5 (weekday), hour 8, road types 1, 4 and 5.
 
 ## How to run it
 
-Run it as you run a county run: `run.sh <folder>`. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
+Use the published image `tmf77/moves-anywhere:v3` (`run.sh` pulls it). One order of steps that works:
 
-**A second example: EPA's training exercise.** The folder `moves_anywhere/inputs_epa_project/` is a project run taken from EPA's own MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key). It models a truck terminal and its roads in Washtenaw County, MI (26161): January 2025, a weekday, hour 9, carbon monoxide, five road links and one off-network link. Every number in it comes from EPA; the folder's `README.md` gives the attribution and lists every change made. The folder lets you check the image against an answer someone else computed: `epa_movesoutput.csv` holds EPA's results, and `tests/compare_epa_project.py` compares a run of the folder with them. For run 1 (carbon monoxide, 21 rows of EPA's answer), all 21 rows are within 1 percent of EPA's, and the largest relative difference is 5.0e-8. The run took 188 seconds in all. A first attempt did not match, because it left out two input tables that EPA's run had filled: the fuel and technology table and the hotelling table. With those supplied, the results match. <!-- source: epa_moves5_exercise/comparison_run1b.csv; epa_moves5_exercise/DIAGNOSIS_run1.md -->
+1. Make a new folder, for example `my_project`. Use a new folder: it must not hold a county result.
+2. Save a full `parameters.json` in it:
 
-**Two years.** A two-year check ran 2019 and 2040, each with the same set of pollutant-process pairs that a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040. CO2 per mile in 2040 is about 45 percent of 2019 (link 1: 214 g against 484 g per mile). MOVES took 876 seconds for 2019 and 963 seconds for 2040 on a busy machine (the EPA exercise run took 188 seconds in all). One range check in the same table did not pass. CO2 per mile on the slow queue link (889 g per mile in 2019) and on four 2040 links (190 to 231 g per mile) fell outside the 250 to 700 g window we expected. Do not read that window as a validity limit. <!-- source: release/years_2019_2040.csv; release/years_2019_2040_checks.csv -->
+   ```json
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+   ```
+
+3. Give it links. Either copy `link.csv` (and `offnetworklink.csv` if a link has road type 1) from `moves_anywhere/inputs_project/`, or add `"place": "-76.499,42.438,-76.495,42.441"` (a box, `west,south,east,north`) to `parameters.json` so the image builds them from federal data. This box gave 17 links when tested in 2026-11; counts change as federal data are updated.
+4. Run `bash moves_anywhere/run.sh my_project`. The image writes `rs_custom.xml` itself. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
+5. After a place run, open `link_summary.txt` first: it says what was built and what was left out. Results are in `linkdata.csv`.
+
+To check the links before MOVES runs, use `links.sh`. It needs a run file, and the only one outside the image is the shipped example's: `cp moves_anywhere/inputs_project/rs_custom.xml my_project/`. See [Building links](README_link_sources.md).
+
+**A second example: EPA's training exercise.** The folder `moves_anywhere/inputs_epa_project/` is a project run taken from EPA's own MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key). It models a truck terminal and its roads in Washtenaw County, MI (26161): January 2025, a weekday, hour 9, carbon monoxide, five road links and one off-network link.
+
+Every number in it comes from EPA; the folder's `README.md` gives the attribution and lists every change made. The folder lets you check the image against an answer someone else computed: `epa_movesoutput.csv` holds EPA's results, and `tests/compare_epa_project.py` compares a run of the folder with them.
+
+For run 1 (carbon monoxide, 21 rows of EPA's answer), all 21 rows are within 1 percent of EPA's, and the largest relative difference is 5.0e-8. The run took 188 seconds in all.
+
+A first attempt did not match, because it left out two input tables that EPA's run had filled: the fuel and technology table and the hotelling table. With those supplied, the results match. <!-- measured; record kept by the maintainers -->
+
+**Two years.** A two-year check ran 2019 and 2040, each with the same set of pollutant-process pairs that a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040. CO2 per mile in 2040 is about 45 percent of 2019 (link 1: 214 g against 484 g per mile).
+
+MOVES took 876 seconds for 2019 and 963 seconds for 2040 on a busy machine (the EPA exercise run took 188 seconds in all).
+
+One range check in the same table did not pass. CO2 per mile on the slow queue link (889 g per mile in 2019) and on four 2040 links (190 to 231 g per mile) fell outside the 250 to 700 g window we expected. Do not read that window as a validity limit.
+<!-- measured; record kept by the maintainers -->
 
 ## What is filled in for you, and how far to trust it
 
@@ -127,7 +159,9 @@ Some defaults come from the county (vehicle mix, speed, parking-lot starts, fuel
 
 ### Vehicle ages: travel-weighted
 
-**Travel-weighted** ages are the ages of the vehicles driving on the link, rather than of the vehicles registered. An age table says what share of the *registered* vehicles of a type is each age, and older vehicles are driven fewer miles. At county scale MOVES weights each age by its mileage before it shares out the miles. At project scale it does not: it reads the table as the ages of the traffic on the link. So, for each vehicle type and year, the image multiplies each age share by MOVES's relative mileage for that age and rescales the shares to add up to 1.
+**Travel-weighted** ages are the ages of the vehicles driving on the link, rather than of the vehicles registered. An age table says what share of the *registered* vehicles of a type is each age, and older vehicles are driven fewer miles.
+
+At county scale MOVES weights each age by its mileage before it shares out the miles. At project scale it does not: it reads the table as the ages of the traffic on the link. So, for each vehicle type and year, the image multiplies each age share by MOVES's relative mileage for that age and rescales the shares to add up to 1.
 
 The table shows what this default changes. Each cell is the per-mile difference, in percent, between a project run and a county run, on urban unrestricted roads:
 
@@ -138,9 +172,11 @@ The table shows what this default changes. Each cell is the per-mile difference,
 | CO2 | 4.28 | 0.08 |
 | CO | 47.52 | -0.06 |
 
-With the default, NOx, exhaust PM2.5 and CO2 are each within 2 percent of the county run. <!-- source: release/county_vs_project_default.csv -->
+With the default, NOx, exhaust PM2.5 and CO2 are each within 2 percent of the county run. <!-- measured; record kept by the maintainers -->
 
-To keep the registration ages instead, set `PROJECT_AGES=registration` in the environment, or put `"project_ages": "registration"` in `parameters.json` in the run folder. If both are set, the environment variable wins. Any other value stops the run. A `sourcetypeagedistribution.csv` that you supply is used as given, with no weighting. `diagnostics.txt` and `_project_inputs.csv` record which ages were used.
+To keep the registration ages instead, set `PROJECT_AGES=registration` in the environment, or put `"project_ages": "registration"` in `parameters.json` in the run folder. If both are set, the environment variable wins. Any other value stops the run.
+
+A `sourcetypeagedistribution.csv` that you supply is used as given, with no weighting. `diagnostics.txt` and `_project_inputs.csv` record which ages were used.
 
 **County ages (`age_source`, national by default).** You can choose one of three age tables, with `"age_source"` in `parameters.json` or `AGE_SOURCE` in the environment (if both are set, the environment wins). The setting works the same in county and project runs.
 
@@ -148,9 +184,16 @@ To keep the registration ages instead, set `PROJECT_AGES=registration` in the en
 - `county`: the county's own table from EPA's National Emissions Inventory (NEI), from the nearest inventory year, used as is. Run years up to 2021 take 2020; 2022 and later take 2023.
 - `county_adjusted`: the national table adjusted to the county. In 2020 and 2023 it is the county's own table. In other years it is the national table for the run year, multiplied age by age by the county-to-national ratio of the nearest inventory year; between 2020 and 2023 the two years' ratios are interpolated in a straight line. Each ratio is kept between 0.25 and 4.
 
-Both county settings rescale the shares to add up to 1 for each vehicle type. Long-haul truck types (53, long-haul single-unit trucks, and 62, long-haul combination trucks) always keep the national table. The county settings need the reference file `scripts/reference/nei_sourcetypeagedistribution.rds`, which is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023; built by `dev/make_nei_ages_reference.R`). If the file is missing or the county is not in it, the run uses the national table and says so in `_age_source.txt`; it does not fail. Any other value of the setting stops the run. A table you supply still wins. For a project run, the travel weighting is applied on top of whichever table is chosen.
+Both county settings rescale the shares to add up to 1 for each vehicle type. Long-haul truck types (53, long-haul single-unit trucks, and 62, long-haul combination trucks) always keep the national table.
 
-One measurement exists (Tompkins, NY, 2022, county run). With county ages, CO2 was 0.962 of the national-age result, NOx 0.676, exhaust PM2.5 0.716, CO 0.722 and hydrocarbons 0.687. In the county table, cars were 1.9 years younger and light trucks 2.3 to 3.4 years younger than in the national table. <!-- source: release/county_ages_effect.csv --> This was measured before the setting was split in three, with the earlier `county` setting and a partial reference file (2020, New York only). It has not been repeated for `county` or `county_adjusted`. The default stays national until this has been reviewed.
+The county settings need the reference file `scripts/reference/nei_sourcetypeagedistribution.rds`, which is included in the image (11.8 MB; 3,223 counties for 2020 and 3,224 for 2023; built by `dev/make_nei_ages_reference.R`).
+
+If the file is missing or the county is not in it, the run uses the national table and says so in `_age_source.txt`; it does not fail. Any other value of the setting stops the run. A table you supply still wins. For a project run, the travel weighting is applied on top of whichever table is chosen.
+
+One measurement exists (Tompkins, NY, 2022, county run). With county ages, CO2 was 0.962 of the national-age result, NOx 0.676, exhaust PM2.5 0.716, CO 0.722 and hydrocarbons 0.687. In the county table, cars were 1.9 years younger and light trucks 2.3 to 3.4 years younger than in the national table.
+<!-- measured; record kept by the maintainers -->
+
+This was measured before the setting was split in three, with the earlier `county` setting and a partial reference file (2020, New York only). It has not been repeated for `county` or `county_adjusted`. The default stays national until this has been reviewed.
 
 ## What you get back
 
@@ -174,7 +217,12 @@ year,month,day,hour,geoid,link,roadtype,pollutant,process,sourcetype,fueltype,em
 2022,7,5,8,36109,1,5,1,1,11,1,5.41786003112793,5.614389896392822,0.22457599639892575,0,11.228799819946287
 ```
 
-The activity columns (`vmt`, `sourcehours`, `starts`, `vehicles`) repeat on every pollutant row of a link, vehicle type and fuel. Do not sum `vmt` down the whole file, or you count the same miles many times. **Grams per mile** is the sum of `emissions` divided by the miles, counting miles once per link, vehicle type and fuel. **Grams per second** is grams divided by 3600. For link 1 of the fixture, CO2 is 186,659.7 g in 400 miles: 466.6 g per mile, or 51.8 g per second. (The reference results were regenerated with travel-weighted ages.) <!-- source: release/gold_change.csv -->
+The activity columns (`vmt`, `sourcehours`, `starts`, `vehicles`) repeat on every pollutant row of a link, vehicle type and fuel. Do not sum `vmt` down the whole file, or you count the same miles many times.
+
+**Grams per mile** is the sum of `emissions` divided by the miles, counting miles once per link, vehicle type and fuel. **Grams per second** is grams divided by 3600.
+
+For link 1 of the fixture, CO2 is 186,659.7 g in 400 miles: 466.6 g per mile, or 51.8 g per second. (The reference results were regenerated with travel-weighted ages.)
+<!-- measured; record kept by the maintainers -->
 
 `diagnostics.txt` holds one line per link and the list of defaults used. This is the real file from the fixture run:
 
@@ -223,20 +271,18 @@ MOVES itself accepts a bad project run and then produces nothing, so the image c
 | `offnetworklink.csv sourceTypeID not in the run's vehicle types` | Use vehicle types the run file selects. |
 | `MOVES produced no results: ...` | MOVES refused the run. The reason ends with MOVES's own first error line; `moveslog.txt` in the folder has the rest. |
 
-## Hosted runs (Cloud MOVES)
+## Hosted runs
 
-A hosted service can run a project folder through a run ticket: a file that tells the container where to fetch the inputs and where to send the outputs (see [RUN_TICKET.md](RUN_TICKET.md)).
-The outputs are the same files as a local run, compressed: `linkdata.csv.gz`, `moveslog.txt.gz`,
-`replication.tar.xz` and `run_manifest.json`.
+You do not need this to run the image yourself. Cloud MOVES is the maintainers' hosted service that runs this same image for CAT users.
 
-As of 2026-11-18 this is being tested on a hosted test service only. It is not open to users.
+It runs a project folder through a run ticket: a file that tells the container where to fetch the inputs and where to send the outputs (see [RUN_TICKET.md](RUN_TICKET.md)). The outputs are the same files as a local run, compressed: `linkdata.csv.gz`, `moveslog.txt.gz`, `replication.tar.xz` and `run_manifest.json`.
 
 ## Limits
 
 - One hour per run. For several hours, make several runs, one folder each.
 - Built for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data and says there are no default values for off-network inputs. The defaults here do not replace that.
 - The image uses MOVES5. MOVES6 exists; this image has not moved to it yet.
-- Not tested: evaporative emissions, rate mode at project scale, runs with more than 32 links. Runs with 16, 17 and 32 links have run. <!-- source: docs/PROJECT_SCALE_DESIGN.md (link limit and run-time notes); release/live_link_build/RESULT.md -->
+- Not tested: evaporative emissions, rate mode at project scale, runs with more than 32 links. Runs with 16, 17 and 32 links have run. <!-- measured; record kept by the maintainers -->
 
 ---
 
@@ -251,14 +297,20 @@ Files that implement a project run (all in `moves_anywhere/scripts/`):
 - `project_parameters.R`: reads and checks a project `parameters.json` (`project_params`), checks that a supplied run file agrees with it (`project_params_agree`), and gives the state for the link builder (`project_state`). As a script it prints shell lines for step 1b of `launch.sh` (`env`) or runs the agreement check (`agree`). Test: `tests/test_project_parameters.R`.
 - `task_runspec.R`: the `LEVEL=project` helper. When `parameters.json` says `"level": "project"`, every value comes from that file. Step 1b of `launch.sh` runs it when the folder has no `rs_custom.xml`.
 
-Tests, from the repository root: `Rscript moves_anywhere/tests/<name>.R` for `test_project_functions`, `test_adapt_link`, `test_adapt_offnetwork`, `test_importer_project`, `test_linkdata`, `test_runspec_project` (no Docker); `bash moves_anywhere/tests/test_pack_project.sh`; `bash moves_anywhere/tests/test_project.sh --image <image>` (Docker; full fixture run and refusals). The gate steps are `project-unit` and `project` in `moves_anywhere/tests/run_gate.sh`.
+Tests, from the repository root: `Rscript moves_anywhere/tests/<name>.R` for `test_project_functions`, `test_adapt_link`, `test_adapt_offnetwork`, `test_importer_project`, `test_linkdata`, `test_runspec_project` (no Docker); `bash moves_anywhere/tests/test_pack_project.sh`; `bash moves_anywhere/tests/test_project.sh --image <image>` (Docker; full fixture run and refusals).
 
-Age files: `adapt_projectage.R` (travel weighting and the `PROJECT_AGES` switch; called by `task_adapt.R` after the county adapters and before `adapt_link.R`), `adapt_ages_county.R` (the `AGE_SOURCE` setting, `national`, `county` or `county_adjusted`, and the county table; sourced by `adapt_sourcetypeagedistribution.R`). Tests: `tests/test_adapt_projectage.R`, `tests/test_adapt_ages_county.R`, `tests/test_nei_ages_reference.R`. The reference file is included in the image and was built by `dev/make_nei_ages.py` and `dev/make_nei_ages_reference.R`.
+The gate steps are `project-unit` and `project` in `moves_anywhere/tests/run_gate.sh`.
 
-Gate and tests (all from the repository root; Docker for the ones that name an image):
+Age files: `adapt_projectage.R` (travel weighting and the `PROJECT_AGES` switch; called by `task_adapt.R` after the county adapters and before `adapt_link.R`), `adapt_ages_county.R` (the `AGE_SOURCE` setting, `national`, `county` or `county_adjusted`, and the county table; sourced by `adapt_sourcetypeagedistribution.R`).
+
+Tests: `tests/test_adapt_projectage.R`, `tests/test_adapt_ages_county.R`, `tests/test_nei_ages_reference.R`.
+
+The reference file is included in the image and was built by `dev/make_nei_ages.py` and `dev/make_nei_ages_reference.R`.
+
+Tests (all from the repository root; Docker for the ones that name an image):
 
 - **Fast gate:** `bash moves_anywhere/tests/run_gate.sh --fast`. It runs `static`, `compare-unit`, `build`, `project-unit`, `replay` and only the refusals of `project`; it runs no MOVES. It takes several minutes (the script header says about 6, a measured run about 9). It is for working and is not a release gate: its last lines say so and list the steps left for the full gate. It cannot be combined with `--only`.
 - **Replay test:** `bash moves_anywhere/tests/test_summarize_replay.sh --image <image>` runs only the summary step (`task_summarize.R`) on saved MOVES outputs, with no MOVES run: a county hour with no vehicle-population rows, the county fixture `inputs_ny`, and the project fixture. `--prove` also runs the first case against the image's own script and expects it to fail. The gate runs it as step `replay`.
-- **EPA test:** `bash moves_anywhere/tests/test_epa_project.sh --image <image> [--run2]` runs `inputs_epa_project/` through `run.sh` and checks the exit code, the manifest, that `linkdata.csv` exists and `data.csv` does not, and EPA's run 1 against `movesoutput.csv` through `tests/compare_epa_project.py` (within 1 percent). `--run2` adds EPA's second run. It takes about 3 minutes of MOVES for run 1 (188 seconds in all). It is step 14 (`epa`) of the full gate. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
+- **EPA test:** `bash moves_anywhere/tests/test_epa_project.sh --image <image> [--run2]` runs `inputs_epa_project/` through `run.sh` and checks the exit code, the manifest, that `linkdata.csv` exists and `data.csv` does not, and EPA's run 1 against `movesoutput.csv` through `tests/compare_epa_project.py` (within 1 percent). `--run2` adds EPA's second run. It takes about 3 minutes of MOVES for run 1 (188 seconds in all). It is step 14 (`epa`) of the full gate. <!-- measured; record kept by the maintainers -->
 
 Rule: every change to an existing script sits behind a project-only branch, and the county fixture in the gate checks that county runs are unchanged.

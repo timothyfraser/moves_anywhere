@@ -18,6 +18,7 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 
 -   [Welcome!](#welcome)
 -   [Quick start](#quick-start)
+-   [Choose your run](#choose-your-run)
 -   [What you get back](#what-you-get-back)
 -   [Project-scale runs](#project-scale-runs-beta)
 -   [Cheatsheet](#cheatsheet)
@@ -29,9 +30,15 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 
 ## Welcome!
 
-Welcome to `moves_anywhere`! This software suite includes several tools to help you run the Environmental Protection Agency's **MO**tor **V**ehicle **E**mission **S**imulator (MOVES) more easily. Developed by Tim Fraser and colleagues at Gao Labs at Cornell University, `moves_anywhere` aims to solve several common problems for planners, engineers, and researchers who need to know how many tons of emissions are produced from on-road transportation sources in their county or state. These problems include:
+Welcome to `moves_anywhere`! It helps you run the Environmental Protection Agency's **MO**tor **V**ehicle **E**mission **S**imulator (MOVES) more easily.
 
--   Writing `runspec.xml` documents faster (a recipe for your MOVES run)
+Developed by Tim Fraser and colleagues at Gao Labs at Cornell University, it helps planners, engineers, and researchers learn how many tons of emissions on-road transportation sources produce in a county, or on specific roads (project runs).
+
+County and project runs are supported. State and national runs are not: they fail, or give totals far too low.
+
+It solves these problems:
+
+-   Writing run files (runspecs) faster (a recipe for your MOVES run)
 -   Running MOVES on any OS (Windows, Mac, or Linux), using a Docker container.
 -   Running MOVES with custom inputs when you have *some (or none)* of the required custom input tables, but not all.
 -   Post-processing MOVES inventory output data into the more dataviz-friendly "CAT Format", developed for Cornell's Climate Action in Transportation (CAT) team's research.
@@ -41,6 +48,8 @@ Welcome to `moves_anywhere`! This software suite includes several tools to help 
 
 You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [R](https://cran.r-project.org/). Nothing else: no MOVES install, no MySQL, no cloud account.
 
+**Before you start:** run `git clone https://github.com/timothyfraser/moves_anywhere`, then `cd moves_anywhere` and start R in that folder, so `inputs/` sits beside `moves_anywhere/` and `run.sh` is in reach. Install `catr` first, with the `remotes::install_github("timothyfraser/moves_anywhere", subdir = "catr")` call in [The `catr` package](#the-catr-package).
+
 **1. 📝 Write a runspec** (the recipe for your run) with `catr`:
 
 ``` r
@@ -49,9 +58,26 @@ dir.create("inputs", showWarnings = FALSE)
 custom_rs(.geoid = "36109", .year = 2025, .path = "inputs/rs_custom.xml")
 ```
 
-**2. 📂 Add any custom input tables you have** to the same folder, as `<tablename>.csv`. Have none? That's fine. `moves_anywhere` fills in the rest from MOVES defaults.
+**2. ⚙️ Write the settings.** Save this as `inputs/parameters.json`. The run reads it to build `data.csv`. Without it, the run is reported as failed even when MOVES finishes.
 
-**3. ▶️ Run it:**
+```json
+{
+  "geoid": "36109",
+  "level": "county",
+  "year": 2025,
+  "mode": "inv",
+  "geoaggregation": "county",
+  "timeaggregation": "year",
+  "pollutant": [98, 3, 87, 2, 31, 33, 110, 100, 106, 107, 116, 117],
+  "by": [1, 16, 8, 12, 14, 15]
+}
+```
+
+`catr::rs_to_parameters("inputs/rs_custom.xml", "inputs/parameters.json")` can write this file from a run file (arguments `path_rs`, `path_parameters`). Keep `geoid`, `year` and `pollutant` the same as in your runspec.
+
+**3. 📂 Add any custom input tables you have** to the same folder, as `<tablename>.csv`. Have none? That's fine. `moves_anywhere` fills in the rest from MOVES defaults.
+
+**4. ▶️ Run it:**
 
 ``` bash
 bash moves_anywhere/run.sh inputs
@@ -61,7 +87,30 @@ bash moves_anywhere/run.sh inputs
 powershell -ExecutionPolicy Bypass -File moves_anywhere\run.ps1 inputs
 ```
 
+One county and one year takes about 10 minutes on a laptop. `data.csv` appears beside your inputs.
+
+No `data.csv`? Open `run_manifest.json` and `moveslog.txt` in the same folder. See [the run manifest](docs/RUN_MANIFEST.md).
+
 ✅ The script exits `0` only when the run produced results.
+
+## Choose your run
+
+| Run | You give | You get | Guide |
+|----|----|----|----|
+| County totals | A run file, `parameters.json`, and your own tables if you have them | `data.csv` | [County runs](docs/README_county_runs.md) |
+| County emission rates | A run file made with `custom_rs(.rate = TRUE)` (`parameters.json` is optional) | The rate tables (`rateperdistance.csv` and others) | [County runs: emission rates](docs/README_county_runs.md#emission-rates) |
+| Project, your own links | `link.csv` and `parameters.json` | `linkdata.csv` | [Project-scale runs](docs/README_project_scale.md) |
+| Project for a place | `parameters.json` with a `place` box | The built links and `linkdata.csv` | [Link sources](docs/README_link_sources.md) |
+
+State and national runs are not supported.
+
+**`run.sh` options.** Put them after the folder name. <!-- source: moves_anywhere/run.sh:4,18-20 -->
+
+| Option | What it sets | Default |
+|----|----|----|
+| `--image` | The Docker image to run | `tmf77/moves-anywhere:v3` |
+| `--cpus` | CPUs for the container | 2 |
+| `--memory` | Memory for the container | 6g (6 GB) |
 
 ## What you get back
 
@@ -79,23 +128,41 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 **Beta.** Project runs are a beta feature. Check results before you rely on them, and tell us what you find.
 
-A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0 (see [Versions](#versions)).
+A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour.
 
-You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (the table is in [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). To try it, copy `moves_anywhere/inputs_project/` (six road links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
+Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0 (see [Versions](#versions)).
 
-```json
-{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
-```
+You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (see [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). Use the published image `tmf77/moves-anywhere:v3`, which `run.sh` pulls for you.
 
-Then run it:
+**Option A: try the example links** (six road links and a parking lot).
 
-```bash
-bash moves_anywhere/run.sh my_project
-```
+1. Copy the folder `moves_anywhere/inputs_project/` to a new folder `my_project`, and delete `my_project/rs_custom.xml`. The image writes a new run file (MOVES calls it a runspec) from your settings. Also delete the shipped results in that folder (`linkdata.csv`, `movesoutput.csv` and `movesactivityoutput.csv`), so the files you see afterwards are fresh.
 
-The results by link are in `my_project/linkdata.csv`.
+2. Save this whole file as `my_project/parameters.json`:
 
-With no `link.csv`, add `"place": "west,south,east,north"` (a box in decimal degrees of longitude and latitude) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. With `place` in `parameters.json`, MOVES runs straight after the build. To check the links first, build them with `bash moves_anywhere/links.sh` (see [Building links](docs/README_link_sources.md)), then run MOVES.
+   ```json
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+   ```
+
+3. Run it. The results by link are in `my_project/linkdata.csv`:
+
+   ```bash
+   bash moves_anywhere/run.sh my_project
+   ```
+
+**Option B: build the links for a place** (no `link.csv` needed).
+
+1. Make an empty folder: `mkdir my_place`.
+2. Save this whole file as `my_place/parameters.json`. `place` is a box in decimal degrees, `"west,south,east,north"`:
+
+   ```json
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8, "place": "-76.499,42.438,-76.495,42.441"}
+   ```
+
+3. Run it: `bash moves_anywhere/run.sh my_place`. The link builder (beta) makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. MOVES then runs on them in the same run. This box gave 17 links when tested in 2026-11; counts change as federal data are updated.
+4. Open `my_place/link_summary.txt` to see what was built, and `my_place/linkdata.csv` for the results.
+
+To check the links before MOVES runs, use `links.sh` (see [Building links](docs/README_link_sources.md)).
 
 What has been measured:
 
@@ -127,6 +194,7 @@ Guides: [project-scale runs](docs/README_project_scale.md) and [building links f
 | Guide | Read it when you want to... |
 |----|----|
 | [MOVES inputs](docs/README_MOVES_inputs.md) | know which input tables MOVES needs and what goes in them |
+| [County runs](docs/README_county_runs.md) | set up a county run: every `parameters.json` key, the columns of `data.csv`, rates, your own tables |
 | [Project-scale runs](docs/README_project_scale.md) | estimate single road links and parking lots for one hour |
 | [The pipeline scripts](docs/README_scripts.md) | see what happens inside the container, step by step |
 | [The `catr` package](docs/README_catr.md) | write runspecs and work with results in R |

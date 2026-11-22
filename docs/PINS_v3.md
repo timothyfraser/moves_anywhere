@@ -2,7 +2,9 @@
 
 Part of the MOVES Anywhere guides: see the [index](README.md).
 
-These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starting `sha256:51ccd84e`) ships, recorded so v3 rebuilds the same MOVES and the same R stack. v3 changes how the image is built (MOVES pinned and compiled at build time, no Google tooling); it does not change which MOVES it runs.
+These are the pins of release 3.2.0: image tags `v3`, `v3.2` and `v3.2.0`, digest `sha256:3509df74aafd5164cfe3ac2afdf2f3f0c07c34c320f35ad9dc3ccbfe120d20c9`. The MOVES commit, the base image, the Java version and the R package list below are those of `tmf77/moves-anywhere:v2` (digest starting `sha256:51ccd84e`), so v3 rebuilds the same MOVES and the same R stack.
+
+v3 changes how the image is built (MOVES pinned and compiled at build time, no Google tooling); it does not change which MOVES it runs.
 
 ## MOVES
 
@@ -50,15 +52,21 @@ Pins are unchanged in 3.2.0: R, the R packages, MOVES (commit `2c4cd1ab...`), Go
 | rclone (sync mode only) | Ubuntu `rclone` 1.50.2 (built with Go 1.13.8) | rclone 1.76.0, official release |
 | System Python | `python3` with `requests`, `urllib3`, `certifi` (from `software-properties-common`) | `python3` only, standard library |
 
-EPA's source (`calc/` and `generators/` at `MOVES_COMMIT`) is unchanged. `GOAMD64=v1` (the default) keeps plain x86-64 floating point. EPA's own prebuilt Windows tools in `tools/` (built by EPA with Go 1.21) and the Java libraries in `libs/` are left as shipped. Apart from the two Go programs, every file under `/cat/EPA_MOVES_Model` is byte-identical to 3.0.0, and the R packages are the same as the v3.0.0 table below.
+EPA's source (`calc/` and `generators/` at `MOVES_COMMIT`) is unchanged. `GOAMD64=v1` (the default) keeps plain x86-64 floating point.
+
+EPA's own prebuilt Windows tools in `tools/` (built by EPA with Go 1.21) and the Java libraries in `libs/` are left as shipped. Apart from the two Go programs, every file under `/cat/EPA_MOVES_Model` is byte-identical to 3.0.0, and the R packages are the same as the v3.0.0 table below.
 
 ## What v3 pins that v2 left floating
 
-The Dockerfile asks for `remotes` 2.5.0, `RMySQL` 0.11.1 and `httr` 1.4.7, the versions v2 had. In the v3.0.0 build a later install upgraded `httr` to 1.4.9 (see the v3.0.0 table below); `remotes` and `RMySQL` stayed as asked. Packages that v2 installed with a version (for example `dplyr` 1.1.0) are unchanged in the Dockerfile; v2 ended up with newer versions of several of them because later installs upgraded them (see the list below). The apt packages and the R binary itself are not version-pinned.
+The Dockerfile asks for `remotes` 2.5.0, `RMySQL` 0.11.1 and `httr` 1.4.7, the versions v2 had. In the v3.0.0 build a later install upgraded `httr` to 1.4.9 (see the v3.0.0 table below); `remotes` and `RMySQL` stayed as asked.
+
+Packages that v2 installed with a version (for example `dplyr` 1.1.0) are unchanged in the Dockerfile; v2 ended up with newer versions of several of them because later installs upgraded them (see the list below). The apt packages and the R binary itself are not version-pinned.
 
 ## What v3 removes
 
-`google-cloud-cli`, `gcsfuse` and `fuse` (the Google command-line tools). The three Google R packages `gargle`, `googleAuthR` and `googleCloudStorageR` are not removed: the Dockerfile still installs them, pinned to the v2 versions below, because `catr` 0.2.0 imports them. They are asked for at the v2 versions, but later installs upgrade `gargle` and `googleAuthR` (v3.0.0 has `gargle` 1.7.0 and `googleAuthR` 2.0.2.1).
+`google-cloud-cli`, `gcsfuse` and `fuse` (the Google command-line tools).
+
+The three Google R packages `gargle`, `googleAuthR` and `googleCloudStorageR` are not removed: the Dockerfile still installs them, pinned to the v2 versions below, because `catr` 0.2.0 imports them. They are asked for at the v2 versions, but later installs upgrade `gargle` and `googleAuthR` (v3.0.0 has `gargle` 1.7.0 and `googleAuthR` 2.0.2.1).
 
 ## R packages in v2 (`installed.packages()`)
 
@@ -159,7 +167,11 @@ The Dockerfile asks for `remotes` 2.5.0, `RMySQL` 0.11.1 and `httr` 1.4.7, the v
 
 ## R packages in v3.0.0 as built (2026-11-13)
 
-The v3.0.0 image installs R packages from CRAN at build time; they are not pinned to the v2 versions above. Built 2026-11-13 from the release commit, it holds R 4.5.2 and the versions below wherever they differ from v2 (55 packages differ; `fansi` is no longer installed). The fixture run on this image matched the v2-era gold result exactly on all three output files, so these differences do not change results. The published image is fixed by its digest; a later rebuild may pick up newer CRAN versions.
+The v3.0.0 image installs R packages from CRAN at build time; they are not pinned to the v2 versions above.
+
+Built 2026-11-13 from the release commit, it holds R 4.5.2 and the versions below wherever they differ from v2 (55 packages differ; `fansi` is no longer installed). The fixture run on this image matched the v2-era gold result exactly on all three output files, so these differences do not change results.
+
+The published image is fixed by its digest; a later rebuild may pick up newer CRAN versions.
 
 | Package | v2 | v3.0.0 |
 |---|---|---|

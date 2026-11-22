@@ -1,0 +1,76 @@
+name: Quick start (run the README for real, check links and paragraphs)
+
+# Runs the README "Quick start" exactly as a new user would, on the published image tmf77/moves-anywhere:v3:
+# the R, json and bash blocks are extracted from README.md itself, so the page cannot drift from what works.
+# Also checks that every relative link and anchor in the Markdown files resolves, and that no prose
+# paragraph in the changed Markdown files is longer than 400 characters. Nothing is pushed anywhere.
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/**"
+      - ".github/workflows/quickstart.yml"
+      - ".github/scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quickstart-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quickstart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install the dependencies of catr
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: catr
+          extra-packages: any::remotes
+
+      - name: Install catr from this checkout
+        run: Rscript -e 'remotes::install_local("catr", dependencies = FALSE, upgrade = "never")'
+
+      - name: Pull the published image
+        run: docker pull tmf77/moves-anywhere:v3
+
+      - name: Run the README quick start
+        run: bash .github/scripts/quickstart_from_readme.sh
+
+      - name: Check relative links and anchors
+        run: python3 -I .github/scripts/check_links.py
+
+      - name: Check paragraph length in changed Markdown
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILES=$(git diff --name-only --diff-filter=d "origin/${{ github.base_ref }}...HEAD" -- '*.md')
+          else
+            FILES="README.md $(ls docs/*.md)"
+          fi
+          if [ -z "$FILES" ]; then echo "no Markdown files changed"; exit 0; fi
+          echo "checking: $FILES"
+          python3 -I .github/scripts/check_paragraphs.py $FILES
+
+      - name: Keep the run record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quickstart-run
+          path: |
+            ${{ runner.temp }}/quickstart/inputs/run_manifest.json
+            ${{ runner.temp }}/quickstart/inputs/moveslog.txt
+            ${{ runner.temp }}/quickstart/run.log
+          retention-days: 14
+          if-no-files-found: ignore

@@ -2,11 +2,15 @@
 
 **Beta.** This command is new. It has been tried in a few places, and its rules may change in the next release. Read `link_summary.txt` and `link_sources.csv` before you run MOVES on its output.
 
-A project-scale run estimates emissions on individual roads for one hour. It needs a table of road **links** (a link is one stretch of road): how long each link is, how many vehicles use it in the run's hour, how fast they go and how steep it is. `links.sh` builds that table from public federal data, so you do not have to type it in. This guide says what the command does, where each number comes from, and where it can mislead you. To run a project-scale run itself, see [Project-scale runs](README_project_scale.md).
+A project-scale run estimates emissions on individual roads for one hour. It needs a table of road **links** (a link is one stretch of road): how long each link is, how many vehicles use it in the run's hour, how fast they go and how steep it is.
+
+`links.sh` builds that table from public federal data, so you do not have to type it in. This guide says what the command does, where each number comes from, and where it can mislead you. To run a project-scale run itself, see [Project-scale runs](README_project_scale.md).
 
 ## What the command does
 
-You give it a place and a folder that holds `rs_custom.xml` (a project run file, which MOVES calls a runspec). It looks up the federal road sections in that place (a section is a stretch of road with its own federal record), joins them into links, adds traffic and grade, and writes the link files into the same folder. It does not run MOVES. When it ends, check the files, then run MOVES with `run.sh`.
+You give it a place and a folder that holds `rs_custom.xml` (a project run file, which MOVES calls a runspec). It looks up the federal road sections in that place (a section is a stretch of road with its own federal record), joins them into links, adds traffic and grade, and writes the link files into the same folder.
+
+It does not run MOVES. When it ends, check the files, then run MOVES with `run.sh`.
 
 ```bash
 bash moves_anywhere/links.sh <folder> --place "<west,south,east,north>" --state <two letters> [--max-links N] [--no-fill] [--overwrite] [--image IMAGE]
@@ -21,18 +25,36 @@ bash moves_anywhere/links.sh <folder> --place <5-digit FIPS> --state <two letter
 | `--max-links N` | Refuse to write more than N links. Default 40. See "The link limit". |
 | `--no-fill` | Do not add the remainder link that stands in for roads with no count. See "Roads with no count". |
 | `--overwrite` | Replace an existing `link.csv`. Without it the command refuses. |
-| `--image IMAGE` | The Docker image (the packaged software the command runs in) to use. Default `tmf77/moves-anywhere:v3`, or the environment variable `MOVES_IMAGE` if set. The link builder needs the 3.2 image. The published `v3` image is 3.1.0 and does not contain it, and 3.2 is not on Docker Hub yet. Until it is, build 3.2 locally and pass its tag here. <!-- source: moves_anywhere/links.sh:19,88; CHANGELOG.md 3.2.0; README.md image versions note --> |
+| `--image IMAGE` | The Docker image (the packaged software the command runs in) to use. Default `tmf77/moves-anywhere:v3`, or the environment variable `MOVES_IMAGE` if set. The published `v3` image is release 3.2.0 and contains the link builder. <!-- source: moves_anywhere/links.sh:19,88 -->
 
-Examples:
+`links.sh` needs a folder with a project `rs_custom.xml`. No command turns `parameters.json` into one outside the image, so start from the run file of the shipped example (Tompkins County, NY, 2022, July weekday, hour 8):
 
 ```bash
-bash moves_anywhere/links.sh my_run --place 36109 --state NY --image my-moves-anywhere:3.2
-bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite --image my-moves-anywhere:3.2
+mkdir my_run
+cp moves_anywhere/inputs_project/rs_custom.xml my_run/
+bash moves_anywhere/links.sh my_run --place "-76.499,42.438,-76.495,42.441" --state NY --overwrite
 ```
 
-Here `my-moves-anywhere:3.2` stands for a 3.2 image you built locally from this branch. Without `--image` (or `MOVES_IMAGE`), these commands use the published `v3` image (3.1.0) and fail because it lacks `launch_links.sh`.
+This box gave 17 links when tested in 2026-11; counts change as federal data are updated. A 5-digit county code also works for `--place`, but a whole county usually has more than 40 links.
 
-**Inside an ordinary run.** The same builder also runs from `parameters.json`, with no separate command. Put a project `parameters.json` (`"level": "project"`) with a `place`, and optionally `max_links`, in a folder with no `link.csv`. Then run `run.sh <folder>`. The image builds the links, takes the state from the first two digits of `geoid`, and runs MOVES on the new links in the same run. The folder does not need an `rs_custom.xml`. The image writes a provisional one for the builder, then writes the real one from the road types in the new `link.csv`. `parameters.json` has no key for `--no-fill`, so the remainder link stays on. A refusal stops the run with the same `links:` line. To check the links before MOVES runs, use `links.sh` instead. The keys are listed in [Project-scale runs](README_project_scale.md).
+Then check `my_run/link_summary.txt`, delete `my_run/rs_custom.xml`, save a `my_run/parameters.json` (full file below) and run `bash moves_anywhere/run.sh my_run`. With no run file, the image writes a new one whose road types match your links:
+
+```json
+{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+```
+
+If you keep a run file instead, it must name the same county, year, month, day type and hour as `parameters.json`, and every road type it selects needs a link, or the run is refused (see [When a run is refused](README_project_scale.md#when-a-run-is-refused)).
+
+**Inside an ordinary run (no separate command).** The same builder runs from `parameters.json`:
+
+- Put a project `parameters.json` (`"level": "project"`) with a `place`, and optionally `max_links`, in a folder with no `link.csv`.
+- Run `bash moves_anywhere/run.sh <folder>`. The folder needs no `rs_custom.xml`.
+- The image builds the links, taking the state from the first two digits of `geoid`.
+- It writes a provisional run file for the builder, then the real one from the road types in the new `link.csv`, and runs MOVES in the same run.
+- `parameters.json` has no key for `--no-fill`, so the remainder link stays on.
+- A refusal stops the run with the same `links:` line.
+
+To check the links before MOVES runs, use `links.sh`. The keys are listed in [Project-scale runs](README_project_scale.md).
 
 Docker must be installed and running. When the command ends it returns an exit code: 0 means links were written, 2 a usage error or a missing input, and 3 that Docker is missing or not running. If the builder refuses (for example, too many links), it prints one line starting `links:` and writes the same line to `link_summary.txt`.
 
@@ -58,7 +80,9 @@ All files go into your folder.
 
 Both are free and need no key. FHWA and USGS publish them as U.S. government data. This command uses no other road, traffic or elevation source.
 
-HPMS gives each public road section a functional class, an urban code, a length, and fields for a daily vehicle count (AADT, annual average daily traffic), counts of single-unit and combination trucks, a posted speed limit, lanes and a direction factor. The count fields are filled for nearly every arterial and collector but for almost no local street (see "Roads with no count"). Each section also carries the year of its count (`data_year`). The command picks the state layer whose year is nearest the run year; if two are equally near, the earlier one.
+HPMS gives each public road section a functional class, an urban code, a length, and fields for a daily vehicle count (AADT, annual average daily traffic), counts of single-unit and combination trucks, a posted speed limit, lanes and a direction factor.
+
+The count fields are filled for nearly every arterial and collector but for almost no local street (see "Roads with no count"). Each section also carries the year of its count (`data_year`). The command picks the state layer whose year is nearest the run year; if two are equally near, the earlier one.
 
 ### Field names differ by layer year
 
@@ -88,7 +112,9 @@ Every value on every link has a label in `link_sources.csv`.
 
 ## Road type
 
-MOVES has five road types: off-network (1), rural restricted (2), rural unrestricted (3), urban restricted (4) and urban unrestricted (5). The command assigns only the four on-road types, 2 to 5, because HPMS sections are roads; off-network links (road type 1, such as a parking lot) are not built from HPMS. "Restricted" means access is controlled, as on a freeway. The command decides from the HPMS functional class and, for class 2, the access-control code.
+MOVES has five road types: off-network (1), rural restricted (2), rural unrestricted (3), urban restricted (4) and urban unrestricted (5). The command assigns only the four on-road types, 2 to 5, because HPMS sections are roads; off-network links (road type 1, such as a parking lot) are not built from HPMS.
+
+"Restricted" means access is controlled, as on a freeway. The command decides from the HPMS functional class and, for class 2, the access-control code.
 
 | HPMS functional class | Road type |
 |---|---|
@@ -106,7 +132,9 @@ HPMS gives a count per day. MOVES needs a count for one hour. The command makes 
 2. **Year factor.** The count is for its count year, and the run may be for another year. The count is scaled by the county's vehicle-miles in the run year divided by the county's vehicle-miles in the count year (all vehicle types, from the same county reference data a county run uses). Equal years, or a year that cannot be looked up, give 1; the second case is labelled `default` and says why.
 3. **Hour.** The scaled daily count is multiplied by the county's share of traffic in the run's month, in the run's day type and in the run's hour, for each vehicle type on the link's road type, and the results are summed. The month, day and hour shares are those the county adapters produce, so a link follows the same daily pattern as a county run.
 
-Each link's vehicle mix is the county's default mix for its road type. When a link has both a single-unit and a combination truck count, the command uses those truck shares instead: the single-unit share goes to source types 52, 53 and 54 and the combination share to 61 and 62, each split by the county default. HPMS single-unit counts include buses. Here, buses stay in the non-truck part of the mix, so the truck share is a little high and the bus share a little low.
+Each link's vehicle mix is the county's default mix for its road type. When a link has both a single-unit and a combination truck count, the command uses those truck shares instead: the single-unit share goes to source types 52, 53 and 54 and the combination share to 61 and 62, each split by the county default.
+
+HPMS single-unit counts include buses. Here, buses stay in the non-truck part of the mix, so the truck share is a little high and the bus share a little low.
 
 ## Speed
 
@@ -125,7 +153,11 @@ For each link longer than 200 m, the command sends the link's line to the USGS e
 
 HPMS counts nearly every arterial and collector but almost no local street. In Tompkins County, New York, 0.1 percent of the 939 miles of local streets and minor collectors have a count, against 99.8 percent of the miles of the higher classes. Without a fix, a run for a box would leave out the traffic on those streets.
 
-The command fills the gap with the county's leftover traffic. For each unrestricted road type (3 and 5) it takes the county's vehicle-miles for the run's hour, subtracts the vehicle-miles already on counted sections, and gives the remainder to one extra link: the remainder link. Its length is the uncounted miles in your place, capped at half an hour of travel at the county default speed. Its volume is the remainder divided by that length. Its grade is 0. Every value on it is labelled `default`. Restricted road types are never filled; leftover traffic there is reported in the summary as unplaced. When counted traffic already exceeds the county total, the remainder is 0 and the summary flags it.
+The command fills the gap with the county's leftover traffic. For each unrestricted road type (3 and 5) it takes the county's vehicle-miles for the run's hour, subtracts the vehicle-miles already on counted sections, and gives the remainder to one extra link: the remainder link.
+
+Its length is the uncounted miles in your place, capped at half an hour of travel at the county default speed. Its volume is the remainder divided by that length. Its grade is 0. Every value on it is labelled `default`.
+
+Restricted road types are never filled; leftover traffic there is reported in the summary as unplaced. When counted traffic already exceeds the county total, the remainder is 0 and the summary flags it.
 
 For a box, the remainder is shared by the uncounted miles in the box out of the uncounted miles in the county. This assumes equal traffic on every uncounted mile of the county, so a downtown box receives the county's average local-street volume.
 
@@ -133,27 +165,33 @@ The switch is `--no-fill`. With it no remainder link is added; the summary still
 
 ## The link limit
 
-The command refuses to write more than 40 links unless you set `--max-links`. The reason is run time: MOVES takes longer with more links. Measured on one workstation: 7 links took 621 seconds of MOVES (100 pollutant-process pairs), 32 links took 1,882 seconds (31 pairs), and the 17-link live build took 371 seconds (84 pairs, the set a county run file gets). Time grows with links and with pollutant-process pairs, not in proportion to either; the refusal message quotes the first two figures as a rough guide. <!-- source: release/live_link_build/RESULT.md; build/county_vs_project/ --> The limit counts remainder links. If a place gives too many links, make the box smaller, or raise the limit and expect a longer run.
+The command refuses to write more than 40 links unless you set `--max-links`. The reason is run time: MOVES takes longer with more links.
+
+Measured on one workstation: 7 links took 621 seconds of MOVES (100 pollutant-process pairs), 32 links took 1,882 seconds (31 pairs), and the 17-link live build took 371 seconds (84 pairs, the set a county run file gets).
+
+Time grows with links and with pollutant-process pairs, not in proportion to either; the refusal message quotes the first two figures as a rough guide.
+<!-- measured; record kept by the maintainers -->
+ The limit counts remainder links. If a place gives too many links, make the box smaller, or raise the limit and expect a longer run.
 
 ## Tested
 
 One live build, then one run of MOVES on its output (Tompkins County, NY, 2022, a July weekday, 8:00 to 8:59). The box was `-76.499,42.438,-76.495,42.441` in Ithaca, NY.
 
-- The build used the 2022 HPMS layer, fetched 18 sections and wrote 17 links (16 counted road links and one remainder link) in 87 s. <!-- source: release/live_link_build/BUILD.md -->
-- 10.2% of the 167 values in `link_sources.csv` were defaults. <!-- source: release/live_link_build/link_summary.txt -->
-- MOVES took 371 s for the 17 links, finished with status ok, and every link appears in `linkdata.csv`. <!-- source: release/live_link_build/RESULT.md -->
-- 13 of the 16 road links were within 10% of the flat fixture's CO2 per mile. The three that were not are the steep links: +65% at +7.1% grade, and -51% and -57% at -8.3% and -10.9%. The fixture is flat, so higher CO2 per mile uphill and lower CO2 per mile on steep downhills are expected. <!-- source: release/live_link_build/RESULT.md -->
-- The remainder link (0.001 mi, 90.9 vehicles an hour) ran as an ordinary link and is 0.014% of the run's vehicle-miles. <!-- source: release/live_link_build/RESULT.md -->
-- A first attempt failed with HTTP 500 because the field names of the 2022 layer differ from the 2024 and 2025 layers; the builder now reads each layer's field list (see "Field names differ by layer year"). <!-- source: release/live_link_build/BUILD.md -->
+- The build used the 2022 HPMS layer, fetched 18 sections and wrote 17 links (16 counted road links and one remainder link) in 87 s. <!-- measured; record kept by the maintainers -->
+- 10.2% of the 167 values in `link_sources.csv` were defaults. <!-- measured; record kept by the maintainers -->
+- MOVES took 371 s for the 17 links, finished with status ok, and every link appears in `linkdata.csv`. <!-- measured; record kept by the maintainers -->
+- 13 of the 16 road links were within 10% of the flat fixture's CO2 per mile. The three that were not are the steep links: +65% at +7.1% grade, and -51% and -57% at -8.3% and -10.9%. The fixture is flat, so higher CO2 per mile uphill and lower CO2 per mile on steep downhills are expected. <!-- measured; record kept by the maintainers -->
+- The remainder link (0.001 mi, 90.9 vehicles an hour) ran as an ordinary link and is 0.014% of the run's vehicle-miles. <!-- measured; record kept by the maintainers -->
+- A first attempt failed with HTTP 500 because the field names of the 2022 layer differ from the 2024 and 2025 layers; the builder now reads each layer's field list (see "Field names differ by layer year"). <!-- measured; record kept by the maintainers -->
 
 This is one place and one hour. It shows that the builder's output runs in MOVES; it does not show the traffic numbers are right for any road.
 
 ### Against measured counts: Manhattan, 2022
 
-A second build, in Manhattan (`-73.9760,40.7435,-73.9705,40.7470`, First Avenue to the FDR Drive, about East 34th to 37th Street; a July weekday, 7:00 to 7:59), wrote 19 links. Its hour volumes were compared with measured counts for the same hour of a weekday. <!-- source: wave3/counts_check.md -->
+A second build, in Manhattan (`-73.9760,40.7435,-73.9705,40.7470`, First Avenue to the FDR Drive, about East 34th to 37th Street; a July weekday, 7:00 to 7:59), wrote 19 links. Its hour volumes were compared with measured counts for the same hour of a weekday. <!-- measured; record kept by the maintainers -->
 
-- The builder's volumes were higher than the counts in 6 of 8 one-direction comparisons: builder over measured, median 1.38, range 0.87 to 1.96. <!-- source: wave3/counts_manhattan.csv -->
-- The best comparison is the Queens Midtown Tunnel approach, against the MTA's hourly toll counts for 20 weekdays of July 2022. Both directions together: 6,378 vehicles from the builder against 4,619 measured (1.38). The split was the wrong way round for this hour: the builder sent 59% toward Queens (HPMS's direction factor, which does not say which direction is the busy one), and 58% went toward Manhattan. <!-- source: wave3/counts_check.md -->
+- The builder's volumes were higher than the counts in 6 of 8 one-direction comparisons: builder over measured, median 1.38, range 0.87 to 1.96. <!-- measured; record kept by the maintainers -->
+- The best comparison is the Queens Midtown Tunnel approach, against the MTA's hourly toll counts for 20 weekdays of July 2022. Both directions together: 6,378 vehicles from the builder against 4,619 measured (1.38). The split was the wrong way round for this hour: the builder sent 59% toward Queens (HPMS's direction factor, which does not say which direction is the busy one), and 58% went toward Manhattan. <!-- measured; record kept by the maintainers -->
 - The street counts are weaker: the nearest New York City counts are from 2015 to 2024, outside July, and some cover a single day.
 
 So, in this place and hour, the builder's hour volumes were about 38% too high (median ratio 1.38, range 0.87 to 1.96), and its direction split at a peak hour should not be trusted. Give your own counts in `link.csv` when you have them.
