@@ -7,14 +7,18 @@ Part of the MOVES Anywhere guides: see the [index](README.md).
 A MOVES ANYWHERE container needs two things from the outside world: the files that describe
 the run (the runspec `rs_custom.xml`, `parameters.json`, and up to about 16 user CSV tables),
 and somewhere to put the results. Today the container finds both in a mounted folder,
-`/cat/inputs`. That works on a laptop and on a host that mounts a bucket as a disk, but it
+`/cat/inputs`.
+
+That works on a laptop and on a host that mounts a bucket as a disk, but it
 means whoever runs the container has to hand it storage access.
 
 A **run ticket** removes that need. The platform that orders the run gives the container one
 URL, `TICKET_URL`. Fetching it returns a small JSON document listing a short-lived download
 link for every input and a short-lived upload link for every output. The container downloads,
 runs MOVES exactly as it does today, uploads, and writes
-[`run_manifest.json`](RUN_MANIFEST.md) last. The job never holds a storage key, a database
+[`run_manifest.json`](RUN_MANIFEST.md) last.
+
+The job never holds a storage key, a database
 password or a cloud credential: a ticket can only read this run's inputs and write this run's
 outputs, and only until its links expire.
 
@@ -34,11 +38,15 @@ operator already holds a store credential; it is not used for user runs.
 
 ## For agents
 
-Everything below is normative. "MUST", "SHOULD" and "MAY" carry their usual meaning. The
+Everything below is normative. "MUST", "SHOULD" and "MAY" carry their usual meaning.
+
+The
 implementation is two bash scripts, `scripts/task_fetch_inputs.sh` (before
 `task_check_inputs.sh`) and `scripts/task_push_outputs.sh` (after the pack step that writes
 [`run_manifest.json`](RUN_MANIFEST.md)), plus a dispatcher of about ten lines in
-`scripts/launch.sh`. Each script fits in about 60 lines and uses only `bash`, `curl`, `gzip`,
+`scripts/launch.sh`.
+
+Each script fits in about 60 lines and uses only `bash`, `curl`, `gzip`,
 `tar`, `xz` and `python3 -I -c` (standard library `json` and `hashlib` only). Nothing between
 fetch and push changes.
 
@@ -140,7 +148,11 @@ Field rules:
 - `callbacks`: always an empty array. There is no webhook. **The manifest is the callback**:
   the platform learns the run finished when `run_manifest.json` lands.
 
-**Project scale.** A project run goes through a ticket like any other. The ticket for a project order lists `parameters.json` and any link tables as inputs. It need not list `rs_custom.xml`: the container accepts a ticket without it only when the fetched `parameters.json` says `"level": "project"`, and then writes the run file itself. The ticket lists `linkdata.csv.gz` (required), `moveslog.txt.gz`, `replication.tar.xz` and `run_manifest.json` as outputs, and does not list `data.csv.gz`. The container pushes `run_manifest.json` last. If `linkdata.csv.gz` is listed as required and was not produced, the run is `failed` with `required output missing: linkdata.csv.gz`.
+**Project scale.** A project run goes through a ticket like any other. The ticket for a project order lists `parameters.json` and any link tables as inputs. It need not list `rs_custom.xml`: the container accepts a ticket without it only when the fetched `parameters.json` says `"level": "project"`, and then writes the run file itself.
+
+The ticket lists `linkdata.csv.gz` (required), `moveslog.txt.gz`, `replication.tar.xz` and `run_manifest.json` as outputs, and does not list `data.csv.gz`.
+
+The container pushes `run_manifest.json` last. If `linkdata.csv.gz` is listed as required and was not produced, the run is `failed` with `required output missing: linkdata.csv.gz`.
 
 **Output names.** The platform lists, and the container pushes, exactly these objects:
 
@@ -231,6 +243,7 @@ place to write, so nothing is pushed; the platform falls back to the runner's jo
 No network, no ticket. Inputs are read from the mounted `/cat/inputs` exactly as today, and
 every file the scripts write today (`movesoutput.csv`, `movesactivityoutput.csv`, `data.csv`,
 `moveslog.txt`, `diagnostics.txt`, the adapted `_*.csv`) is still written there, unchanged.
+
 The pack step additionally writes the outputs of §2 (`data.csv.gz`, `moveslog.txt.gz`,
 `replication.tar.xz`) into `/cat/inputs/`, then `run_manifest.json` last. Nothing is deleted.
 

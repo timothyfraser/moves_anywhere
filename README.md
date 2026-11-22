@@ -126,7 +126,9 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 **Beta.** Project runs are a beta feature. Check results before you rely on them, and tell us what you find.
 
-A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0 (see [Versions](#versions)).
+A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour.
+
+Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0 (see [Versions](#versions)).
 
 You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (see [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). Use the published image `tmf77/moves-anywhere:v3`, which `run.sh` pulls for you.
 

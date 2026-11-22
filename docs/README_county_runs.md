@@ -1,6 +1,7 @@
 # `README`: county runs
 
-A county run estimates emissions and activity for one county and one year, at MOVES's county scale. <!-- source: README.md, "Quick start"; catr/R/custom_rs.R:3-4 -->
+A county run estimates emissions and activity for one county and one year, at MOVES's county scale.
+<!-- source: README.md, "Quick start"; catr/R/custom_rs.R:3-4 -->
 You give a run file (`rs_custom.xml`) and settings (`parameters.json`). <!-- source: README.md, "Quick start" steps 1-2 -->
 You get emissions and activity in CAT Format (`data.csv`). For the three-step example, see the [Quick start](../README.md#quick-start). <!-- source: README.md, "What you get back" -->
 

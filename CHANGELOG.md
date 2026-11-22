@@ -38,7 +38,16 @@ Adds project-scale runs (beta): emissions on individual road links and parking l
 
 `docker scout cves`, critical and high only: 15 critical and 84 high, the same as 3.1.0. Every remaining finding is inside EPA's MOVES tree, left as EPA ships it (the components are listed under 3.1.0). <!-- measured 2026-11-21; record kept by the maintainers -->
 
-Checks: full gate PASS on commit 282fb16, 14 steps in 3,624 s (static, compare-unit, build, county fixture, compare, manifest, pack, ticket, bad-table, sha, project-unit, project, replay, epa); EPA's MOVES5 course project exercise reproduced on both runs, 21 of 21 rows each, largest relative difference 5e-8; project against county scale with the age default, 16 urban links: NOx +1.5%, exhaust PM2.5 +1.8%, CO2 +0.1% per mile; 2019 and 2040 project runs complete; a 17-link live build of downtown Ithaca from federal data ran in MOVES in 371 s; city checks for Manhattan and Buffalo (Erie County), NY, 2022, against the CAT county results: CO2 per mile within 7% on road types 4 and 5; the link builder's hour volumes in Manhattan are about 1.4 times measured counts. <!-- measured; record kept by the maintainers -->
+Checks:
+
+- Full gate PASS on commit 282fb16, 14 steps in 3,624 s (static, compare-unit, build, county fixture, compare, manifest, pack, ticket, bad-table, sha, project-unit, project, replay, epa).
+- EPA's MOVES5 course project exercise reproduced on both runs, 21 of 21 rows each, largest relative difference 5e-8.
+- Project against county scale with the age default, 16 urban links: NOx +1.5%, exhaust PM2.5 +1.8%, CO2 +0.1% per mile.
+- 2019 and 2040 project runs complete.
+- A 17-link live build of downtown Ithaca from federal data ran in MOVES in 371 s.
+- City checks for Manhattan and Buffalo (Erie County), NY, 2022, against the CAT county results: CO2 per mile within 7% on road types 4 and 5.
+- The link builder's hour volumes in Manhattan are about 1.4 times measured counts.
+<!-- measured; record kept by the maintainers -->
 
 ## 3.1.0
 

@@ -53,7 +53,9 @@ Normative. The pack step (`scripts/task_pack.sh`, after `task_summarize.R`) writ
 
 A project-scale run (its `rs_custom.xml` has `<modeldomain value="PROJECT"/>`) is an inventory-type
 run with a different result object: `linkdata.csv.gz`, one row per link, pollutant, process, vehicle
-type and fuel, in grams for the hour. It has no `data.csv.gz`. `mode` stays `inv`, no field was added,
+type and fuel, in grams for the hour.
+
+It has no `data.csv.gz`. `mode` stays `inv`, no field was added,
 and `manifest_version` stays 1. For these runs the platform's result check looks for `linkdata.csv.gz`.
 
 Everything else (`mode`, `image`, `moves`, `runspec`, `inputs`, the rest of `outputs`,
