@@ -508,9 +508,13 @@ On the corrected run, all 21 of 21 CO rows are within 1% of EPA's, and the large
 
 **A first comparison was wrong, and why.** Our first run used the MOVES default fuel-technology table
 (`avft`) and the default hotelling table, because an earlier decode of EPA's input database had read only 7
-of its 25 tables and concluded that EPA's run had imported neither. The full decode shows that EPA's
+of its 25 tables and concluded that EPA's run had imported neither.
+
+The full decode shows that EPA's
 importer filled both (its audit log records it), and that EPA's `avft` equals the course workbook's on all
-888 rows. That first run was the mistake, not a finding about the tool: nine of its 21 CO rows were within
+888 rows.
+
+That first run was the mistake, not a finding about the tool: nine of its 21 CO rows were within
 1% of EPA's, and the rest differed in ways the two tables explain (a 1.1% share of natural-gas trucks in the
 default technology mix raised truck running CO by 4.5 to 7.2%; the default hotelling table runs 32.5 hours
 of an auxiliary power unit where EPA's has none, giving 313.7 g against EPA's 0).
@@ -695,12 +699,17 @@ option.
 13. **How it was built.** The code was written in one day by AI agents working from a written plan, with
     one orchestrating agent reviewing diffs and running every container test. The plan was reviewed
     independently before coding, and the code was reviewed once by a separate agent that had not
-    written it. No person has read all of it. Defects found after the writing agents reported their
-    units done: vehicle counts came out as zero in the results file; one test would have compared the
-    new code with itself once committed; stale result files from an earlier run in the same folder were
-    shipped with the wrong kind of run; a partial soak-time table dropped every default; a run file
-    using single quotes was read as a project run by some scripts and a county run by others. All are
-    fixed. The review found no way for the change to alter a county run in a clean folder. Assume there
+    written it. No person has read all of it.
+
+    Defects found after the writing agents reported their units done:
+
+    - vehicle counts came out as zero in the results file.
+    - one test would have compared the new code with itself once committed.
+    - stale result files from an earlier run in the same folder were shipped with the wrong kind of run.
+    - a partial soak-time table dropped every default.
+    - a run file using single quotes was read as a project run by some scripts and a county run by others.
+
+    All are fixed. The review found no way for the change to alter a county run in a clean folder. Assume there
     are more defects of the same kinds.
 14. **County averages come from the default database's national tables**, not from the county, for
     speeds, road type shares, hourly shares, starts and ages.
