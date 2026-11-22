@@ -166,8 +166,8 @@ To check the links before MOVES runs, use `links.sh` (see [Building links](docs/
 
 What has been measured:
 
-- EPA's MOVES5 training-course project exercise, run in this image: all 21 rows match EPA's answer, with a largest relative difference of 5e-8. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
-- With the default vehicle ages, a project run built to copy a county's speeds agrees with the county run to within 2% per mile for NOx, exhaust PM2.5 and CO2. <!-- source: release/county_vs_project_default.csv -->
+- EPA's MOVES5 training-course project exercise, run in this image: all 21 rows match EPA's answer, with a largest relative difference of 5e-8. <!-- measured 2026-11 for release 3.2.0; record kept by the maintainers -->
+- With the default vehicle ages, a project run built to copy a county's speeds agrees with the county run to within 2% per mile for NOx, exhaust PM2.5 and CO2. <!-- measured 2026-11 for release 3.2.0; record kept by the maintainers -->
 
 Project runs are for screening, research and teaching. EPA's guidance for regulatory hot-spot analysis expects project-specific traffic data, and the defaults here do not replace that.
 
