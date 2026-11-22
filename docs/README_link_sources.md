@@ -150,27 +150,27 @@ The switch is `--no-fill`. With it no remainder link is added; the summary still
 
 ## The link limit
 
-The command refuses to write more than 40 links unless you set `--max-links`. The reason is run time: MOVES takes longer with more links. Measured on one workstation: 7 links took 621 seconds of MOVES (100 pollutant-process pairs), 32 links took 1,882 seconds (31 pairs), and the 17-link live build took 371 seconds (84 pairs, the set a county run file gets). Time grows with links and with pollutant-process pairs, not in proportion to either; the refusal message quotes the first two figures as a rough guide. <!-- source: release/live_link_build/RESULT.md; build/county_vs_project/ --> The limit counts remainder links. If a place gives too many links, make the box smaller, or raise the limit and expect a longer run.
+The command refuses to write more than 40 links unless you set `--max-links`. The reason is run time: MOVES takes longer with more links. Measured on one workstation: 7 links took 621 seconds of MOVES (100 pollutant-process pairs), 32 links took 1,882 seconds (31 pairs), and the 17-link live build took 371 seconds (84 pairs, the set a county run file gets). Time grows with links and with pollutant-process pairs, not in proportion to either; the refusal message quotes the first two figures as a rough guide. <!-- measured; record kept by the maintainers --> The limit counts remainder links. If a place gives too many links, make the box smaller, or raise the limit and expect a longer run.
 
 ## Tested
 
 One live build, then one run of MOVES on its output (Tompkins County, NY, 2022, a July weekday, 8:00 to 8:59). The box was `-76.499,42.438,-76.495,42.441` in Ithaca, NY.
 
-- The build used the 2022 HPMS layer, fetched 18 sections and wrote 17 links (16 counted road links and one remainder link) in 87 s. <!-- source: release/live_link_build/BUILD.md -->
-- 10.2% of the 167 values in `link_sources.csv` were defaults. <!-- source: release/live_link_build/link_summary.txt -->
-- MOVES took 371 s for the 17 links, finished with status ok, and every link appears in `linkdata.csv`. <!-- source: release/live_link_build/RESULT.md -->
-- 13 of the 16 road links were within 10% of the flat fixture's CO2 per mile. The three that were not are the steep links: +65% at +7.1% grade, and -51% and -57% at -8.3% and -10.9%. The fixture is flat, so higher CO2 per mile uphill and lower CO2 per mile on steep downhills are expected. <!-- source: release/live_link_build/RESULT.md -->
-- The remainder link (0.001 mi, 90.9 vehicles an hour) ran as an ordinary link and is 0.014% of the run's vehicle-miles. <!-- source: release/live_link_build/RESULT.md -->
-- A first attempt failed with HTTP 500 because the field names of the 2022 layer differ from the 2024 and 2025 layers; the builder now reads each layer's field list (see "Field names differ by layer year"). <!-- source: release/live_link_build/BUILD.md -->
+- The build used the 2022 HPMS layer, fetched 18 sections and wrote 17 links (16 counted road links and one remainder link) in 87 s. <!-- measured; record kept by the maintainers -->
+- 10.2% of the 167 values in `link_sources.csv` were defaults. <!-- measured; record kept by the maintainers -->
+- MOVES took 371 s for the 17 links, finished with status ok, and every link appears in `linkdata.csv`. <!-- measured; record kept by the maintainers -->
+- 13 of the 16 road links were within 10% of the flat fixture's CO2 per mile. The three that were not are the steep links: +65% at +7.1% grade, and -51% and -57% at -8.3% and -10.9%. The fixture is flat, so higher CO2 per mile uphill and lower CO2 per mile on steep downhills are expected. <!-- measured; record kept by the maintainers -->
+- The remainder link (0.001 mi, 90.9 vehicles an hour) ran as an ordinary link and is 0.014% of the run's vehicle-miles. <!-- measured; record kept by the maintainers -->
+- A first attempt failed with HTTP 500 because the field names of the 2022 layer differ from the 2024 and 2025 layers; the builder now reads each layer's field list (see "Field names differ by layer year"). <!-- measured; record kept by the maintainers -->
 
 This is one place and one hour. It shows that the builder's output runs in MOVES; it does not show the traffic numbers are right for any road.
 
 ### Against measured counts: Manhattan, 2022
 
-A second build, in Manhattan (`-73.9760,40.7435,-73.9705,40.7470`, First Avenue to the FDR Drive, about East 34th to 37th Street; a July weekday, 7:00 to 7:59), wrote 19 links. Its hour volumes were compared with measured counts for the same hour of a weekday. <!-- source: wave3/counts_check.md -->
+A second build, in Manhattan (`-73.9760,40.7435,-73.9705,40.7470`, First Avenue to the FDR Drive, about East 34th to 37th Street; a July weekday, 7:00 to 7:59), wrote 19 links. Its hour volumes were compared with measured counts for the same hour of a weekday. <!-- measured; record kept by the maintainers -->
 
-- The builder's volumes were higher than the counts in 6 of 8 one-direction comparisons: builder over measured, median 1.38, range 0.87 to 1.96. <!-- source: wave3/counts_manhattan.csv -->
-- The best comparison is the Queens Midtown Tunnel approach, against the MTA's hourly toll counts for 20 weekdays of July 2022. Both directions together: 6,378 vehicles from the builder against 4,619 measured (1.38). The split was the wrong way round for this hour: the builder sent 59% toward Queens (HPMS's direction factor, which does not say which direction is the busy one), and 58% went toward Manhattan. <!-- source: wave3/counts_check.md -->
+- The builder's volumes were higher than the counts in 6 of 8 one-direction comparisons: builder over measured, median 1.38, range 0.87 to 1.96. <!-- measured; record kept by the maintainers -->
+- The best comparison is the Queens Midtown Tunnel approach, against the MTA's hourly toll counts for 20 weekdays of July 2022. Both directions together: 6,378 vehicles from the builder against 4,619 measured (1.38). The split was the wrong way round for this hour: the builder sent 59% toward Queens (HPMS's direction factor, which does not say which direction is the busy one), and 58% went toward Manhattan. <!-- measured; record kept by the maintainers -->
 - The street counts are weaker: the nearest New York City counts are from 2015 to 2024, outside July, and some cover a single day.
 
 So, in this place and hour, the builder's hour volumes were about 38% too high (median ratio 1.38, range 0.87 to 1.96), and its direction split at a peak hour should not be trusted. Give your own counts in `link.csv` when you have them.

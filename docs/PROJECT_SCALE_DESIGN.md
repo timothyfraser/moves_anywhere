@@ -116,7 +116,7 @@ project result inherits every one of these assumptions.
 | Input | In the default database? | What MOVES Anywhere does by default | Assumption you are accepting |
 |---|---|---|---|
 | Vehicle ages | Yes, a national distribution for each year | Takes the national rows for the run's year | Your county's fleet has the national age profile |
-| Fuel supply and formulation | Yes, by fuel region | **Uses a fixed New York metropolitan fuel supply and formulation** shipped with the image (`scripts/fuelsupply.csv`, `scripts/fuelformulation.csv`), relabelled with the county's fuel region and the run's year | Fuel everywhere is like New York metro fuel. This matters little for CO2 and more for CO, NOx, particulates and evaporation. The default database does hold regional fuel, and the code path that would use it is commented out on purpose: the New York fuel stays the default for every county because MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against (decision D92, 2026-11-18) |
+| Fuel supply and formulation | Yes, by fuel region | **Uses a fixed New York metropolitan fuel supply and formulation** shipped with the image (`scripts/fuelsupply.csv`, `scripts/fuelformulation.csv`), relabelled with the county's fuel region and the run's year | Fuel everywhere is like New York metro fuel. This matters little for CO2 and more for CO, NOx, particulates and evaporation. The default database does hold regional fuel, and the code path that would use it is commented out on purpose: the New York fuel stays the default for every county because MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against (the maintainers' decision of 2026-11-18) |
 | Fuel usage, engine technology shares (`AVFT`) | Yes | Default tables, estimated where needed | National technology and fuel-use shares |
 | Weather | Yes, by county, month and hour | Takes the county's default rows | A typical month, not the day you care about |
 | Inspection programme | Yes, for counties that have one | Takes the county's rows; writes nothing if there are none | EPA's description of the programme is current |
@@ -192,7 +192,7 @@ labels every value on every link `measured`, `derived` or `default`. The guide i
   its metadata and maps it to one set of names, for the section fetch and for the county statistics.
   The 2020 layer uses `route_id`, `begin_point` and `end_point`; the 2022 and 2023 layers use `routeid`,
   `beginpoint` and `endpoint`. The 2022 layer for New York, queried for a box in Ithaca, first failed with
-  HTTP 500 because the builder asked it for the newer names; it works now. <!-- source: release/live_link_build/BUILD.md -->
+  HTTP 500 because the builder asked it for the newer names; it works now. <!-- measured; record kept by the maintainers -->
 - **Roads with no count.** HPMS counts almost no local streets. For each unrestricted road type the builder
   adds one remainder link carrying the county's leftover traffic for the run's hour: the county's
   vehicle-miles minus the miles already counted. Its length is the uncounted miles in the place, capped at
@@ -289,7 +289,7 @@ one came from the adapters. This is `moves_anywhere/inputs_project/`.
 | 6 | urban road, stop-and-go speed trace | 400 | 201,166 | 503 | 0.452 | 0 |
 | 7 | parking lot, 385 vehicles | 0 | 79,646 | | | 76.3 |
 
-The reference results were regenerated with travel-weighted ages. <!-- source: release/gold_change.csv -->
+The reference results were regenerated with travel-weighted ages. <!-- measured; record kept by the maintainers -->
 
 - Miles equal volume x length, and hours equal miles / speed, exactly as the MOVES engine source says.
 - The pattern is physically sensible: uphill costs 45% more CO2; a slow queue emits almost twice as
@@ -417,12 +417,12 @@ select, and that may be the whole reason, but we have not confirmed it.
 | EPA example, Washtenaw County, third attempt | Ran. CO 27% above EPA's printed MOVES3 figure on free-flow links, three times above it at idle; unexplained (section 7.3) |
 | County run against project run built from defaults | CO2 within 5%; NOx, CO, hydrocarbons and exhaust PM2.5 1.5 to 2.9 times higher at project scale (section 7.4) |
 | The same project links with travel-weighted vehicle ages (16 links, urban roads) | Agrees with the county run: CO2 +0.1%, CO -0.1%, hydrocarbons 0.0%, NOx +1.5%, exhaust PM2.5 +1.8%, tyre wear +1.4%, brake wear +3.4%. Vehicle age weighting accounts for the whole gap. 1,487 s of MOVES |
-| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Passed (14 steps) on commit 282fb16, in 3,624 s, and earlier on 2758e4f and 8f48468. <!-- source: cloud_moves docs/audit/project_scale_2026-11/wave4/gate_full_282fb16.txt --> `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
+| Full test gate on the image built from the branch (14 steps now, including the county reference run, the summary replay, the project fixture and step 14, `epa`, for EPA's exercise (section 7.6), full gate only) | Passed (14 steps) on commit 282fb16, in 3,624 s, and earlier on 2758e4f and 8f48468. <!-- measured; record kept by the maintainers --> `run_gate.sh --fast` runs only static, compare-unit, build, project-unit, replay and the refusals of the project step, with no MOVES run; its summary says it is not a release gate. The gate script's own header puts it at 9 to 15 minutes with the image build |
 | Fixture run twice: identical results | Passed (the `sha` step of the gate) |
 | The fourth refusal (a road type with no link) | Offline test passes; the container test passed (the `project` step of the gate) |
-| The county-against-project comparison again, with the new age default | with the travel-weighted default, the project run differs from the county run per mile by 0.04% (THC), -0.06% (CO), 1.53% (NOx), 0.08% (CO2), 1.83% (exhaust PM2.5), 3.37% (brake PM2.5) and 1.35% (tyre PM2.5) on urban unrestricted roads; with registration ages the same differences were 85.42%, 47.52%, 93.54%, 4.28%, 164.72%, -3.54% and 1.65%. <!-- source: release/county_vs_project_default.csv --> |
-| Reference years 2019 and 2040, county-run settings | Both years ran with the same pollutant-process set a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040; CO2 per mile in 2040 is about 45% of 2019. MOVES took 876 s and 963 s on a busy machine. One range check (CO2 per mile between 250 and 700 g) failed on five links, so it is not a limit we rely on. <!-- source: release/years_2019_2040.csv, release/years_2019_2040_checks.csv --> |
-| City checks: Manhattan (36061) and Buffalo (Erie County, 36029), 2022, link-builder boxes run in MOVES; grams per mile compared with the CAT county results for the same road type | CO2 per mile is within 7% of CAT on road types 4 and 5: Manhattan 1.07 and 1.05 times CAT, Buffalo 0.98 and 1.00. NOx per mile: Manhattan 1.05 and 1.02 times CAT, Buffalo 0.82 and 0.84. Exhaust PM2.5 per mile in Manhattan is 1.39 and 1.23 times CAT. Buffalo road type 3 rests on 0.2 vehicle-miles and should not be read. Traffic counts, Manhattan only: the link builder's 7:00 hour volumes are 1.38 times measured counts (median of 8 comparisons, range 0.87 to 1.96); at the Queens Midtown Tunnel the builder puts 59% of traffic toward Queens, while the measured flow at 7:00 is 58% toward Manhattan. No measured hourly counts were found for Buffalo. Both runs are beta link-builder inputs, not a validation of the model. <!-- source: cloud_moves docs/audit/project_scale_2026-11/wave3/manhattan_vs_cat_2022.csv, wave3/buffalo_vs_cat_2022.csv, wave3/counts_check.md --> |
+| The county-against-project comparison again, with the new age default | with the travel-weighted default, the project run differs from the county run per mile by 0.04% (THC), -0.06% (CO), 1.53% (NOx), 0.08% (CO2), 1.83% (exhaust PM2.5), 3.37% (brake PM2.5) and 1.35% (tyre PM2.5) on urban unrestricted roads; with registration ages the same differences were 85.42%, 47.52%, 93.54%, 4.28%, 164.72%, -3.54% and 1.65%. <!-- measured; record kept by the maintainers --> |
+| Reference years 2019 and 2040, county-run settings | Both years ran with the same pollutant-process set a county run file gets (84 pairs). NOx and exhaust PM2.5 per mile fall on every road link from 2019 to 2040; CO2 per mile in 2040 is about 45% of 2019. MOVES took 876 s and 963 s on a busy machine. One range check (CO2 per mile between 250 and 700 g) failed on five links, so it is not a limit we rely on. <!-- measured; record kept by the maintainers --> |
+| City checks: Manhattan (36061) and Buffalo (Erie County, 36029), 2022, link-builder boxes run in MOVES; grams per mile compared with the CAT county results for the same road type | CO2 per mile is within 7% of CAT on road types 4 and 5: Manhattan 1.07 and 1.05 times CAT, Buffalo 0.98 and 1.00. NOx per mile: Manhattan 1.05 and 1.02 times CAT, Buffalo 0.82 and 0.84. Exhaust PM2.5 per mile in Manhattan is 1.39 and 1.23 times CAT. Buffalo road type 3 rests on 0.2 vehicle-miles and should not be read. Traffic counts, Manhattan only: the link builder's 7:00 hour volumes are 1.38 times measured counts (median of 8 comparisons, range 0.87 to 1.96); at the Queens Midtown Tunnel the builder puts 59% of traffic toward Queens, while the measured flow at 7:00 is 58% toward Manhattan. No measured hourly counts were found for Buffalo. Both runs are beta link-builder inputs, not a validation of the model. <!-- measured; record kept by the maintainers --> |
 
 ### 7.6 EPA's MOVES5 course exercise
 
@@ -439,14 +439,14 @@ in EPA's input and output databases and in our run), so a difference cannot be p
 compared them with the tables our adapters build from the same inputs. EPA's input database holds 18
 tables in this comparison: 16 that our adapters also write, which we compared, and EPA's audit log and a
 drive-schedule table, which have no counterpart in this run.
-<!-- source: epa_moves5_exercise/tables_compare_full.csv -->
+<!-- measured; record kept by the maintainers -->
 
 - Fourteen of the 16 are equal on every row EPA's table holds (the county table's barometric pressure
   differs by 2 parts in a hundred million). The other two, `zone` and `zoneroadtype`, differ in their
   allocation factors: EPA sets them to 1; our adapters set them to the county's share of the state
   (about 0.001). They did not change activity: population, starts and distance (miles) are equal to EPA's
   on every link and for both vehicle types in MOVES's activity output.
-  <!-- source: epa_moves5_exercise/DIAGNOSIS_run1.md -->
+  <!-- measured; record kept by the maintainers -->
 - Our tables sometimes hold more rows than EPA's (our age table has all 13 vehicle types, EPA's has the
   two in the run; our state table lists all states). Those extra rows are not read by this run. A few
   tables carry extra columns that MOVES fills in itself.
@@ -455,7 +455,7 @@ drive-schedule table, which have no counterpart in this run.
   does not read.
 
 **What the run showed.**
-On the corrected run, all 21 of 21 CO rows are within 1% of EPA's, and the largest relative difference is 5.0e-8. The run took 188 s in all. <!-- source: epa_moves5_exercise/comparison_run1b.csv -->
+On the corrected run, all 21 of 21 CO rows are within 1% of EPA's, and the largest relative difference is 5.0e-8. The run took 188 s in all. <!-- measured; record kept by the maintainers -->
 
 **A first comparison was wrong, and why.** Our first run used the MOVES default fuel-technology table
 (`avft`) and the default hotelling table, because an earlier decode of EPA's input database had read only 7
@@ -465,7 +465,7 @@ importer filled both (its audit log records it), and that EPA's `avft` equals th
 1% of EPA's, and the rest differed in ways the two tables explain (a 1.1% share of natural-gas trucks in the
 default technology mix raised truck running CO by 4.5 to 7.2%; the default hotelling table runs 32.5 hours
 of an auxiliary power unit where EPA's has none, giving 313.7 g against EPA's 0).
-<!-- source: epa_moves5_exercise/DIAGNOSIS_run1.md -->
+<!-- measured; record kept by the maintainers -->
 The two workbook tables were then put back into the run folder, and the corrected run is the one reported
 here. We say so because a comparison like this is easy to bend: putting EPA's inputs back is matching the
 experiment, not tuning our code, but a reader should know that the first result was different and why.
@@ -475,10 +475,10 @@ adapters and run-file handling reproduce EPA's example on one county, one month 
 does not show that county averages are right for a real site, which this exercise supplies by hand and
 does not test. The tolerance and the rows outside it, if any, are in the marker above.
 
-**Other runs.** The 2019 and 2040 reference-year runs: see section 7.5; NOx and exhaust PM2.5 per mile fall on every link, CO2 per mile in 2040 is about 45% of 2019. <!-- source: release/years_2019_2040.csv -->
-**EPA's second run (drive schedules).** EPA's exercise has a second run that gives links drive schedules. It reproduces too: 21 of 21 rows, largest relative difference about 5e-8. <!-- source: epa_moves5_exercise/comparison_run2.csv -->
+**Other runs.** The 2019 and 2040 reference-year runs: see section 7.5; NOx and exhaust PM2.5 per mile fall on every link, CO2 per mile in 2040 is about 45% of 2019. <!-- measured; record kept by the maintainers -->
+**EPA's second run (drive schedules).** EPA's exercise has a second run that gives links drive schedules. It reproduces too: 21 of 21 rows, largest relative difference about 5e-8. <!-- measured; record kept by the maintainers -->
 
-**The link builder's live build, in a run of MOVES.** A box in Ithaca, NY (`-76.499,42.438,-76.495,42.441`), the 2022 HPMS layer, Tompkins County 2022, July weekday, 8:00 to 8:59. The builder made 17 links (16 counted, one remainder) in 87 s, with 10.2% of values from defaults. <!-- source: release/live_link_build/BUILD.md --> MOVES took 371 s, the run finished with status ok, and every link is in `linkdata.csv`. 13 of the 16 road links are within 10% of the flat fixture's CO2 per mile; the three outliers are the steep links (+65% at +7.1% grade, -51% and -57% at -8.3% and -10.9%), as expected against a flat reference. <!-- source: release/live_link_build/RESULT.md --> The remainder link (0.001 mi) ran as an ordinary link. The builder ships as beta.
+**The link builder's live build, in a run of MOVES.** A box in Ithaca, NY (`-76.499,42.438,-76.495,42.441`), the 2022 HPMS layer, Tompkins County 2022, July weekday, 8:00 to 8:59. The builder made 17 links (16 counted, one remainder) in 87 s, with 10.2% of values from defaults. <!-- measured; record kept by the maintainers --> MOVES took 371 s, the run finished with status ok, and every link is in `linkdata.csv`. 13 of the 16 road links are within 10% of the flat fixture's CO2 per mile; the three outliers are the steep links (+65% at +7.1% grade, -51% and -57% at -8.3% and -10.9%), as expected against a flat reference. <!-- measured; record kept by the maintainers --> The remainder link (0.001 mi) ran as an ordinary link. The builder ships as beta.
 
 ## 8. Design decisions that a reader should know about
 
@@ -549,7 +549,7 @@ renormalised, which is what MOVES itself does at county scale. A project run doe
 reads the table. The switch back is `PROJECT_AGES=registration` in the environment, or
 `"project_ages": "registration"` in `parameters.json`; the environment wins. A `sourcetypeagedistribution.csv`
 that the user supplies is used as given, with no weighting. The measured effect of the default on the
-county-against-project comparison: NOx 1.53% and exhaust PM2.5 1.83% above the county run per mile, CO2 0.08%, on urban unrestricted roads. <!-- source: release/county_vs_project_default.csv --> The earlier test of the
+county-against-project comparison: NOx 1.53% and exhaust PM2.5 1.83% above the county run per mile, CO2 0.08%, on urban unrestricted roads. <!-- measured; record kept by the maintainers --> The earlier test of the
 same idea (section 7.5) closed the gap to under 2% for NOx and exhaust particulates.
 
 The same decision started a second option: **county ages**. The age table has three settings, chosen by
@@ -578,7 +578,7 @@ option.
    metropolitan fuel supply and formulation. This is how county runs already work, so project runs
    inherit it. We did not measure how much it changes CO, NOx or particulates in, say, Michigan in
    January. The external comparison in section 7.3 is affected by it. Keeping this default is now a
-   decision (D92, 2026-11-18): MOVES's own fuel formulation tables are unreliable, and there are no good
+   decision (2026-11-18): MOVES's own fuel formulation tables are unreliable, and there are no good
    public tables to compare against. The effect is still not measured.
 4. **We replaced MOVES's validation with our own, narrower checks.** With validation off, MOVES will
    run inputs it would otherwise reject. We check the cases we have met (hours, road types, mix sums,
@@ -635,7 +635,7 @@ option.
     as one measurement, not a calibration. It was made before the setting was split into `national`,
     `county` and `county_adjusted`, and has not been repeated for `county` or `county_adjusted`. The
     default stays `national` until the effect has been reviewed.
-    <!-- source: release/county_ages_effect.csv -->
+    <!-- measured; record kept by the maintainers -->
 
 ## 10. Reference data, and whether MOVES-Matrix is needed
 
@@ -671,10 +671,10 @@ dependency.
 | Extended idle and hotelling hours as columns of `linkdata.csv` | Backlog | Today they are only in the raw activity file |
 | Check a user's operating-mode table against the run's vehicle types and pollutants | Backlog | |
 | Re-run county-scale runs with link and hourly output (section 3) and put them under test | Backlog | Run and confirmed to compute when MOVESAI was built; no automated test and no reference result exists |
-| Check every link and pollutant appears in the output (red team 5) | Backlog | |
-| Warn on 0 mph links in `diagnostics.txt` (red team 7) | Done: built (`task_summarize.R`); a flag in `linkdata.csv` stays in the backlog | |
-| A flag on each `linkdata.csv` row for "used a default" (red team 1) | Backlog | |
-| Regional fuel instead of New York's (red team 3) | Decided: New York fuel stays the default for every county (D92, 2026-11-18) | MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against. A user can still supply `fuelsupply.csv` and `fuelformulation.csv` |
+| Check every link and pollutant appears in the output | Backlog | |
+| Warn on 0 mph links in `diagnostics.txt` | Done: built (`task_summarize.R`); a flag in `linkdata.csv` stays in the backlog | |
+| A flag on each `linkdata.csv` row for "used a default" | Backlog | |
+| Regional fuel instead of New York's | Decided: New York fuel stays the default for every county (decision of 2026-11-18) | MOVES's own fuel formulation tables are unreliable, and there are no good public tables to compare them against. A user can still supply `fuelsupply.csv` and `fuelformulation.csv` |
 | Many hours in one command | Backlog | Each hour is a separate MOVES run |
 | Run time for 20, 50, 200 links | Backlog | |
 | EPA's MOVES5 training exercise as a reference | Done (section 7.6) | The corrected run is the one reported |

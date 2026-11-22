@@ -2,7 +2,9 @@
 
 Part of the MOVES Anywhere guides: see the [index](README.md).
 
-These are the exact versions that `tmf77/moves-anywhere:v2` (image digest starting `sha256:51ccd84e`) ships, recorded so v3 rebuilds the same MOVES and the same R stack. v3 changes how the image is built (MOVES pinned and compiled at build time, no Google tooling); it does not change which MOVES it runs.
+These are the pins of release 3.2.0: image tags `v3`, `v3.2` and `v3.2.0`, digest `sha256:3509df74aafd5164cfe3ac2afdf2f3f0c07c34c320f35ad9dc3ccbfe120d20c9`. The MOVES commit, the base image, the Java version and the R package list below are those of `tmf77/moves-anywhere:v2` (digest starting `sha256:51ccd84e`), so v3 rebuilds the same MOVES and the same R stack.
+
+v3 changes how the image is built (MOVES pinned and compiled at build time, no Google tooling); it does not change which MOVES it runs.
 
 ## MOVES
 

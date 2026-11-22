@@ -286,7 +286,7 @@ sequenceDiagram
 
 ### 9. Testing with a local stub ticket server
 
-The U1.2 test runs the container against a stub on the host, no cloud involved. Lay out a
+The stub test runs the container against a stub on the host, no cloud involved. Lay out a
 directory `stub/` with `in/` (the run's inputs, e.g. a copy of `inputs_ny/` minus outputs and
 `_*.csv`), an empty `out/`, and `ticket.json` whose links point at the stub, e.g.
 `http://127.0.0.1:8765/in/rs_custom.xml` and `http://127.0.0.1:8765/out/data.csv.gz`. Run the
