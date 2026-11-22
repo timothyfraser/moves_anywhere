@@ -1,10 +1,13 @@
 # `README`: MOVES inputs
 
+This page lists the MOVES input tables a county run can take, and what MOVES Anywhere does with each one.
+It is for anyone who wants to supply their own input tables.
+
 Part of the MOVES Anywhere guides: see the [index](README.md).
 
 This document summarizes MOVES input tables used in the MOVES County Data Manager, catagorized by how the MOVES Anywhere software interacts with and adapts them. 
 
-Tables below borrowed from Cloud MOVES paper.
+The tables below summarise the MOVES input tables. <!-- source: docs/README_MOVES_inputs.md (the tables that follow) -->
 
 ## Optional Tables for EPA MOVES's County Data Manager, *listed by MOVES Menu*
 

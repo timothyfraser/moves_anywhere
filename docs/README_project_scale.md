@@ -49,7 +49,7 @@ A refused key stops the run before MOVES starts. The run ends with exit code 1 (
 | `month` | Required | 1 to 12 | none | `month must be a month from 1 to 12` |
 | `day` | Required | `"weekday"` or `"weekend"`, or MOVES's codes 5 (weekday) and 2 (weekend) | none | `day must be "weekday", "weekend", 5 or 2` |
 | `hour` | Required | 1 to 24, in MOVES's numbering: hour 8 is 7:00 to 7:59 | none | `hour must be an hour from 1 to 24 (8 is 7:00 to 7:59)` |
-| `pollutant` | Optional | A list of MOVES pollutant IDs, for example `[90, 3]` | The 21 a county run file gets: 90, 98, 2, 118, 112, 119, 5, 33, 32, 6, 3, 100, 110, 106, 107, 116, 117, 115, 31, 91, 1 <!-- source: moves_anywhere/scripts/project_parameters.R, PROJECT_POLLUTANTS; moves_anywhere/inputs_ny/parameters.json --> | `pollutant must be a list of MOVES pollutant IDs (positive whole numbers)` |
+| `pollutant` | Optional | A list of MOVES pollutant IDs, for example `[90, 3]` | The 21 of the shipped county example (`moves_anywhere/inputs_ny/parameters.json`): 90, 98, 2, 118, 112, 119, 5, 33, 32, 6, 3, 100, 110, 106, 107, 116, 117, 115, 31, 91, 1. (`catr::custom_rs()` selects only 12 by default.) <!-- source: moves_anywhere/scripts/project_parameters.R:7 (PROJECT_POLLUTANTS); moves_anywhere/inputs_ny/parameters.json; catr/R/custom_rs.R:60 --> | `pollutant must be a list of MOVES pollutant IDs (positive whole numbers)` |
 | `roadtypes` | Optional | A list of road types from 1 to 5, for example `[1, 4, 5]` | The road types in `link.csv` | `roadtypes must be a list of road types from 1 to 5`. With no `roadtypes`, no `link.csv` and no `place`, the run stops with `task_runspec.R failed: could not make rs_custom.xml from parameters.json`. |
 | `place` | Optional | A box `"west,south,east,north"` in degrees, or a 5-digit county FIPS code as a string | none: you give `link.csv` | `place must be a box "west,south,east,north" (degrees, west < east, south < north) or a 5-digit county FIPS code`. Used only when the folder has no `link.csv`. If the link builder refuses, the run stops with `links: ` and the builder's reason. |
 | `max_links` | Optional | A whole number of 1 or more | 40 | `max_links must be a positive whole number` |
@@ -121,7 +121,7 @@ Use the published image `tmf77/moves-anywhere:v3` (`run.sh` pulls it). One order
    {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
    ```
 
-3. Give it links. Either copy `link.csv` (and `offnetworklink.csv` if a link has road type 1) from `moves_anywhere/inputs_project/`, or add `"place": "-76.52,42.42,-76.47,42.46"` (a box, `west,south,east,north`) to `parameters.json` so the image builds them from federal data.
+3. Give it links. Either copy `link.csv` (and `offnetworklink.csv` if a link has road type 1) from `moves_anywhere/inputs_project/`, or add `"place": "-76.499,42.438,-76.495,42.441"` (a box, `west,south,east,north`) to `parameters.json` so the image builds them from federal data. This box gave 17 links when tested in 2026-11; counts change as federal data are updated.
 4. Run `bash moves_anywhere/run.sh my_project`. The image writes `rs_custom.xml` itself. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
 5. After a place run, open `link_summary.txt` first: it says what was built and what was left out. Results are in `linkdata.csv`.
 

@@ -104,21 +104,37 @@ That run's file has 10,225 rows. <!-- measured 2026-11; record kept by the maint
 
 ## Emission rates
 
-By default a run is an inventory run: total emissions. To ask for rates instead, make the run file with `catr::custom_rs(.rate = TRUE)`, and set `"mode": "rate"` in `parameters.json`. <!-- source: catr/R/custom_rs.R:11,59,117-122; moves_anywhere/scripts/manifest_fields.py:115-117 -->
+By default a run is an inventory run: total emissions. To ask for rates instead, make the run file with `catr::custom_rs(.rate = TRUE)`. A `parameters.json` is optional for a rate run. <!-- source: catr/R/custom_rs.R:11,59,117-122; moves_anywhere/scripts/task_postprocess.R:127-146 (does not read parameters.json); moves_anywhere/scripts/manifest_fields.py:115-124 (mode only feeds the manifest) -->
+
+Two lines are enough: the run file for Tompkins County, NY, 2025, then the run. <!-- source: catr/R/custom_rs.R:54-59 (argument names .geoid, .year, .path, .rate); README.md, "Quick start" step 4 -->
+
+```r
+catr::custom_rs(.geoid = "36109", .year = 2025, .rate = TRUE, .path = "inputs/rs_custom.xml")
+```
+
+```
+bash moves_anywhere/run.sh inputs
+```
 
 A rate run does not write `data.csv`. It writes these tables to the same folder: <!-- source: moves_anywhere/scripts/task_postprocess.R:127-143 -->
 
-| File | What it is |
+| File | What it is, its key columns and its unit |
 |----|----|
-| `rateperdistance.csv` | The MOVES `rateperdistance` table: rates per distance travelled. <!-- source: moves_anywhere/scripts/task_postprocess.R:139; moves_anywhere/scripts/task_pack.sh:121-123 --> |
-| `rateperhour.csv` | The MOVES `rateperhour` table: rates per hour. <!-- source: moves_anywhere/scripts/task_postprocess.R:137; moves_anywhere/scripts/task_pack.sh:121 --> |
-| `ratepervehicle.csv` | The MOVES `ratepervehicle` table: rates per vehicle. <!-- source: moves_anywhere/scripts/task_postprocess.R:138; moves_anywhere/scripts/task_pack.sh:121 --> |
-| `rateperstart.csv` | The MOVES `rateperstart` table: rates per engine start. <!-- source: moves_anywhere/scripts/task_postprocess.R:140; moves_anywhere/scripts/task_pack.sh:122 --> |
-| `startspervehicle.csv` | The MOVES `startspervehicle` table: starts per vehicle. <!-- source: moves_anywhere/scripts/task_postprocess.R:141; moves_anywhere/scripts/task_pack.sh:122 --> |
-| `rateperprofile.csv` | The MOVES `rateperprofile` table. The code notes it is usually empty. <!-- source: moves_anywhere/scripts/task_postprocess.R:142; moves_anywhere/scripts/task_pack.sh:122 --> |
-| `movesrun.csv` | The MOVES `movesrun` table. The code notes it is usually small. <!-- source: moves_anywhere/scripts/task_postprocess.R:143; moves_anywhere/scripts/task_pack.sh:122 --> |
+| `rateperdistance.csv` | The MOVES `rateperdistance` table: rates per distance travelled. Columns: `MOVESScenarioID`, `MOVESRunID`, `yearID`, `monthID`, `dayID`, `hourID`, `linkID`, `pollutantID`, `processID`, `sourceTypeID`, `regClassID`, `SCC`, `fuelTypeID`, `modelYearID`, `roadTypeID`, `avgSpeedBinID`, `temperature`, `relHumidity`, `ratePerDistance`. Unit: U.S. tons per mile. <!-- source: moves_anywhere/defaults/CreateOutput.sql:290-310 (columns); catr/data_raw/rs_rate.xml:229-231 (units); measured 2026-11-22; record kept by the maintainers --> <!-- source: moves_anywhere/scripts/task_postprocess.R:139; moves_anywhere/scripts/task_pack.sh:121-123 --> |
+| `rateperhour.csv` | The MOVES `rateperhour` table: rates per hour. Key columns: the time columns (`yearID`, `monthID`, `dayID`, `hourID`), `linkID`, `pollutantID`, `processID`, `sourceTypeID`, `regClassID`, `SCC`, `fuelTypeID`, `modelYearID`, `roadTypeID`, `temperature`, `relHumidity`; value `ratePerHour`. Unit: U.S. tons per hour. <!-- source: moves_anywhere/defaults/CreateOutput.sql:421-440; catr/data_raw/rs_rate.xml:229-231 --> <!-- source: moves_anywhere/scripts/task_postprocess.R:137; moves_anywhere/scripts/task_pack.sh:121 --> |
+| `ratepervehicle.csv` | The MOVES `ratepervehicle` table: rates per vehicle. Key columns: the time columns, `zoneID`, `pollutantID`, `processID`, `sourceTypeID`, `regClassID`, `SCC`, `fuelTypeID`, `modelYearID`, `temperature`, `relHumidity`; value `ratePerVehicle`. Unit: U.S. tons per vehicle. <!-- source: moves_anywhere/defaults/CreateOutput.sql:320-338; catr/data_raw/rs_rate.xml:229-231 --> <!-- source: moves_anywhere/scripts/task_postprocess.R:138; moves_anywhere/scripts/task_pack.sh:121 --> |
+| `rateperstart.csv` | The MOVES `rateperstart` table: rates per engine start. Key columns: the time columns, `zoneID`, `sourceTypeID`, `regClassID`, `SCC`, `fuelTypeID`, `modelYearID`, `pollutantID`, `processID`, `temperature`, `relHumidity`; value `ratePerStart`. Unit: U.S. tons per start. <!-- source: moves_anywhere/defaults/CreateOutput.sql:394-412; catr/data_raw/rs_rate.xml:229-231 --> <!-- source: moves_anywhere/scripts/task_postprocess.R:140; moves_anywhere/scripts/task_pack.sh:122 --> |
+| `startspervehicle.csv` | The MOVES `startspervehicle` table: starts per vehicle. Key columns: the time columns, `zoneID`, `sourceTypeID`, `regClassID`, `SCC`, `fuelTypeID`, `modelYearID`; value `startsPerVehicle`. Unit: starts per vehicle (a count, not a mass). <!-- source: moves_anywhere/defaults/CreateOutput.sql:372-386 --> <!-- source: moves_anywhere/scripts/task_postprocess.R:141; moves_anywhere/scripts/task_pack.sh:122 --> |
+| `rateperprofile.csv` | The MOVES `rateperprofile` table. The code notes it is usually empty. Key columns: `temperatureProfileID`, `yearID`, `dayID`, `hourID`, `pollutantID`, `processID`, `sourceTypeID`, `regClassID`, `SCC`, `fuelTypeID`, `modelYearID`, `temperature`, `relHumidity`; value `ratePerVehicle`. Unit: U.S. tons per vehicle. <!-- source: moves_anywhere/defaults/CreateOutput.sql:347-364 --> <!-- source: moves_anywhere/scripts/task_postprocess.R:142; moves_anywhere/scripts/task_pack.sh:122 --> |
+| `movesrun.csv` | The MOVES `movesrun` table: one row per run, including its `massUnits` ("ton") and `distanceUnits` ("mi"). The code notes it is usually small. <!-- measured 2026-11-22; record kept by the maintainers --> <!-- source: moves_anywhere/scripts/task_postprocess.R:143; moves_anywhere/scripts/task_pack.sh:122 --> |
 
 Rate runs complete and write every table. Their numbers have not yet been compared with a reference. <!-- measured 2026-11; record kept by the maintainers -->
+
+**Units.** The run file sets time to hours, distance to miles and mass to U.S. (short) tons, so the rates are U.S. tons per mile, per vehicle, per start or per hour. To get grams, multiply by 907,185. <!-- source: catr/data_raw/rs_rate.xml:229-231; measured 2026-11-22; record kept by the maintainers -->
+
+For example, on a real rate run (Tompkins County, 2022), the median `ratePerDistance` for passenger cars (`sourceTypeID` 21), CO2 (`pollutantID` 90) and running exhaust (`processID` 1) on road type 4 is 0.000335. That is about 304 grams per mile. The file itself holds tons, not grams. <!-- measured 2026-11-22; record kept by the maintainers -->
+
+**Check a rate run.** The run's manifest status is `ok`, and `rateperdistance.csv` is present and not empty. <!-- source: moves_anywhere/scripts/task_pack.sh:148-153 (success is judged by rateperdistance.csv); docs/RUN_MANIFEST.md:50 -->
 
 ## Not supported
 
@@ -140,18 +156,18 @@ Any table in the list works the same way: save it as `inputs/<tablename>.csv`. T
 
 ## Check your setup
 
-The folder `moves_anywhere/inputs_ny` is a finished example: Tompkins County, NY, 2022. It holds the run file, `parameters.json`, input tables and the results of a run, including `data.csv`. <!-- source: moves_anywhere/inputs_ny/parameters.json; CHANGELOG.md:61 -->
+The folder `moves_anywhere/inputs_ny` is a finished example: Tompkins County, NY, 2022. It holds the run file, `parameters.json`, input tables and the results of a run, including `data.csv`. <!-- source: moves_anywhere/inputs_ny/parameters.json; CHANGELOG.md:105 -->
 
-1. Copy the folder, so the results in it are not overwritten, and delete the old results from the copy (`data.csv`, `movesoutput.csv`, `movesactivityoutput.csv`, `moveslog.txt`).
+1. Copy the folder, so the results in it are not overwritten: `cp -r moves_anywhere/inputs_ny my_check`. Delete the old results from the copy (`data.csv`, `movesoutput.csv`, `movesactivityoutput.csv`, `moveslog.txt`). Leftover generated files there (`diagnostics.txt`, `importer.xml`, `_*.csv`) are regenerated by the run and are harmless. <!-- source: moves_anywhere/scripts/compare_outputs.py:1-24 (compares the result files only) -->
 2. Run the copy: `bash moves_anywhere/run.sh my_check`.
-3. Compare your folder with the shipped one, using the exact check the maintainers use: `python -I moves_anywhere/scripts/compare_outputs.py moves_anywhere/inputs_ny my_check`. <!-- source: moves_anywhere/scripts/compare_outputs.py:1-24; docs/REPLICATION_KIT.md:40-41 -->
+3. Compare your folder with the shipped one, using the exact check the maintainers use. It needs Python 3 on the host (on Windows the command may be `py` instead of `python`): `python -I moves_anywhere/scripts/compare_outputs.py moves_anywhere/inputs_ny my_check`. <!-- source: moves_anywhere/scripts/compare_outputs.py:1-24; docs/REPLICATION_KIT.md:40-41 -->
 
 What to expect:
 
 | Check | Expected |
 |----|----|
-| `compare_outputs.py` | A `PASS` line for each file. <!-- source: docs/REPLICATION_KIT.md:41; CHANGELOG.md:61 (OVERALL: PASS, maximum relative difference 0.0 for this example) --> |
+| `compare_outputs.py` | A `PASS` line for each file. <!-- source: docs/REPLICATION_KIT.md:41; CHANGELOG.md:105 (OVERALL: PASS, maximum relative difference 0.0 for this example) --> |
 | `data.csv` | 23,730 rows plus a header, the shipped file. <!-- source: moves_anywhere/inputs_ny/data.csv (23,731 lines) --> |
 | `run_manifest.json` | A successful status. See [the run manifest](RUN_MANIFEST.md). <!-- source: docs/RUN_MANIFEST.md:50 (`status: ok`) --> |
 
-The changelog records that a fresh run of this example matched the reference, with a largest relative difference of 0.0. <!-- source: CHANGELOG.md:61 -->
+The changelog records that a fresh run of this example matched the reference, with a largest relative difference of 0.0. <!-- source: CHANGELOG.md:105 -->

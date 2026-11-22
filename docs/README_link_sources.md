@@ -32,9 +32,10 @@ bash moves_anywhere/links.sh <folder> --place <5-digit FIPS> --state <two letter
 ```bash
 mkdir my_run
 cp moves_anywhere/inputs_project/rs_custom.xml my_run/
-bash moves_anywhere/links.sh my_run --place 36109 --state NY
-bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite
+bash moves_anywhere/links.sh my_run --place "-76.499,42.438,-76.495,42.441" --state NY --overwrite
 ```
+
+This box gave 17 links when tested in 2026-11; counts change as federal data are updated. A 5-digit county code also works for `--place`, but a whole county usually has more than 40 links.
 
 Then check `my_run/link_summary.txt`, delete `my_run/rs_custom.xml`, save a `my_run/parameters.json` (full file below) and run `bash moves_anywhere/run.sh my_run`. With no run file, the image writes a new one whose road types match your links:
 

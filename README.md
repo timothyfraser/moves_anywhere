@@ -38,7 +38,7 @@ County and project runs are supported. State and national runs are not: they fai
 
 It solves these problems:
 
--   Writing `runspec.xml` documents faster (a recipe for your MOVES run)
+-   Writing run files (runspecs) faster (a recipe for your MOVES run)
 -   Running MOVES on any OS (Windows, Mac, or Linux), using a Docker container.
 -   Running MOVES with custom inputs when you have *some (or none)* of the required custom input tables, but not all.
 -   Post-processing MOVES inventory output data into the more dataviz-friendly "CAT Format", developed for Cornell's Climate Action in Transportation (CAT) team's research.
@@ -47,6 +47,8 @@ It solves these problems:
 ## Quick start
 
 You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [R](https://cran.r-project.org/). Nothing else: no MOVES install, no MySQL, no cloud account.
+
+**Before you start:** run `git clone https://github.com/timothyfraser/moves_anywhere`, then `cd moves_anywhere` and start R in that folder, so `inputs/` sits beside `moves_anywhere/` and `run.sh` is in reach. Install `catr` first, with the `remotes::install_github("timothyfraser/moves_anywhere", subdir = "catr")` call in [The `catr` package](#the-catr-package).
 
 **1. 📝 Write a runspec** (the recipe for your run) with `catr`:
 
@@ -71,7 +73,7 @@ custom_rs(.geoid = "36109", .year = 2025, .path = "inputs/rs_custom.xml")
 }
 ```
 
-`catr::rs_to_parameters()` can write this file from a run file. Keep `geoid`, `year` and `pollutant` the same as in your runspec.
+`catr::rs_to_parameters("inputs/rs_custom.xml", "inputs/parameters.json")` can write this file from a run file (arguments `path_rs`, `path_parameters`). Keep `geoid`, `year` and `pollutant` the same as in your runspec.
 
 **3. 📂 Add any custom input tables you have** to the same folder, as `<tablename>.csv`. Have none? That's fine. `moves_anywhere` fills in the rest from MOVES defaults.
 
@@ -96,7 +98,7 @@ No `data.csv`? Open `run_manifest.json` and `moveslog.txt` in the same folder. S
 | Run | You give | You get | Guide |
 |----|----|----|----|
 | County totals | A run file, `parameters.json`, and your own tables if you have them | `data.csv` | [County runs](docs/README_county_runs.md) |
-| County emission rates | A run file made with `custom_rs(.rate = TRUE)`, and `parameters.json` | The rate tables (`rateperdistance.csv` and others) | [County runs: emission rates](docs/README_county_runs.md#emission-rates) |
+| County emission rates | A run file made with `custom_rs(.rate = TRUE)` (`parameters.json` is optional) | The rate tables (`rateperdistance.csv` and others) | [County runs: emission rates](docs/README_county_runs.md#emission-rates) |
 | Project, your own links | `link.csv` and `parameters.json` | `linkdata.csv` | [Project-scale runs](docs/README_project_scale.md) |
 | Project for a place | `parameters.json` with a `place` box | The built links and `linkdata.csv` | [Link sources](docs/README_link_sources.md) |
 
@@ -134,7 +136,7 @@ You give a few settings, and either your own links (`link.csv`) or a box on a ma
 
 **Option A: try the example links** (six road links and a parking lot).
 
-1. Copy the folder `moves_anywhere/inputs_project/` to a new folder `my_project`, and delete `my_project/rs_custom.xml`. The image writes a new run file (MOVES calls it a runspec) from your settings.
+1. Copy the folder `moves_anywhere/inputs_project/` to a new folder `my_project`, and delete `my_project/rs_custom.xml`. The image writes a new run file (MOVES calls it a runspec) from your settings. Also delete the shipped results in that folder (`linkdata.csv`, `movesoutput.csv` and `movesactivityoutput.csv`), so the files you see afterwards are fresh.
 
 2. Save this whole file as `my_project/parameters.json`:
 
@@ -154,10 +156,10 @@ You give a few settings, and either your own links (`link.csv`) or a box on a ma
 2. Save this whole file as `my_place/parameters.json`. `place` is a box in decimal degrees, `"west,south,east,north"`:
 
    ```json
-   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8, "place": "-76.52,42.42,-76.47,42.46"}
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8, "place": "-76.499,42.438,-76.495,42.441"}
    ```
 
-3. Run it: `bash moves_anywhere/run.sh my_place`. The link builder (beta) makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. MOVES then runs on them in the same run.
+3. Run it: `bash moves_anywhere/run.sh my_place`. The link builder (beta) makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. MOVES then runs on them in the same run. This box gave 17 links when tested in 2026-11; counts change as federal data are updated.
 4. Open `my_place/link_summary.txt` to see what was built, and `my_place/linkdata.csv` for the results.
 
 To check the links before MOVES runs, use `links.sh` (see [Building links](docs/README_link_sources.md)).
