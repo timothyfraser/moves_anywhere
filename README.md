@@ -18,6 +18,7 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 
 -   [Welcome!](#welcome)
 -   [Quick start](#quick-start)
+-   [Choose your run](#choose-your-run)
 -   [What you get back](#what-you-get-back)
 -   [Project-scale runs](#project-scale-runs-beta)
 -   [Cheatsheet](#cheatsheet)
@@ -89,6 +90,25 @@ One county and one year takes about 10 minutes on a laptop. `data.csv` appears b
 No `data.csv`? Open `run_manifest.json` and `moveslog.txt` in the same folder. See [the run manifest](docs/RUN_MANIFEST.md).
 
 ✅ The script exits `0` only when the run produced results.
+
+## Choose your run
+
+| Run | You give | You get | Guide |
+|----|----|----|----|
+| County totals | A run file, `parameters.json`, and your own tables if you have them | `data.csv` | [County runs](docs/README_county_runs.md) |
+| County emission rates | A run file made with `custom_rs(.rate = TRUE)`, and `parameters.json` | The rate tables (`rateperdistance.csv` and others) | [County runs: emission rates](docs/README_county_runs.md#emission-rates) |
+| Project, your own links | `link.csv` and `parameters.json` | `linkdata.csv` | [Project-scale runs](docs/README_project_scale.md) |
+| Project for a place | `parameters.json` with a `place` box | The built links and `linkdata.csv` | [Link sources](docs/README_link_sources.md) |
+
+State and national runs are not supported.
+
+**`run.sh` options.** Put them after the folder name. <!-- source: moves_anywhere/run.sh:4,18-20 -->
+
+| Option | What it sets | Default |
+|----|----|----|
+| `--image` | The Docker image to run | `tmf77/moves-anywhere:v3` |
+| `--cpus` | CPUs for the container | 2 |
+| `--memory` | Memory for the container | 6g (6 GB) |
 
 ## What you get back
 
@@ -170,6 +190,7 @@ Guides: [project-scale runs](docs/README_project_scale.md) and [building links f
 | Guide | Read it when you want to... |
 |----|----|
 | [MOVES inputs](docs/README_MOVES_inputs.md) | know which input tables MOVES needs and what goes in them |
+| [County runs](docs/README_county_runs.md) | set up a county run: every `parameters.json` key, the columns of `data.csv`, rates, your own tables |
 | [Project-scale runs](docs/README_project_scale.md) | estimate single road links and parking lots for one hour |
 | [The pipeline scripts](docs/README_scripts.md) | see what happens inside the container, step by step |
 | [The `catr` package](docs/README_catr.md) | write runspecs and work with results in R |
