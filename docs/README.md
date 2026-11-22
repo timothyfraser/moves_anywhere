@@ -2,6 +2,19 @@
 
 This is the index of the guides in this folder. Start with the [main README](../README.md), which explains how to run MOVES with Docker. The guides below go deeper. They are listed in a sensible reading order.
 
+## Choose your run
+
+| Run | You give | You get | Guide |
+|----|----|----|----|
+| County totals | A run file, `parameters.json`, and your own tables if you have them | `data.csv` | [County runs](README_county_runs.md) |
+| County emission rates | A run file made with `custom_rs(.rate = TRUE)` (`parameters.json` is optional) | The rate tables (`rateperdistance.csv` and others) | [County runs: emission rates](README_county_runs.md#emission-rates) |
+| Project, your own links | `link.csv` and `parameters.json` | `linkdata.csv` | [Project-scale runs](README_project_scale.md) |
+| Project for a place | `parameters.json` with a `place` box | The built links and `linkdata.csv` | [Link sources](README_link_sources.md) |
+
+State and national runs are not supported. The [main README](../README.md#quick-start) has the exact commands.
+
+## All guides
+
 | Guide | What it is for |
 |----|----|
 | [MOVES inputs](README_MOVES_inputs.md) | Which input tables MOVES needs, and how MOVES Anywhere adapts them. |
