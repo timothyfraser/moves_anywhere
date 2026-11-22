@@ -29,7 +29,13 @@ The image is built for x86-64 (`linux/amd64`). It is tested on Linux and on Wind
 
 ## Welcome!
 
-Welcome to `moves_anywhere`! This software suite includes several tools to help you run the Environmental Protection Agency's **MO**tor **V**ehicle **E**mission **S**imulator (MOVES) more easily. Developed by Tim Fraser and colleagues at Gao Labs at Cornell University, `moves_anywhere` aims to solve several common problems for planners, engineers, and researchers who need to know how many tons of emissions are produced from on-road transportation sources in their county or state. These problems include:
+Welcome to `moves_anywhere`! It helps you run the Environmental Protection Agency's **MO**tor **V**ehicle **E**mission **S**imulator (MOVES) more easily.
+
+Developed by Tim Fraser and colleagues at Gao Labs at Cornell University, it helps planners, engineers, and researchers learn how many tons of emissions on-road transportation sources produce in a county, or on specific roads (project runs).
+
+County and project runs are supported. State and national runs are not: they fail, or give totals far too low.
+
+It solves these problems:
 
 -   Writing `runspec.xml` documents faster (a recipe for your MOVES run)
 -   Running MOVES on any OS (Windows, Mac, or Linux), using a Docker container.
@@ -78,7 +84,7 @@ bash moves_anywhere/run.sh inputs
 powershell -ExecutionPolicy Bypass -File moves_anywhere\run.ps1 inputs
 ```
 
-One county and one year takes about 4 minutes on a laptop. `data.csv` appears beside your inputs.
+One county and one year takes about 10 minutes on a laptop. `data.csv` appears beside your inputs.
 
 No `data.csv`? Open `run_manifest.json` and `moveslog.txt` in the same folder. See [the run manifest](docs/RUN_MANIFEST.md).
 
@@ -102,21 +108,37 @@ Results land in the same folder as your inputs. The run manifest and replication
 
 A county run estimates emissions for a whole county over a year. A project run (MOVES's *project scale*) estimates emissions on specific roads for one hour. Each piece of road is a **link**, with a length in miles and a traffic volume in vehicles for that hour. Each link has a **road type**, the MOVES code for the kind of road: 4 is an urban freeway, 5 is an urban arterial, and 1 is a parking lot or truck stop. Project runs come with release 3.2.0 (see [Versions](#versions)).
 
-You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (the table is in [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). To try it, copy `moves_anywhere/inputs_project/` (six road links and a parking lot) to a new folder `my_project`. Delete its `rs_custom.xml`, the run file (MOVES calls it a runspec) that tells MOVES what to compute; the image writes a new one. Then put this in its `parameters.json`:
+You give a few settings, and either your own links (`link.csv`) or a box on a map. The image fills in the rest from the county's data and from MOVES defaults (see [what is filled in for you](docs/README_project_scale.md#what-is-filled-in-for-you-and-how-far-to-trust-it)). Use the published image `tmf77/moves-anywhere:v3`, which `run.sh` pulls for you.
 
-```json
-{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
-```
+**Option A: try the example links** (six road links and a parking lot).
 
-Then run it:
+1. Copy the folder `moves_anywhere/inputs_project/` to a new folder `my_project`, and delete `my_project/rs_custom.xml`. The image writes a new run file (MOVES calls it a runspec) from your settings.
 
-```bash
-bash moves_anywhere/run.sh my_project
-```
+2. Save this whole file as `my_project/parameters.json`:
 
-The results by link are in `my_project/linkdata.csv`.
+   ```json
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+   ```
 
-With no `link.csv`, add `"place": "west,south,east,north"` (a box in decimal degrees of longitude and latitude) to `parameters.json`. The link builder, which is in beta, then makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. With `place` in `parameters.json`, MOVES runs straight after the build. To check the links first, build them with `bash moves_anywhere/links.sh` (see [Building links](docs/README_link_sources.md)), then run MOVES.
+3. Run it. The results by link are in `my_project/linkdata.csv`:
+
+   ```bash
+   bash moves_anywhere/run.sh my_project
+   ```
+
+**Option B: build the links for a place** (no `link.csv` needed).
+
+1. Make an empty folder: `mkdir my_place`.
+2. Save this whole file as `my_place/parameters.json`. `place` is a box in decimal degrees, `"west,south,east,north"`:
+
+   ```json
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8, "place": "-76.52,42.42,-76.47,42.46"}
+   ```
+
+3. Run it: `bash moves_anywhere/run.sh my_place`. The link builder (beta) makes the links from federal data: road sections and traffic counts from FHWA's Highway Performance Monitoring System (HPMS), and grade from USGS 3DEP elevation. MOVES then runs on them in the same run.
+4. Open `my_place/link_summary.txt` to see what was built, and `my_place/linkdata.csv` for the results.
+
+To check the links before MOVES runs, use `links.sh` (see [Building links](docs/README_link_sources.md)).
 
 What has been measured:
 

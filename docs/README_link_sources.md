@@ -21,18 +21,35 @@ bash moves_anywhere/links.sh <folder> --place <5-digit FIPS> --state <two letter
 | `--max-links N` | Refuse to write more than N links. Default 40. See "The link limit". |
 | `--no-fill` | Do not add the remainder link that stands in for roads with no count. See "Roads with no count". |
 | `--overwrite` | Replace an existing `link.csv`. Without it the command refuses. |
-| `--image IMAGE` | The Docker image (the packaged software the command runs in) to use. Default `tmf77/moves-anywhere:v3`, or the environment variable `MOVES_IMAGE` if set. The link builder needs the 3.2 image. The published `v3` image is 3.1.0 and does not contain it, and 3.2 is not on Docker Hub yet. Until it is, build 3.2 locally and pass its tag here. <!-- source: moves_anywhere/links.sh:19,88; CHANGELOG.md 3.2.0; README.md image versions note --> |
+| `--image IMAGE` | The Docker image (the packaged software the command runs in) to use. Default `tmf77/moves-anywhere:v3`, or the environment variable `MOVES_IMAGE` if set. The published `v3` image is release 3.2.0 and contains the link builder. <!-- source: moves_anywhere/links.sh:19,88 -->
 
-Examples:
+`links.sh` needs a folder with a project `rs_custom.xml`. No command turns `parameters.json` into one outside the image, so start from the run file of the shipped example (Tompkins County, NY, 2022, July weekday, hour 8):
 
 ```bash
-bash moves_anywhere/links.sh my_run --place 36109 --state NY --image my-moves-anywhere:3.2
-bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite --image my-moves-anywhere:3.2
+mkdir my_run
+cp moves_anywhere/inputs_project/rs_custom.xml my_run/
+bash moves_anywhere/links.sh my_run --place 36109 --state NY
+bash moves_anywhere/links.sh my_run --place "-76.52,42.42,-76.47,42.46" --state NY --overwrite
 ```
 
-Here `my-moves-anywhere:3.2` stands for a 3.2 image you built locally from this branch. Without `--image` (or `MOVES_IMAGE`), these commands use the published `v3` image (3.1.0) and fail because it lacks `launch_links.sh`.
+Then check `my_run/link_summary.txt`, delete `my_run/rs_custom.xml`, save a `my_run/parameters.json` (full file below) and run `bash moves_anywhere/run.sh my_run`. With no run file, the image writes a new one whose road types match your links:
 
-**Inside an ordinary run.** The same builder also runs from `parameters.json`, with no separate command. Put a project `parameters.json` (`"level": "project"`) with a `place`, and optionally `max_links`, in a folder with no `link.csv`. Then run `run.sh <folder>`. The image builds the links, takes the state from the first two digits of `geoid`, and runs MOVES on the new links in the same run. The folder does not need an `rs_custom.xml`. The image writes a provisional one for the builder, then writes the real one from the road types in the new `link.csv`. `parameters.json` has no key for `--no-fill`, so the remainder link stays on. A refusal stops the run with the same `links:` line. To check the links before MOVES runs, use `links.sh` instead. The keys are listed in [Project-scale runs](README_project_scale.md).
+```json
+{"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+```
+
+If you keep a run file instead, it must name the same county, year, month, day type and hour as `parameters.json`, and every road type it selects needs a link, or the run is refused (see [When a run is refused](README_project_scale.md#when-a-run-is-refused)).
+
+**Inside an ordinary run (no separate command).** The same builder runs from `parameters.json`:
+
+- Put a project `parameters.json` (`"level": "project"`) with a `place`, and optionally `max_links`, in a folder with no `link.csv`.
+- Run `bash moves_anywhere/run.sh <folder>`. The folder needs no `rs_custom.xml`.
+- The image builds the links, taking the state from the first two digits of `geoid`.
+- It writes a provisional run file for the builder, then the real one from the road types in the new `link.csv`, and runs MOVES in the same run.
+- `parameters.json` has no key for `--no-fill`, so the remainder link stays on.
+- A refusal stops the run with the same `links:` line.
+
+To check the links before MOVES runs, use `links.sh`. The keys are listed in [Project-scale runs](README_project_scale.md).
 
 Docker must be installed and running. When the command ends it returns an exit code: 0 means links were written, 2 a usage error or a missing input, and 3 that Docker is missing or not running. If the builder refuses (for example, too many links), it prints one line starting `links:` and writes the same line to `link_summary.txt`.
 

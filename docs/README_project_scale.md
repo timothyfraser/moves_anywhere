@@ -25,7 +25,7 @@ A project run can start from one settings file. Make a new folder and put in it:
 - `parameters.json`, with `"level": "project"` and the county, year, month, day type and hour;
 - `link.csv`, or a `place` in `parameters.json` so that the image builds the links from federal road data first (see [Building links](README_link_sources.md)).
 
-Then run `run.sh <folder>`. The image writes the run file, `rs_custom.xml`, itself. (The run file is what MOVES calls a runspec: the XML file that tells MOVES what to compute.) For example, copy the example folder `moves_anywhere/inputs_project/` (the test fixture, "the fixture" below) to a new folder, delete its `rs_custom.xml`, and put this in its `parameters.json`:
+Then run `run.sh <folder>`. The image writes the run file, `rs_custom.xml`, itself. (The run file is what MOVES calls a runspec: the XML file that tells MOVES what to compute.) For example, copy the example folder `moves_anywhere/inputs_project/` (the test fixture, "the fixture" below) to a new folder, delete its `rs_custom.xml`, and save this whole file as its `parameters.json`:
 
 ```json
 {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
@@ -104,7 +104,20 @@ The worked example is `moves_anywhere/inputs_project/rs_custom.xml`: Tompkins Co
 
 ## How to run it
 
-Run it as you run a county run: `run.sh <folder>`. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
+Use the published image `tmf77/moves-anywhere:v3` (`run.sh` pulls it). One order of steps that works:
+
+1. Make a new folder, for example `my_project`. Use a new folder: it must not hold a county result.
+2. Save a full `parameters.json` in it:
+
+   ```json
+   {"level": "project", "geoid": "36109", "year": 2022, "month": 7, "day": "weekday", "hour": 8}
+   ```
+
+3. Give it links. Either copy `link.csv` (and `offnetworklink.csv` if a link has road type 1) from `moves_anywhere/inputs_project/`, or add `"place": "-76.52,42.42,-76.47,42.46"` (a box, `west,south,east,north`) to `parameters.json` so the image builds them from federal data.
+4. Run `bash moves_anywhere/run.sh my_project`. The image writes `rs_custom.xml` itself. The [main README](../README.md) explains `run.sh`. A full run of the fixture takes about 8 minutes of MOVES time.
+5. After a place run, open `link_summary.txt` first: it says what was built and what was left out. Results are in `linkdata.csv`.
+
+To check the links before MOVES runs, use `links.sh`. It needs a run file, and the only one outside the image is the shipped example's: `cp moves_anywhere/inputs_project/rs_custom.xml my_project/`. See [Building links](README_link_sources.md).
 
 **A second example: EPA's training exercise.** The folder `moves_anywhere/inputs_epa_project/` is a project run taken from EPA's own MOVES5 Hands-on Training Course (September 2025, Module 7, Project Exercise, Answer Key). It models a truck terminal and its roads in Washtenaw County, MI (26161): January 2025, a weekday, hour 9, carbon monoxide, five road links and one off-network link. Every number in it comes from EPA; the folder's `README.md` gives the attribution and lists every change made. The folder lets you check the image against an answer someone else computed: `epa_movesoutput.csv` holds EPA's results, and `tests/compare_epa_project.py` compares a run of the folder with them. For run 1 (carbon monoxide, 21 rows of EPA's answer), all 21 rows are within 1 percent of EPA's, and the largest relative difference is 5.0e-8. The run took 188 seconds in all. A first attempt did not match, because it left out two input tables that EPA's run had filled: the fuel and technology table and the hotelling table. With those supplied, the results match. <!-- source: epa_moves5_exercise/comparison_run1b.csv; epa_moves5_exercise/DIAGNOSIS_run1.md -->
 
@@ -223,13 +236,11 @@ MOVES itself accepts a bad project run and then produces nothing, so the image c
 | `offnetworklink.csv sourceTypeID not in the run's vehicle types` | Use vehicle types the run file selects. |
 | `MOVES produced no results: ...` | MOVES refused the run. The reason ends with MOVES's own first error line; `moveslog.txt` in the folder has the rest. |
 
-## Hosted runs (Cloud MOVES)
+## Hosted runs
 
-A hosted service can run a project folder through a run ticket: a file that tells the container where to fetch the inputs and where to send the outputs (see [RUN_TICKET.md](RUN_TICKET.md)).
-The outputs are the same files as a local run, compressed: `linkdata.csv.gz`, `moveslog.txt.gz`,
-`replication.tar.xz` and `run_manifest.json`.
+You do not need this to run the image yourself. Cloud MOVES is the maintainers' hosted service that runs this same image for CAT users.
 
-As of 2026-11-18 this is being tested on a hosted test service only. It is not open to users.
+It runs a project folder through a run ticket: a file that tells the container where to fetch the inputs and where to send the outputs (see [RUN_TICKET.md](RUN_TICKET.md)). The outputs are the same files as a local run, compressed: `linkdata.csv.gz`, `moveslog.txt.gz`, `replication.tar.xz` and `run_manifest.json`.
 
 ## Limits
 
